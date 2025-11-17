@@ -42,6 +42,6 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             npm install
-            npm run migrate
+            npm run build
             pm2 restart ${{ secrets.PM2_PROCESS }}
             echo "Deployment completed successfully for main branch"

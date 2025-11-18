@@ -52,7 +52,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const { page, limit, search, role, status, sortBy, sortOrder } = req.query as unknown as IUserPaginationOptions;
 
-    const result = await userService.findAllUsers({
+    const { data, pagination } = await userService.findAllUsers({
       page,
       limit,
       search,
@@ -65,8 +65,10 @@ export const getAllUsers = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'Users fetched successfully',
-      data: result.data,
-      pagination: result.pagination,
+      data: {
+        users: data,
+        pagination: pagination,
+      } 
     });
   } catch (error: any) {
     logger.error('Error fetching users:', error);

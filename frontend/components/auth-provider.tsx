@@ -23,6 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const firstSegment = segments[0] as string;
     const inAuthGroup = firstSegment === '(auth)' || firstSegment === 'sign-in' || firstSegment === 'sign-up';
+    const isSplash = firstSegment === 'splash';
+
+    // Don't redirect if on splash screen - let splash handle navigation
+    if (isSplash) return;
 
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to sign-in if not authenticated

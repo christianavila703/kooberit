@@ -1,9 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -11,9 +12,23 @@ import { store } from '@/store';
 import { AuthProvider } from '@/components/auth-provider';
 import { Colors } from '@/constants/theme';
 
+SplashScreen.hide();
+
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: 'splash',
 };
+
+function StatusBarWrapper() {
+  const segments = useSegments();
+  const isSplash = segments[0] === 'splash';
+  
+  // Don't render StatusBar on splash screen - it's handled by the splash screen itself
+  if (isSplash) {
+    return <StatusBar style="light" translucent />;
+  }
+  
+  return <StatusBar style="auto" translucent />;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -24,11 +39,12 @@ export default function RootLayout() {
       <AuthProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
+            <Stack.Screen name="splash" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
-          <StatusBar style="auto" />
+          <StatusBarWrapper />
           <Toast
             config={{
               success: (props) => (

@@ -12,7 +12,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logoutUser } from '@/store/slices/authSlice';
-import contractorService from '@/services/contractor';
+import {
+  fetchProfileSettings,
+  updateProfileSettings,
+} from '@/store/slices/profileSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -23,37 +26,42 @@ export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const { settings: profileSettings, isSaving } = useAppSelector((state) => state.profile);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor';
 
+  // Local form state for editing (synced with Redux on load)
   const [contractorAddress, setContractorAddress] = useState('');
   const [contractorLatitude, setContractorLatitude] = useState<number | null>(null);
   const [contractorLongitude, setContractorLongitude] = useState<number | null>(null);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [notificationRadius, setNotificationRadius] = useState(50);
-  const [loading, setLoading] = useState(false);
 
+  // Load settings from Redux on mount and sync local form state
   useEffect(() => {
-    if (isContractor) {
-      loadContractorSettings();
-    }
-  }, [isContractor]);
+    dispatch(fetchProfileSettings());
+  }, [dispatch]);
 
-  const loadContractorSettings = async () => {
-    try {
-      const settings = await contractorService.getSettings();
-      setNotificationEnabled(settings.notificationEnabled ?? true);
-      setNotificationRadius(settings.notificationRadius ?? 50);
-      if (settings.contractorAddress) {
-        setContractorAddress(settings.contractorAddress.address);
-        setContractorLatitude(settings.contractorAddress.coordinates.latitude);
-        setContractorLongitude(settings.contractorAddress.coordinates.longitude);
+  // Sync local form state with Redux state when settings are loaded/updated
+  useEffect(() => {
+    if (profileSettings) {
+      setNotificationEnabled(profileSettings.notificationEnabled);
+      if (isContractor) {
+        setNotificationRadius(profileSettings.notificationRadius ?? 50);
+        if (profileSettings.contractorAddress) {
+          setContractorAddress(profileSettings.contractorAddress.address);
+          setContractorLatitude(profileSettings.contractorAddress.coordinates.latitude);
+          setContractorLongitude(profileSettings.contractorAddress.coordinates.longitude);
+        } else {
+          // Reset if no address in settings
+          setContractorAddress('');
+          setContractorLatitude(null);
+          setContractorLongitude(null);
+        }
       }
-    } catch (error: any) {
-      // Silently fail
     }
-  };
+  }, [profileSettings, isContractor]);
 
   const saveContractorSettings = async () => {
     if (!contractorLatitude || !contractorLongitude) {
@@ -61,24 +69,26 @@ export default function ProfileScreen() {
       return;
     }
 
-    setLoading(true);
     try {
-      await contractorService.updateSettings({
-        contractorAddress: {
+      const updateData: any = {
+        notificationEnabled,
+      };
+      
+      if (isContractor) {
+        updateData.contractorAddress = {
           address: contractorAddress,
           coordinates: {
             latitude: contractorLatitude,
             longitude: contractorLongitude,
           },
-        },
-        notificationEnabled,
-        notificationRadius,
-      });
+        };
+        updateData.notificationRadius = notificationRadius;
+      }
+
+      await dispatch(updateProfileSettings(updateData)).unwrap();
       notificationService.success('Success', 'Settings saved successfully');
     } catch (error: any) {
       notificationService.error('Error', error || 'Failed to save settings');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -151,7 +161,7 @@ export default function ProfileScreen() {
                 placeholderTextColor={colors.icon}
                 value={contractorAddress}
                 onChangeText={setContractorAddress}
-                editable={!loading}
+                editable={!isSaving}
               />
               <LocationPicker
                 address={contractorAddress}
@@ -180,7 +190,7 @@ export default function ProfileScreen() {
                   onValueChange={setNotificationEnabled}
                   trackColor={{ false: '#767577', true: colors.tint }}
                   thumbColor="#FFFFFF"
-                  disabled={loading}
+                  disabled={isSaving}
                 />
               </View>
             </View>
@@ -200,7 +210,7 @@ export default function ProfileScreen() {
                       { borderColor: colors.tint },
                     ]}
                     onPress={() => setNotificationRadius(r)}
-                    disabled={loading}>
+                    disabled={isSaving}>
                     <Text
                       style={[
                         styles.radiusButtonText,
@@ -216,9 +226,9 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: colors.tint }]}
               onPress={saveContractorSettings}
-              disabled={loading}>
+              disabled={isSaving}>
               <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : 'Save Settings'}
+                {isSaving ? 'Saving...' : 'Save Settings'}
               </Text>
             </TouchableOpacity>
           </View>

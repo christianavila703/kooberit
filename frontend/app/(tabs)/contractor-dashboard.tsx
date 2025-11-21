@@ -10,18 +10,20 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
-  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setRadius,
   toggleCategory,
-  applyFilters,
   resetFilters,
   resetToApplied,
   setAppliedFilters,
 } from '@/store/slices/contractorFilterSlice';
+import {
+  fetchProfileSettings,
+  updateProfileSettings,
+} from '@/store/slices/profileSlice';
 import contractorService from '@/services/contractor';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -64,13 +66,13 @@ export default function ContractorDashboard() {
   const { radius, selectedCategories, appliedRadius, appliedCategories } = useAppSelector(
     (state) => state.contractorFilter
   );
+  const { settings: profileSettings, isSaving } = useAppSelector((state) => state.profile);
 
   const [jobPosts, setJobPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -84,9 +86,10 @@ export default function ContractorDashboard() {
   } | null>(null);
 
   useEffect(() => {
-    loadSettings();
+    // Load profile settings from Redux
+    dispatch(fetchProfileSettings());
     loadJobPosts(true);
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -97,17 +100,7 @@ export default function ContractorDashboard() {
       loadJobPosts(true);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const loadSettings = async () => {
-    try {
-      const settings = await contractorService.getSettings();
-      setNotificationEnabled(settings.notificationEnabled ?? true);
-      // Don't auto-apply radius from settings - let user choose
-    } catch (error: any) {
-      // Silently fail
-    }
-  };
+  }, [searchQuery, dispatch]);
 
   const loadJobPosts = async (reset: boolean = false) => {
     if (reset) {
@@ -223,13 +216,16 @@ export default function ContractorDashboard() {
   };
 
   const handleNotificationToggle = async (value: boolean) => {
-    setNotificationEnabled(value);
+    // Prevent multiple simultaneous toggles
+    if (isSaving) return;
+
     try {
-      await contractorService.updateSettings({ notificationEnabled: value });
+      await dispatch(updateProfileSettings({ notificationEnabled: value })).unwrap();
       notificationService.success('Success', `Notifications ${value ? 'enabled' : 'disabled'}`);
     } catch (error: any) {
-      notificationService.error('Error', 'Failed to update notification settings');
-      setNotificationEnabled(!value); // Revert on error
+      notificationService.error('Error', error || 'Failed to update notification settings');
+      // Refetch settings to revert to correct state on error
+      dispatch(fetchProfileSettings());
     }
   };
 
@@ -241,11 +237,6 @@ export default function ContractorDashboard() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
-        translucent={false}
-      />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View>
@@ -271,10 +262,11 @@ export default function ContractorDashboard() {
             </Text>
           </View>
           <Switch
-            value={notificationEnabled}
+            value={profileSettings.notificationEnabled}
             onValueChange={handleNotificationToggle}
             trackColor={{ false: '#767577', true: colors.tint }}
             thumbColor="#FFFFFF"
+            disabled={isSaving}
           />
         </View>
       </View>

@@ -31,8 +31,10 @@ const endpoints = {
     },
     contractor: {
         getJobBoard: '/contractor/job-board',
-        getSettings: '/contractor/settings',
-        updateSettings: '/contractor/settings',
+    },
+    profile: {
+        getSettings: '/profile/settings',
+        updateSettings: '/profile/settings',
     },
     upload: {
         chatFile: '/upload/chat-file',

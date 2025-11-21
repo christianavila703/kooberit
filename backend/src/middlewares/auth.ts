@@ -44,3 +44,36 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
  */
 export const isAuthenticated = authenticate;
 
+/**
+ * Middleware to authorize user based on roles
+ */
+export const authorize = (allowedRoles: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+      }
+
+      if (!allowedRoles.includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Insufficient permissions.',
+        });
+      }
+
+      next();
+    } catch (error: any) {
+      logger.error('Authorization error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Authorization failed',
+      });
+    }
+  };
+};
+

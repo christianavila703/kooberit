@@ -148,7 +148,39 @@ class AuthService {
 
     // Update password
     await userService.updateUser(userId, { password: hashedPassword });
+  }
 
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(email: string): Promise<string> {
+    const user = await userService.findUserByEmail(email);
+    if (!user) {
+      // Don't reveal if user exists for security
+      return 'reset_token_placeholder';
+    }
+
+    // Generate reset token (in production, use crypto.randomBytes)
+    const resetToken = `reset_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    
+    // Store reset token (in production, use Redis or database with expiry)
+    // For now, we'll just return it - in production, store it with expiry
+    return resetToken;
+  }
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // In production, verify token from storage and check expiry
+    // For now, basic validation
+    if (!token || !token.startsWith('reset_')) {
+      throw new CustomError('Invalid reset token', 400);
+    }
+
+    // Extract email from token (in production, store email with token)
+    // This is a simplified version - in production, use proper token storage
+    throw new CustomError('Token verification not fully implemented. Use change password instead.', 501);
   }
 }
 

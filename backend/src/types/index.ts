@@ -82,6 +82,15 @@ export interface IUserAttributes {
   role: UserRole;
   status: UserAllowStatus;
   lastLogin?: Date;
+  contractorAddress?: {
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  notificationEnabled?: boolean;
+  notificationRadius?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -95,3 +104,96 @@ export interface IUserPaginationOptions extends IPaginationOptions {
 }
 
 export type { UserRole, UserAllowStatus } from '@enums';
+
+/**
+ * Job Post types
+ */
+export type JobPostStatus = 'active' | 'closed';
+
+export interface IJobPostAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  description: string;
+  categories: string[];
+  contractorLimit: number;
+  location: {
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  status: JobPostStatus;
+  contractorContactsCount: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IJobPostCreationAttributes = Omit<IJobPostAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contractorContactsCount'>;
+export type IJobPostDocument = IJobPostAttributes & Document<Types.ObjectId>;
+
+/**
+ * Contractor Contact types
+ */
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+export interface IContractorContactAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  jobPostId: Types.ObjectId;
+  contractorId: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  paymentAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentTransactionId?: string;
+  chatRoomId?: Types.ObjectId;
+  contactInfoRevealed: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IContractorContactCreationAttributes = Omit<IContractorContactAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contactInfoRevealed'>;
+export type IContractorContactDocument = IContractorContactAttributes & Document<Types.ObjectId>;
+
+/**
+ * Chat types
+ */
+export interface IChatAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  jobPostId: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  contractorId: Types.ObjectId;
+  lastMessage?: string;
+  lastMessageAt?: Date;
+  homeownerUnreadCount: number;
+  contractorUnreadCount: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IChatCreationAttributes = Omit<IChatAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'homeownerUnreadCount' | 'contractorUnreadCount'>;
+export type IChatDocument = IChatAttributes & Document<Types.ObjectId>;
+
+/**
+ * Message types
+ */
+export type MessageType = 'text' | 'image' | 'file';
+
+export interface IMessageAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  chatId: Types.ObjectId;
+  senderId: Types.ObjectId;
+  content: string;
+  type: MessageType;
+  fileUrl?: string;
+  isRead: boolean;
+  readAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IMessageCreationAttributes = Omit<IMessageAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'isRead'>;
+export type IMessageDocument = IMessageAttributes & Document<Types.ObjectId>;

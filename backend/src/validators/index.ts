@@ -2,6 +2,8 @@ import Joi from 'joi';
 
 export * from './authSchema';
 export * from './userSchema';
+export * from './jobPostSchema';
+export * from './chatSchema';
 
 /**
  * Global

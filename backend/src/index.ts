@@ -2,12 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
 import logger from '@/utils/logger';
 import { CORS_ALLOWED_ORIGINS, SERVER_PORT } from '@/config/constants';
 import { connectDatabase } from '@/config/database';
 import routes from '@/routes';
+import socketService from '@/socket/socket';
 
 const app = express();
+const httpServer = createServer(app);
 
 app.use(cookieParser());
 
@@ -28,6 +31,9 @@ app.use(cors(corsOptions));
 // API routes
 app.use('/api', routes);
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Serve frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -43,8 +49,12 @@ async function initializeServer() {
         await connectDatabase();
         logger.info('Database connected successfully');
         
+        // Initialize Socket.io
+        socketService.initialize(httpServer);
+        logger.info('Socket.io initialized');
+        
         // Start server
-        app.listen(SERVER_PORT, () => {
+        httpServer.listen(SERVER_PORT, () => {
           logger.info(`Server is running at http://localhost:${SERVER_PORT}`);
         });
     } catch (error) {

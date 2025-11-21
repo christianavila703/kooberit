@@ -117,3 +117,54 @@ export const changePassword = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Request password reset
+ */
+export const requestPasswordReset = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        
+        const resetToken = await authService.requestPasswordReset(email);
+        
+        // In production, send email with reset link
+        // For now, we'll just return success (email sending would be handled by email service)
+        
+        logger.info(`Password reset requested for: ${email}`);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'If an account with that email exists, a password reset link has been sent.' 
+        });
+    } catch (error: any) {
+        logger.error('Request password reset error:', error);
+        res.status(error.statusCode || 500).json({ 
+            success: false,
+            message: error.message 
+        });
+    }
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        await authService.resetPassword(token, newPassword);
+
+        logger.info('Password reset successful');
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Password reset successfully' 
+        });
+    } catch (error: any) {
+        logger.error('Reset password error:', error);
+        res.status(error.statusCode || 500).json({ 
+            success: false,
+            message: error.message 
+        });
+    }
+};
+

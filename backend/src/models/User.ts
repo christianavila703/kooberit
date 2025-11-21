@@ -16,7 +16,6 @@ const userSchema = new Schema<IUserDocument>(
       lowercase: true,
       trim: true,
       maxlength: 255,
-      index: true,
     },
     password: {
       type: String,
@@ -54,13 +53,40 @@ const userSchema = new Schema<IUserDocument>(
     lastLogin: {
       type: Date,
     },
+    // Contractor-specific fields
+    contractorAddress: {
+      address: {
+        type: String,
+        trim: true,
+      },
+      coordinates: {
+        latitude: {
+          type: Number,
+        },
+        longitude: {
+          type: Number,
+        },
+      },
+    },
+    notificationEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    notificationRadius: {
+      type: Number,
+      default: 50, // km
+      min: 1,
+      max: 500,
+    },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 
-userSchema.index({ email: 1 }, { unique: true });
+// Email index is already created by unique: true, no need for duplicate
 
 const User = model<IUserDocument>('User', userSchema);
 

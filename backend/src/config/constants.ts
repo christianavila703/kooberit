@@ -20,3 +20,12 @@ export const CORS_ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
       .map((origin) => origin.trim())
       .filter(Boolean)
   : '*';
+
+// SendGrid configuration
+export const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
+export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@kooberit.com';
+
+// Stripe configuration
+export const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+export const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
+export const PAYMENT_AMOUNT = 1999; // $19.99 in cents

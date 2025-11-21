@@ -1,11 +1,19 @@
 import User from './User';
+import JobPost from './JobPost';
+import ContractorContact from './ContractorContact';
+import Chat from './Chat';
+import Message from './Message';
 
 // Define associations here if needed
 
-export { User };
+export { User, JobPost, ContractorContact, Chat, Message };
 
 // Export a default object with all models
 export default {
   User,
+  JobPost,
+  ContractorContact,
+  Chat,
+  Message,
 };
 

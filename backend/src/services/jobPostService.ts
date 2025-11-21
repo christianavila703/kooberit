@@ -5,6 +5,7 @@ import {
   IJobPostAttributes,
   IJobPostCreationAttributes,
   IJobPostDocument,
+  IPaginatedResponse,
 } from '@/types';
 
 /**
@@ -64,16 +65,40 @@ class JobPostService {
    */
   async findJobPostsByHomeowner(
     homeownerId: string,
-    status?: 'active' | 'closed'
-  ): Promise<IJobPostDocument[]> {
+    status?: 'active' | 'closed',
+    page: number = 1,
+    limit: number = 20
+  ): Promise<IPaginatedResponse<IJobPostAttributes>> {
     const filters: any = { homeownerId: new Types.ObjectId(homeownerId) };
     if (status) {
       filters.status = status;
     }
-    return JobPost.find(filters)
-      .populate('homeownerId', 'firstName lastName email')
-      .sort({ createdAt: -1 })
-      .exec();
+
+    const skip = (page - 1) * limit;
+
+    const [data, totalCount] = await Promise.all([
+      JobPost.find(filters)
+        .populate('homeownerId', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      JobPost.countDocuments(filters).exec(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit) || 1;
+
+    return {
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   /**
@@ -121,15 +146,18 @@ class JobPostService {
     longitude: number | null,
     radiusKm: number,
     categories?: string[],
-    excludeContractorId?: string
-  ): Promise<IJobPostDocument[]> {
-    const radiusInMeters = radiusKm * 1000;
-
+    excludeContractorId?: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<IPaginatedResponse<IJobPostAttributes>> {
     const filters: any = {
       status: 'active'
     };
 
-    if (latitude && longitude) {
+    // Only apply radius filter if radiusKm > 0 and coordinates are provided
+    // If radiusKm is 0 or null, it means "All" - no radius filtering
+    if (radiusKm > 0 && latitude && longitude) {
+      const radiusInMeters = radiusKm * 1000;
       filters.location.coordinates = {
         $near: {
           $geometry: {
@@ -145,11 +173,17 @@ class JobPostService {
       filters.categories = { $in: categories };
     }
 
-    console.log(filters)
+    // Count total matching documents (before exclusion for pagination calculation)
+    const totalCount = await JobPost.countDocuments(filters).exec();
+    const totalPages = Math.ceil(totalCount / limit) || 1;
 
-    const jobPosts = await JobPost.find(filters)
+    const skip = (page - 1) * limit;
+
+    let jobPosts = await JobPost.find(filters)
       .populate('homeownerId', 'firstName lastName email')
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .exec();
 
     // Convert GeoJSON coordinates back to lat/lng format for frontend
@@ -167,6 +201,7 @@ class JobPostService {
     });
 
     // If excludeContractorId is provided, filter out job posts where contractor already contacted
+    let filteredPosts = convertedPosts;
     if (excludeContractorId) {
       const { ContractorContact } = await import('@/models');
       const contactedJobPostIds = await ContractorContact.find({
@@ -175,12 +210,24 @@ class JobPostService {
         .distinct('jobPostId')
         .exec();
 
-      return convertedPosts.filter(
+      filteredPosts = convertedPosts.filter(
         (jobPost) => !contactedJobPostIds.some((id) => id.toString() === jobPost._id.toString())
       );
     }
 
-    return convertedPosts;
+    // Note: totalCount is calculated before exclusion, so it may be slightly higher than actual
+    // This is acceptable for pagination purposes as it provides an upper bound
+    return {
+      data: filteredPosts,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   /**

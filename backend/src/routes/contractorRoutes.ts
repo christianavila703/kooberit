@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import * as contractorController from '@/controllers/contractorController';
+import { validate } from '@/middlewares/validate';
+import { fetchJobBoardSchema } from '@/validators';
 
 const router = Router();
 
@@ -8,7 +10,7 @@ const router = Router();
  * @desc    Get job board for contractor (filtered by radius and categories)
  * @access  Private (Contractor)
  */
-router.get('/job-board', contractorController.getJobBoard);
+router.get('/job-board', validate(fetchJobBoardSchema, 'query'), contractorController.getJobBoard);
 
 /**
  * @route   GET /api/contractor/settings

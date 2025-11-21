@@ -121,12 +121,18 @@ export const getHomeownerJobPosts = async (req: Request, res: Response) => {
     }
 
     const status = req.query.status as 'active' | 'closed' | undefined;
-    const jobPosts = await jobPostService.findJobPostsByHomeowner(user.id, status);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const { data, pagination } = await jobPostService.findJobPostsByHomeowner(user.id, status, page, limit);
 
     return res.status(200).json({
       success: true,
       message: 'Job posts retrieved successfully',
-      data: jobPosts,
+      data: {
+        jobPosts: data,
+        pagination: pagination,
+      },
     });
   } catch (error: any) {
     logger.error('Get homeowner job posts error:', error);

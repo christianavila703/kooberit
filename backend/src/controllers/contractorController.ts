@@ -31,26 +31,33 @@ export const getJobBoard = async (req: Request, res: Response) => {
     const latitude = contractor.contractorAddress.coordinates.latitude || null;
     const longitude = contractor.contractorAddress.coordinates.longitude || null;
 
+    let { radius = 0, categories, search, page, limit } = req.query;
+    if (!categories) {
+      categories = req.query['categories[]'];
+    }
 
-    const { radius, categories, search } = req.query;
-    const radiusKm = radius ? Number(radius) : contractor.notificationRadius || 50;
+    const radiusKm = Number(radius) || 0;
     const categoryFilters = categories
       ? (Array.isArray(categories) ? categories : [categories]).map((c) => String(c))
       : undefined;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
 
-    const jobPosts = await jobPostService.findJobPostsWithinRadius(
+    const { data, pagination } = await jobPostService.findJobPostsWithinRadius(
       latitude,
       longitude,
       radiusKm,
       categoryFilters,
-      user.id
+      user.id,
+      pageNum,
+      limitNum
     );
 
     // Filter by search keyword if provided
-    let filteredPosts = jobPosts;
+    let filteredPosts = data;
     if (search) {
       const searchLower = String(search).toLowerCase();
-      filteredPosts = jobPosts.filter(
+      filteredPosts = data.filter(
         (post) =>
           post.description.toLowerCase().includes(searchLower) ||
           post.categories.some((cat) => cat.toLowerCase().includes(searchLower))
@@ -60,7 +67,10 @@ export const getJobBoard = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'Job posts retrieved successfully',
-      data: filteredPosts,
+      data: {
+        jobPosts: filteredPosts,
+        pagination: pagination,
+      },
     });
   } catch (error: any) {
     logger.error('Get job board error:', error);

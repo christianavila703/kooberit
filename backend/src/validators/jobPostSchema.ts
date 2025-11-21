@@ -152,3 +152,97 @@ export const updateJobPostSchema = Joi.object({
   }).optional(),
 });
 
+/**
+ * Validation schema for pagination query parameters (homeowner job posts)
+ */
+export const fetchHomeownerJobPostsSchema = Joi.object({
+  status: Joi.string()
+    .valid('active', 'closed')
+    .optional()
+    .lowercase()
+    .trim()
+    .messages({
+      'any.only': 'Status must be either active or closed',
+    }),
+  page: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .default(1)
+    .messages({
+      'number.base': 'Page must be a number',
+      'number.integer': 'Page must be an integer',
+      'number.min': 'Page must be greater than 0',
+    }),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(100)
+    .optional()
+    .default(20)
+    .messages({
+      'number.base': 'Limit must be a number',
+      'number.integer': 'Limit must be an integer',
+      'number.min': 'Limit must be at least 1',
+      'number.max': 'Limit must not exceed 100',
+    }),
+});
+
+/**
+ * Validation schema for pagination query parameters (contractor job board)
+ */
+export const fetchJobBoardSchema = Joi.object({
+  radius: Joi.alternatives()
+    .try(
+      Joi.number().integer().min(1).max(1000),
+      Joi.string().valid('all', 'null').allow(null, '')
+    )
+    .optional()
+    .messages({
+      'number.base': 'Radius must be a number',
+      'number.integer': 'Radius must be an integer',
+      'number.min': 'Radius must be at least 1',
+      'number.max': 'Radius must not exceed 1000',
+      'any.only': 'Radius must be a number or "all"',
+    }),
+  'categories[]': Joi.alternatives()
+    .try(
+      Joi.array().items(Joi.string().valid(...CONSTRUCTION_CATEGORIES)),
+      Joi.string().valid(...CONSTRUCTION_CATEGORIES)
+    )
+    .optional()
+    .messages({
+      'any.only': 'Category must be one of the valid construction categories',
+    }),
+  search: Joi.string()
+    .allow('')
+    .optional()
+    .trim()
+    .max(255)
+    .messages({
+      'string.max': 'Search term must not exceed 255 characters',
+    }),
+  page: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .default(1)
+    .messages({
+      'number.base': 'Page must be a number',
+      'number.integer': 'Page must be an integer',
+      'number.min': 'Page must be greater than 0',
+    }),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(100)
+    .optional()
+    .default(20)
+    .messages({
+      'number.base': 'Limit must be a number',
+      'number.integer': 'Limit must be an integer',
+      'number.min': 'Limit must be at least 1',
+      'number.max': 'Limit must not exceed 100',
+    }),
+});
+

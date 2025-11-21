@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as jobPostController from '@/controllers/jobPostController';
 import { validate } from '@/middlewares/validate';
-import { createJobPostSchema, updateJobPostSchema } from '@/validators';
+import { createJobPostSchema, updateJobPostSchema, fetchHomeownerJobPostsSchema } from '@/validators';
 
 const router = Router();
 
@@ -17,7 +17,7 @@ router.post('/', validate(createJobPostSchema, 'body'), jobPostController.create
  * @desc    Get all job posts for homeowner
  * @access  Private (Homeowner)
  */
-router.get('/homeowner', jobPostController.getHomeownerJobPosts);
+router.get('/homeowner', validate(fetchHomeownerJobPostsSchema, 'query'), jobPostController.getHomeownerJobPosts);
 
 /**
  * @route   GET /api/job-posts/:id

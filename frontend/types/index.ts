@@ -32,6 +32,15 @@ export interface IUser {
   lastName: string;
   role: string;
   status: string;
+  contractorAddress?: {
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  notificationEnabled?: boolean;
+  notificationRadius?: number;
 }
 
 export interface IAuthResponse {
@@ -64,5 +73,153 @@ export interface INotificationOptions {
   position?: 'top' | 'bottom';
   visibilityTime?: number;
   autoHide?: boolean;
+}
+
+// Job Post Types
+export type IJobPostStatus = 'active' | 'closed';
+
+export interface IJobPost {
+  id: string;
+  homeownerId: string;
+  description: string;
+  categories: string[];
+  contractorLimit: number;
+  location: {
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  status: IJobPostStatus;
+  contractorContactsCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+  homeowner?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface ICreateJobPostRequest {
+  description: string;
+  categories: string[];
+  contractorLimit: number;
+  location: {
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+}
+
+export interface IUpdateJobPostRequest {
+  description?: string;
+  categories?: string[];
+  contractorLimit?: number;
+  location?: {
+    address?: string;
+    coordinates?: {
+      latitude?: number;
+      longitude?: number;
+    };
+  };
+}
+
+// Contractor Contact Types
+export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+export interface IContractorContact {
+  id: string;
+  jobPostId: string;
+  contractorId: string;
+  homeownerId: string;
+  paymentAmount: number;
+  paymentStatus: IPaymentStatus;
+  paymentTransactionId?: string;
+  chatRoomId?: string;
+  contactInfoRevealed: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  contractor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  jobPost?: {
+    id: string;
+    description: string;
+    categories: string[];
+    status: IJobPostStatus;
+  };
+}
+
+export interface ICreateContractorContactRequest {
+  jobPostId: string;
+  paymentTransactionId?: string;
+}
+
+// Chat Types
+export interface IChat {
+  id: string;
+  jobPostId: string;
+  homeownerId: string;
+  contractorId: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  homeownerUnreadCount: number;
+  contractorUnreadCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+  homeowner?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  contractor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  jobPost?: {
+    id: string;
+    description: string;
+    categories: string[];
+    status: IJobPostStatus;
+  };
+}
+
+// Message Types
+export type IMessageType = 'text' | 'image' | 'file';
+
+export interface IMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string;
+  type: IMessageType;
+  fileUrl?: string;
+  isRead: boolean;
+  readAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  sender?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface ISendMessageRequest {
+  content: string;
+  type?: IMessageType;
+  fileUrl?: string;
 }
 

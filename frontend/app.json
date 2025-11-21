@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,6 +39,14 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Kooberit to use your location to find nearby job posts.",
+          "locationAlwaysPermission": "Allow Kooberit to use your location to find nearby job posts.",
+          "locationWhenInUsePermission": "Allow Kooberit to use your location to find nearby job posts."
         }
       ]
     ],

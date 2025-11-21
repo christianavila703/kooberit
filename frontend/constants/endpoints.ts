@@ -3,6 +3,43 @@ const endpoints = {
         login: '/auth/login',
         register: '/auth/register',
         refresh: '/auth/refresh',
+        changePassword: '/auth/change-password',
+        forgotPassword: '/auth/forgot-password',
+        resetPassword: '/auth/reset-password',
+    },
+    jobPosts: {
+        create: '/job-posts',
+        getHomeowner: '/job-posts/homeowner',
+        getById: (id: string) => `/job-posts/${id}`,
+        update: (id: string) => `/job-posts/${id}`,
+        close: (id: string) => `/job-posts/${id}/close`,
+        delete: (id: string) => `/job-posts/${id}`,
+    },
+    contractorContacts: {
+        getByJobPost: (jobPostId: string) => `/contractor-contacts/job-post/${jobPostId}`,
+        getHomeowner: '/contractor-contacts/homeowner',
+        checkContact: (jobPostId: string) => `/contractor-contacts/check/${jobPostId}`,
+        create: '/contractor-contacts',
+    },
+    chats: {
+        getAll: '/chats',
+        getById: (id: string) => `/chats/${id}`,
+        getMessages: (chatId: string) => `/chats/${chatId}/messages`,
+        sendMessage: (chatId: string) => `/chats/${chatId}/messages`,
+        markAsRead: (chatId: string) => `/chats/${chatId}/read`,
+        getUnreadCount: '/chats/unread-count',
+    },
+    contractor: {
+        getJobBoard: '/contractor/job-board',
+        getSettings: '/contractor/settings',
+        updateSettings: '/contractor/settings',
+    },
+    upload: {
+        chatFile: '/upload/chat-file',
+    },
+    payments: {
+        process: '/payments/process',
+        getStatus: (paymentIntentId: string) => `/payments/status/${paymentIntentId}`,
     },
 }
 

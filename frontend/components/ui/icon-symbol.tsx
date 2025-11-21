@@ -18,6 +18,41 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'message.fill': 'message',
+  'person.fill': 'person',
+  'list.bullet': 'list',
+  'arrow.left': 'arrow-back',
+  'arrow.up.circle.fill': 'arrow-upward',
+  'arrow.up': 'arrow-upward',
+  'photo': 'photo',
+  'checkmark.circle.fill': 'check-circle',
+  'checkmark': 'check',
+  'chevron.left': 'chevron-left',
+  'plus.circle.fill': 'add-circle',
+  'plus': 'add',
+  'minus': 'remove',
+  'location.fill': 'location-on',
+  'person.2.fill': 'people',
+  'person.2': 'people',
+  'pencil': 'edit',
+  'xmark.circle.fill': 'cancel',
+  'trash.fill': 'delete',
+  'person.crop.circle.badge.questionmark': 'help-outline',
+  'bubble.left.and.bubble.right': 'chat-bubble-outline',
+  'message': 'message',
+  'person.circle.fill': 'account-circle',
+  'power': 'power-settings-new',
+  'lock.fill': 'lock',
+  'doc.text.magnifyingglass': 'description',
+  'doc.text': 'description',
+  'doc.text.fill': 'description',
+  'slider.horizontal.3': 'tune',
+  'bell.fill': 'notifications',
+  'magnifyingglass': 'search',
+  'creditcard.fill': 'credit-card',
+  'hand.raised.fill': 'privacy-tip',
+  'map': 'map',
+  'map.fill': 'map',
 } as IconMapping;
 
 /**
@@ -37,5 +72,10 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const iconName = MAPPING[name];
+  if (!iconName) {
+    console.warn(`Icon "${name}" not found in mapping`);
+    return <MaterialIcons color={color} size={size} name="help-outline" style={style} />;
+  }
+  return <MaterialIcons color={color} size={size} name={iconName} style={style} />;
 }

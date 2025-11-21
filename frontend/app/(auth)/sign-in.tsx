@@ -196,6 +196,16 @@ export default function SignInScreen() {
               )}
             </TouchableOpacity>
 
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              onPress={() => router.push('/forgot-password' as any)}
+              disabled={isLoading}
+              style={styles.forgotPasswordContainer}>
+              <Text style={[styles.forgotPasswordText, { color: colors.tint }]}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+
             {/* Sign Up Link */}
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: colors.icon }]}>
@@ -304,6 +314,15 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   footer: {

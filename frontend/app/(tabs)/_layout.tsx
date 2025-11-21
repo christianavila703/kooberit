@@ -23,10 +23,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}
-      initialRouteName={isHomeowner ? 'index' : (isContractor ? 'contractor-dashboard' : 'index')}>
+      initialRouteName={isHomeowner ? 'homeowner-dashboard' : 'contractor-dashboard'}>
       {/* Homeowner Dashboard - only show for homeowners */}
       <Tabs.Screen
-        name="index"
+        name="homeowner-dashboard"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
@@ -59,6 +59,15 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'index',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          href: null,
         }}
       />
     </Tabs>

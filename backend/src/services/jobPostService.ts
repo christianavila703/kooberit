@@ -157,14 +157,16 @@ class JobPostService {
     // Only apply radius filter if radiusKm > 0 and coordinates are provided
     // If radiusKm is 0 or null, it means "All" - no radius filtering
     if (radiusKm > 0 && latitude && longitude) {
-      const radiusInMeters = radiusKm * 1000;
-      filters.location.coordinates = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [longitude, latitude],
-          },
-          $maxDistance: radiusInMeters,
+      // Convert radius from km to radians (Earth's radius in km is ~6371)
+      const radiusInRadians = radiusKm / 6371;
+      // Use $geoWithin with $centerSphere to allow custom sorting
+      // $centerSphere uses [longitude, latitude] and radius in radians
+      filters['location.coordinates'] = {
+        $geoWithin: {
+          $centerSphere: [
+            [longitude, latitude],
+            radiusInRadians,
+          ],
         },
       };
     }
@@ -185,6 +187,8 @@ class JobPostService {
       .skip(skip)
       .limit(limit)
       .exec();
+
+      console.log(jobPosts)
 
     // Convert GeoJSON coordinates back to lat/lng format for frontend
     const convertedPosts = jobPosts.map((jobPost) => {

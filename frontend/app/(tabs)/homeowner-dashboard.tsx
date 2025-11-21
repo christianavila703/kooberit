@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -38,24 +38,58 @@ function HomeownerDashboard() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [pagination, setPagination] = useState<{
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    loadJobPosts();
+    loadJobPosts(true);
   }, []);
 
-  const loadJobPosts = async () => {
+  const loadJobPosts = async (reset: boolean = false) => {
+    if (reset) {
+      setPage(1);
+      setHasMore(true);
+    } else {
+      if (!hasMore || loadingMore) return;
+      setLoadingMore(true);
+    }
+
     try {
-      await dispatch(fetchHomeownerJobPosts()).unwrap();
+      const currentPage = reset ? 1 : page;
+      const result = await dispatch(
+        fetchHomeownerJobPosts({ page: currentPage, limit: 20, append: !reset })
+      ).unwrap();
+      
+      setPagination(result.pagination);
+      setHasMore(result.pagination.hasNextPage);
+      setPage(result.pagination.currentPage + 1);
     } catch (error: any) {
       notificationService.error('Error', error || 'Failed to load job posts');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadJobPosts();
+    await loadJobPosts(true);
     setRefreshing(false);
   };
+
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !isLoading) {
+      loadJobPosts(false);
+    }
+  }, [loadingMore, hasMore, isLoading]);
 
   const handleCreateJobPost = () => {
     router.push('/create-job-post' as any);
@@ -96,95 +130,106 @@ function HomeownerDashboard() {
       </View>
 
       {/* Job Posts List */}
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        data={jobPosts}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: jobPost }) => (
+          <TouchableOpacity
+            style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
+            onPress={() => handleJobPostPress(jobPost.id)}
+            activeOpacity={0.7}>
+            <View style={styles.jobCardHeader}>
+              <View style={styles.jobCardTitleRow}>
+                <Text
+                  style={[styles.jobCardTitle, { color: colors.text }]}
+                  numberOfLines={2}>
+                  {jobPost.description.substring(0, 60)}
+                  {jobPost.description.length > 60 ? '...' : ''}
+                </Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor:
+                        jobPost.status === 'active' ? '#4CAF50' : '#9E9E9E',
+                    },
+                  ]}>
+                  <Text style={styles.statusText}>
+                    {jobPost.status === 'active' ? 'Active' : 'Closed'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.jobCardBody}>
+              <View style={styles.categoriesContainer}>
+                {jobPost.categories.slice(0, 3).map((category, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.categoryTag,
+                      { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
+                    ]}>
+                    <Text style={[styles.categoryText, { color: colors.text }]}>
+                      {category}
+                    </Text>
+                  </View>
+                ))}
+                {jobPost.categories.length > 3 && (
+                  <Text style={[styles.moreCategories, { color: colors.icon }]}>
+                    +{jobPost.categories.length - 3}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.jobCardFooter}>
+                <View style={styles.contactInfo}>
+                  <IconSymbol name="person.2.fill" size={16} color={colors.icon} />
+                  <Text style={[styles.contactText, { color: colors.icon }]}>
+                    {jobPost.contractorContactsCount} / {jobPost.contractorLimit} contractors
+                  </Text>
+                </View>
+                <Text style={[styles.dateText, { color: colors.icon }]}>
+                  {jobPost.createdAt
+                    ? new Date(jobPost.createdAt).toLocaleDateString()
+                    : ''}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.tint} />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <IconSymbol name="doc.text" size={64} color={colors.icon} />
+              <Text style={[styles.emptyText, { color: colors.icon }]}>
+                No job posts yet
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.icon }]}>
+                Create your first job post to get started
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.loadingMoreContainer}>
+              <ActivityIndicator size="small" color={colors.tint} />
+            </View>
+          ) : null
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} />
-        }>
-        {isLoading && jobPosts.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.tint} />
-          </View>
-        ) : jobPosts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="doc.text" size={64} color={colors.icon} />
-            <Text style={[styles.emptyText, { color: colors.icon }]}>
-              No job posts yet
-            </Text>
-            <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-              Create your first job post to get started
-            </Text>
-          </View>
-        ) : (
-          jobPosts.map((jobPost) => (
-            <TouchableOpacity
-              key={jobPost.id}
-              style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-              onPress={() => handleJobPostPress(jobPost.id)}
-              activeOpacity={0.7}>
-              <View style={styles.jobCardHeader}>
-                <View style={styles.jobCardTitleRow}>
-                  <Text
-                    style={[styles.jobCardTitle, { color: colors.text }]}
-                    numberOfLines={2}>
-                    {jobPost.description.substring(0, 60)}
-                    {jobPost.description.length > 60 ? '...' : ''}
-                  </Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor:
-                          jobPost.status === 'active' ? '#4CAF50' : '#9E9E9E',
-                      },
-                    ]}>
-                    <Text style={styles.statusText}>
-                      {jobPost.status === 'active' ? 'Active' : 'Closed'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.jobCardBody}>
-                <View style={styles.categoriesContainer}>
-                  {jobPost.categories.slice(0, 3).map((category, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.categoryTag,
-                        { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
-                      ]}>
-                      <Text style={[styles.categoryText, { color: colors.text }]}>
-                        {category}
-                      </Text>
-                    </View>
-                  ))}
-                  {jobPost.categories.length > 3 && (
-                    <Text style={[styles.moreCategories, { color: colors.icon }]}>
-                      +{jobPost.categories.length - 3}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.jobCardFooter}>
-                  <View style={styles.contactInfo}>
-                    <IconSymbol name="person.2.fill" size={16} color={colors.icon} />
-                    <Text style={[styles.contactText, { color: colors.icon }]}>
-                      {jobPost.contractorContactsCount} / {jobPost.contractorLimit} contractors
-                    </Text>
-                  </View>
-                  <Text style={[styles.dateText, { color: colors.icon }]}>
-                    {jobPost.createdAt
-                      ? new Date(jobPost.createdAt).toLocaleDateString()
-                      : ''}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+        }
+      />
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -240,6 +285,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+    flexGrow: 1,
+  },
+  loadingMoreContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   loadingContainer: {
     paddingVertical: 40,

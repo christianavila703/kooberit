@@ -25,10 +25,13 @@ const initialState: IJobPostState = {
  */
 export const fetchHomeownerJobPosts = createAsyncThunk(
   'jobPost/fetchHomeowner',
-  async (status?: 'active' | 'closed', { rejectWithValue }) => {
+  async (
+    { status, page, limit, append = false }: { status?: 'active' | 'closed'; page?: number; limit?: number; append?: boolean },
+    { rejectWithValue }
+  ) => {
     try {
-      const jobPosts = await jobPostService.getHomeownerJobPosts(status);
-      return jobPosts;
+      const result = await jobPostService.getHomeownerJobPosts(status, page, limit);
+      return { ...result, append };
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch job posts');
     }
@@ -130,7 +133,15 @@ const jobPostSlice = createSlice({
       })
       .addCase(fetchHomeownerJobPosts.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.jobPosts = action.payload;
+        if (action.payload.append) {
+          // Append new data for infinite scroll
+          const existingIds = new Set(state.jobPosts.map((jp) => jp.id));
+          const newPosts = action.payload.data.filter((jp) => !existingIds.has(jp.id));
+          state.jobPosts = [...state.jobPosts, ...newPosts];
+        } else {
+          // Replace data for initial load or refresh
+          state.jobPosts = action.payload.data;
+        }
         state.error = null;
       })
       .addCase(fetchHomeownerJobPosts.rejected, (state, action) => {

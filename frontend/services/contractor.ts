@@ -13,15 +13,27 @@ class ContractorService {
    * Get job board (filtered by radius and categories)
    */
   async getJobBoard(params?: {
-    radius?: number;
+    radius?: number | null;
     categories?: string[];
     search?: string;
-  }): Promise<IJobPost[]> {
-    const response = await api.get<IApiResponse<IJobPost[]>>(
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: IJobPost[]; pagination: { currentPage: number; totalPages: number; totalCount: number; itemsPerPage: number; hasNextPage: boolean; hasPreviousPage: boolean } }> {
+    const response = await api.get<IApiResponse<{ jobPosts: IJobPost[]; pagination: any }>>(
       endpoints.contractor.getJobBoard,
       { params }
     );
-    return response.data.data || [];
+    return {
+      data: response.data.data?.jobPosts || [],
+      pagination: response.data.data?.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        itemsPerPage: 20,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    };
   }
 
   /**

@@ -1,22 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   Switch,
   ActivityIndicator,
   TextInput,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setRadius,
+  toggleCategory,
+  applyFilters,
+  resetFilters,
+  resetToApplied,
+  setAppliedFilters,
+} from '@/store/slices/contractorFilterSlice';
 import contractorService from '@/services/contractor';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notificationService from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Modal } from '@/components/ui/modal';
 
 const CONSTRUCTION_CATEGORIES = [
   'roof',
@@ -49,27 +60,41 @@ export default function ContractorDashboard() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const dispatch = useAppDispatch();
+  const { radius, selectedCategories, appliedRadius, appliedCategories } = useAppSelector(
+    (state) => state.contractorFilter
+  );
+
   const [jobPosts, setJobPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [radius, setRadius] = useState(50);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [pagination, setPagination] = useState<{
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  } | null>(null);
 
   useEffect(() => {
     loadSettings();
-    loadJobPosts();
+    loadJobPosts(true);
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchQuery !== '') {
-        loadJobPosts();
-      } else {
-        loadJobPosts();
+      // Reset filters when search is performed
+      if (searchQuery) {
+        dispatch(resetFilters());
       }
+      loadJobPosts(true);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -78,42 +103,123 @@ export default function ContractorDashboard() {
     try {
       const settings = await contractorService.getSettings();
       setNotificationEnabled(settings.notificationEnabled ?? true);
-      if (settings.notificationRadius) {
-        setRadius(settings.notificationRadius);
-      }
+      // Don't auto-apply radius from settings - let user choose
     } catch (error: any) {
       // Silently fail
     }
   };
 
-  const loadJobPosts = async () => {
-    setIsLoading(true);
+  const loadJobPosts = async (reset: boolean = false) => {
+    if (reset) {
+      setPage(1);
+      setHasMore(true);
+      setIsLoading(true);
+    } else {
+      if (!hasMore || loadingMore) return;
+      setLoadingMore(true);
+    }
+
     try {
-      const posts = await contractorService.getJobBoard({
-        radius,
-        categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+      const currentPage = reset ? 1 : page;
+      const result = await contractorService.getJobBoard({
+        radius: appliedRadius ?? undefined,
+        categories: appliedCategories.length > 0 ? appliedCategories : undefined,
         search: searchQuery || undefined,
+        page: currentPage,
+        limit: 20,
       });
-      setJobPosts(posts);
+      if (reset) {
+        setJobPosts(result.data);
+      } else {
+        setJobPosts((prev) => [...prev, ...result.data]);
+      }
+
+      setPagination(result.pagination);
+      setHasMore(result.pagination.hasNextPage);
+      setPage(result.pagination.currentPage + 1);
     } catch (error: any) {
       notificationService.error('Error', error || 'Failed to load job posts');
     } finally {
       setIsLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadJobPosts();
+    await loadJobPosts(true);
     setRefreshing(false);
   };
 
-  const toggleCategory = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
-    );
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !isLoading) {
+      loadJobPosts(false);
+    }
+  }, [loadingMore, hasMore, isLoading]);
+
+  const handleToggleCategory = (category: string) => {
+    dispatch(toggleCategory(category));
+  };
+
+  const handleApplyFilters = () => {
+    // Apply filters immediately using current values
+    dispatch(setAppliedFilters({ radius, categories: selectedCategories }));
+    setShowFilters(false);
+    // Use current values directly instead of waiting for Redux update
+    loadJobPostsWithFilters(true, radius, selectedCategories);
+  };
+
+  const handleResetFilters = () => {
+    // Reset to default values (All radius, no categories)
+    const defaultRadius: number | null = null; // "All"
+    const defaultCategories: string[] = [];
+    dispatch(setAppliedFilters({ radius: defaultRadius, categories: defaultCategories }));
+    loadJobPostsWithFilters(true, defaultRadius, defaultCategories);
+  };
+
+  const loadJobPostsWithFilters = async (
+    reset: boolean,
+    filterRadius: number | null,
+    filterCategories: string[]
+  ) => {
+    if (reset) {
+      setPage(1);
+      setHasMore(true);
+      setIsLoading(true);
+    } else {
+      if (!hasMore || loadingMore) return;
+      setLoadingMore(true);
+    }
+
+    try {
+      const currentPage = reset ? 1 : page;
+      const result = await contractorService.getJobBoard({
+        radius: filterRadius,
+        categories: filterCategories.length > 0 ? filterCategories : undefined,
+        search: searchQuery || undefined,
+        page: currentPage,
+        limit: 20,
+      });
+      if (reset) {
+        setJobPosts(result.data);
+      } else {
+        setJobPosts((prev) => [...prev, ...result.data]);
+      }
+
+      setPagination(result.pagination);
+      setHasMore(result.pagination.hasNextPage);
+      setPage(result.pagination.currentPage + 1);
+    } catch (error: any) {
+      notificationService.error('Error', error || 'Failed to load job posts');
+    } finally {
+      setIsLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    dispatch(resetToApplied());
+    setShowFilters(false);
   };
 
   const handleNotificationToggle = async (value: boolean) => {
@@ -135,6 +241,11 @@ export default function ContractorDashboard() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+        translucent={false}
+      />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View>
@@ -185,175 +296,211 @@ export default function ContractorDashboard() {
         )}
       </View>
 
-      {/* Filters */}
-      {showFilters && (
-        <View style={[styles.filtersCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.filterTitle, { color: colors.text }]}>Radius (km)</Text>
-          <View style={styles.radiusContainer}>
-            <TouchableOpacity
-              style={[
-                styles.radiusButton,
-                radius === 25 && { backgroundColor: colors.tint },
-                { borderColor: colors.tint },
-              ]}
-              onPress={() => {
-                setRadius(25);
-                loadJobPosts();
-              }}>
-              <Text
-                style={[
-                  styles.radiusButtonText,
-                  { color: radius === 25 ? '#FFFFFF' : colors.text },
-                ]}>
-                25 km
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.radiusButton,
-                radius === 50 && { backgroundColor: colors.tint },
-                { borderColor: colors.tint },
-              ]}
-              onPress={() => {
-                setRadius(50);
-                loadJobPosts();
-              }}>
-              <Text
-                style={[
-                  styles.radiusButtonText,
-                  { color: radius === 50 ? '#FFFFFF' : colors.text },
-                ]}>
-                50 km
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.radiusButton,
-                radius === 100 && { backgroundColor: colors.tint },
-                { borderColor: colors.tint },
-              ]}
-              onPress={() => {
-                setRadius(100);
-                loadJobPosts();
-              }}>
-              <Text
-                style={[
-                  styles.radiusButtonText,
-                  { color: radius === 100 ? '#FFFFFF' : colors.text },
-                ]}>
-                100 km
-              </Text>
+      {/* Filter Modal */}
+      <Modal visible={showFilters} onClose={handleCloseModal}>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalHeader, { borderBottomColor: isDark ? '#2E2E2E' : '#E0E0E0' }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
+            <TouchableOpacity onPress={handleCloseModal}>
+              <IconSymbol name="xmark" size={24} color={colors.icon} />
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.filterTitle, { color: colors.text, marginTop: 16 }]}>
-            Categories
-          </Text>
-          <View style={styles.categoriesContainer}>
-            {CONSTRUCTION_CATEGORIES.map((category) => (
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.filterTitle, { color: colors.text }]}>Radius (km)</Text>
+            <View style={styles.radiusContainer}>
               <TouchableOpacity
-                key={category}
                 style={[
-                  styles.categoryChip,
-                  {
-                    backgroundColor: selectedCategories.includes(category)
-                      ? colors.tint
-                      : isDark
-                      ? '#2E2E2E'
-                      : '#F5F5F5',
-                  },
+                  styles.radiusButton,
+                  radius === null && { backgroundColor: colors.tint },
+                  { borderColor: colors.tint },
                 ]}
-                onPress={() => {
-                  toggleCategory(category);
-                  setTimeout(() => loadJobPosts(), 100);
-                }}>
+                onPress={() => dispatch(setRadius(null))}>
                 <Text
                   style={[
-                    styles.categoryText,
-                    {
-                      color: selectedCategories.includes(category) ? '#FFFFFF' : colors.text,
-                    },
+                    styles.radiusButtonText,
+                    { color: radius === null ? '#FFFFFF' : colors.text },
                   ]}>
-                  {category}
+                  All
                 </Text>
               </TouchableOpacity>
-            ))}
+              <TouchableOpacity
+                style={[
+                  styles.radiusButton,
+                  radius === 25 && { backgroundColor: colors.tint },
+                  { borderColor: colors.tint },
+                ]}
+                onPress={() => dispatch(setRadius(25))}>
+                <Text
+                  style={[
+                    styles.radiusButtonText,
+                    { color: radius === 25 ? '#FFFFFF' : colors.text },
+                  ]}>
+                  25 km
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.radiusButton,
+                  radius === 50 && { backgroundColor: colors.tint },
+                  { borderColor: colors.tint },
+                ]}
+                onPress={() => dispatch(setRadius(50))}>
+                <Text
+                  style={[
+                    styles.radiusButtonText,
+                    { color: radius === 50 ? '#FFFFFF' : colors.text },
+                  ]}>
+                  50 km
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.radiusButton,
+                  radius === 100 && { backgroundColor: colors.tint },
+                  { borderColor: colors.tint },
+                ]}
+                onPress={() => dispatch(setRadius(100))}>
+                <Text
+                  style={[
+                    styles.radiusButtonText,
+                    { color: radius === 100 ? '#FFFFFF' : colors.text },
+                  ]}>
+                  100 km
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.filterTitle, { color: colors.text, marginTop: 24 }]}>
+              Categories
+            </Text>
+            <View style={styles.categoriesContainer}>
+              {CONSTRUCTION_CATEGORIES.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor: selectedCategories.includes(category)
+                        ? colors.tint
+                        : isDark
+                        ? '#2E2E2E'
+                        : '#F5F5F5',
+                    },
+                  ]}
+                  onPress={() => handleToggleCategory(category)}>
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      {
+                        color: selectedCategories.includes(category) ? '#FFFFFF' : colors.text,
+                      },
+                    ]}>
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          <View style={[styles.modalFooter, { borderTopColor: isDark ? '#2E2E2E' : '#E0E0E0' }]}>
+            <TouchableOpacity
+              style={[styles.resetButton, { borderColor: colors.tint }]}
+              onPress={handleResetFilters}>
+              <Text style={[styles.resetButtonText, { color: colors.tint }]}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.applyButton, { backgroundColor: colors.tint }]}
+              onPress={handleApplyFilters}>
+              <Text style={styles.applyButtonText}>Apply</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      )}
+      </Modal>
 
       {/* Job Posts List */}
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} />
-        }>
-        {isLoading && jobPosts.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.tint} />
-          </View>
-        ) : jobPosts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="doc.text" size={64} color={colors.icon} />
-            <Text style={[styles.emptyText, { color: colors.icon }]}>No job posts found</Text>
-            <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-              Try adjusting your filters or radius
-            </Text>
-          </View>
-        ) : (
-          jobPosts.map((jobPost) => (
-            <TouchableOpacity
-              key={jobPost.id}
-              style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-              onPress={() => handleJobPostPress(jobPost.id)}
-              activeOpacity={0.7}>
-              <View style={styles.jobCardHeader}>
-                <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
-                  {jobPost.description.substring(0, 80)}
-                  {jobPost.description.length > 80 ? '...' : ''}
-                </Text>
-              </View>
+        data={jobPosts}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: jobPost }) => (
+          <TouchableOpacity
+            style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
+            onPress={() => handleJobPostPress(jobPost.id)}
+            activeOpacity={0.7}>
+            <View style={styles.jobCardHeader}>
+              <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
+                {jobPost.description.substring(0, 80)}
+                {jobPost.description.length > 80 ? '...' : ''}
+              </Text>
+            </View>
 
-              <View style={styles.jobCardBody}>
-                <View style={styles.categoriesContainer}>
-                  {jobPost.categories.slice(0, 3).map((category: string, index: number) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.categoryTag,
-                        { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
-                      ]}>
-                      <Text style={[styles.categoryText, { color: colors.text }]}>
-                        {category}
-                      </Text>
-                    </View>
-                  ))}
-                  {jobPost.categories.length > 3 && (
-                    <Text style={[styles.moreCategories, { color: colors.icon }]}>
-                      +{jobPost.categories.length - 3}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.jobCardFooter}>
-                  <View style={styles.locationInfo}>
-                    <IconSymbol name="location.fill" size={14} color={colors.icon} />
-                    <Text style={[styles.locationText, { color: colors.icon }]}>
-                      {jobPost.location?.address || 'Location not specified'}
+            <View style={styles.jobCardBody}>
+              <View style={styles.categoriesContainer}>
+                {jobPost.categories.slice(0, 3).map((category: string, index: number) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.categoryTag,
+                      { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
+                    ]}>
+                    <Text style={[styles.categoryText, { color: colors.text }]}>
+                      {category}
                     </Text>
                   </View>
-                  <Text style={[styles.dateText, { color: colors.icon }]}>
-                    {jobPost.createdAt
-                      ? new Date(jobPost.createdAt).toLocaleDateString()
-                      : ''}
+                ))}
+                {jobPost.categories.length > 3 && (
+                  <Text style={[styles.moreCategories, { color: colors.icon }]}>
+                    +{jobPost.categories.length - 3}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.jobCardFooter}>
+                <View style={styles.locationInfo}>
+                  <IconSymbol name="location.fill" size={14} color={colors.icon} />
+                  <Text style={[styles.locationText, { color: colors.icon }]}>
+                    {jobPost.location?.address || 'Location not specified'}
                   </Text>
                 </View>
+                <Text style={[styles.dateText, { color: colors.icon }]}>
+                  {jobPost.createdAt
+                    ? new Date(jobPost.createdAt).toLocaleDateString()
+                    : ''}
+                </Text>
               </View>
-            </TouchableOpacity>
-          ))
+            </View>
+          </TouchableOpacity>
         )}
-      </ScrollView>
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.tint} />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <IconSymbol name="doc.text" size={64} color={colors.icon} />
+              <Text style={[styles.emptyText, { color: colors.icon }]}>No job posts found</Text>
+              <Text style={[styles.emptySubtext, { color: colors.icon }]}>
+                Try adjusting your filters or radius
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.loadingMoreContainer}>
+              <ActivityIndicator size="small" color={colors.tint} />
+            </View>
+          ) : null
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} />
+        }
+      />
     </View>
   );
 }
@@ -427,19 +574,55 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
   },
-  filtersCard: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+  },
+  applyButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resetButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   filterTitle: {
     fontSize: 16,
@@ -482,6 +665,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 20,
+    flexGrow: 1,
+  },
+  loadingMoreContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   loadingContainer: {
     paddingVertical: 40,

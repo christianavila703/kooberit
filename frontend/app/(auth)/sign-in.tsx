@@ -15,7 +15,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loginUser, clearError } from '@/store/slices/authSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IRootState } from '@/store';
 
 export default function SignInScreen() {
@@ -36,7 +36,7 @@ export default function SignInScreen() {
   // Show error notification
   React.useEffect(() => {
     if (error) {
-      notificationService.error('Sign In Failed', error);
+      notification.error('Sign In Failed', error);
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -74,7 +74,7 @@ export default function SignInScreen() {
 
     try {
       await dispatch(loginUser({ email, password })).unwrap();
-      notificationService.success('Welcome back!', 'You have successfully signed in');
+      notification.success('Welcome back!', 'You have successfully signed in');
       // Navigation will be handled by AuthProvider
     } catch (err: any) {
       // Error is handled by the useEffect above
@@ -178,6 +178,17 @@ export default function SignInScreen() {
               ) : null}
             </View>
 
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              // onPress={() => router.push('/forgot-password' as any)}
+              onPress={() => notification.info('Forgot Password', 'This feature is not available yet')}
+              disabled={isLoading}
+              style={styles.forgotPasswordContainer}>
+              <Text style={[styles.forgotPasswordText, { color: colors.tint }]}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+
             {/* Sign In Button */}
             <TouchableOpacity
               style={[
@@ -194,16 +205,6 @@ export default function SignInScreen() {
               ) : (
                 <Text style={styles.buttonText}>Sign In</Text>
               )}
-            </TouchableOpacity>
-
-            {/* Forgot Password Link */}
-            <TouchableOpacity
-              onPress={() => router.push('/forgot-password' as any)}
-              disabled={isLoading}
-              style={styles.forgotPasswordContainer}>
-              <Text style={[styles.forgotPasswordText, { color: colors.tint }]}>
-                Forgot Password?
-              </Text>
             </TouchableOpacity>
 
             {/* Sign Up Link */}

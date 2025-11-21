@@ -35,6 +35,7 @@ const MAPPING = {
   'person.2.fill': 'people',
   'person.2': 'people',
   'pencil': 'edit',
+  'xmark': 'close',
   'xmark.circle.fill': 'cancel',
   'trash.fill': 'delete',
   'person.crop.circle.badge.questionmark': 'help-outline',

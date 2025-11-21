@@ -25,13 +25,31 @@ class JobPostService {
   /**
    * Get all job posts for homeowner
    */
-  async getHomeownerJobPosts(status?: 'active' | 'closed'): Promise<IJobPost[]> {
-    const params = status ? { status } : {};
-    const response = await api.get<IApiResponse<IJobPost[]>>(
+  async getHomeownerJobPosts(
+    status?: 'active' | 'closed',
+    page?: number,
+    limit?: number
+  ): Promise<{ data: IJobPost[]; pagination: { currentPage: number; totalPages: number; totalCount: number; itemsPerPage: number; hasNextPage: boolean; hasPreviousPage: boolean } }> {
+    const params: any = {};
+    if (status) params.status = status;
+    if (page) params.page = page;
+    if (limit) params.limit = limit;
+    
+    const response = await api.get<IApiResponse<{ jobPosts: IJobPost[]; pagination: any }>>(
       endpoints.jobPosts.getHomeowner,
       { params }
     );
-    return response.data.data || [];
+    return {
+      data: response.data.data?.jobPosts || [],
+      pagination: response.data.data?.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        itemsPerPage: 20,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    };
   }
 
   /**

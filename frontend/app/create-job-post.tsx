@@ -15,7 +15,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { createJobPost } from '@/store/slices/jobPostSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import LocationPicker from '@/components/LocationPicker';
 
@@ -116,10 +116,10 @@ export default function CreateJobPostScreen() {
         })
       ).unwrap();
 
-      notificationService.success('Success', 'Job post created successfully');
+      notification.success('Success', 'Job post created successfully');
       router.replace(`/job-post/${jobPost.id}` as any);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to create job post');
+      notification.error('Error', error.message || 'Failed to create job post');
     } finally {
       setIsLoading(false);
     }

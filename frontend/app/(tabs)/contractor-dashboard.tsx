@@ -27,7 +27,7 @@ import {
 import contractorService from '@/services/contractor';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 
@@ -131,7 +131,7 @@ export default function ContractorDashboard() {
       setHasMore(result.pagination.hasNextPage);
       setPage(result.pagination.currentPage + 1);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load job posts');
+      notification.error('Error', error.message || 'Failed to load job posts');
     } finally {
       setIsLoading(false);
       setLoadingMore(false);
@@ -203,7 +203,7 @@ export default function ContractorDashboard() {
       setHasMore(result.pagination.hasNextPage);
       setPage(result.pagination.currentPage + 1);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load job posts');
+      notification.error('Error', error || 'Failed to load job posts');
     } finally {
       setIsLoading(false);
       setLoadingMore(false);
@@ -221,9 +221,9 @@ export default function ContractorDashboard() {
 
     try {
       await dispatch(updateProfileSettings({ notificationEnabled: value })).unwrap();
-      notificationService.success('Success', `Notifications ${value ? 'enabled' : 'disabled'}`);
+      notification.success('Success', `Notifications ${value ? 'enabled' : 'disabled'}`);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to update notification settings');
+      notification.error('Error', error || 'Failed to update notification settings');
       // Refetch settings to revert to correct state on error
       dispatch(fetchProfileSettings());
     }

@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchHomeownerJobPosts } from '@/store/slices/jobPostSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function TabIndex() {
@@ -73,7 +73,7 @@ function HomeownerDashboard() {
       setHasMore(result.pagination.hasNextPage);
       setPage(result.pagination.currentPage + 1);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load job posts');
+      notification.error('Error', error.message || 'Failed to load job posts');
     } finally {
       setLoadingMore(false);
     }

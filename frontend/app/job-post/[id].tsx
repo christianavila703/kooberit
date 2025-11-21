@@ -18,7 +18,7 @@ import {
 import contractorContactService from '@/services/contractorContact';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IRootState } from '@/store';
 
@@ -58,7 +58,7 @@ export default function JobPostDetailsScreen() {
     try {
       await dispatch(fetchJobPostById(id!)).unwrap();
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load job post');
+      notification.error('Error', error.message || 'Failed to load job post');
       router.back();
     }
   };
@@ -70,7 +70,7 @@ export default function JobPostDetailsScreen() {
       const contacts = await contractorContactService.getContractorContactsByJobPost(id);
       setContractorContacts(contacts);
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load contractor contacts');
+      notification.error('Error', error.message || 'Failed to load contractor contacts');
     } finally {
       setLoadingContacts(false);
     }
@@ -104,9 +104,9 @@ export default function JobPostDetailsScreen() {
           onPress: async () => {
             try {
               await dispatch(closeJobPost(id)).unwrap();
-              notificationService.success('Success', 'Job post closed successfully');
+              notification.success('Success', 'Job post closed successfully');
             } catch (error: any) {
-              notificationService.error('Error', error || 'Failed to close job post');
+              notification.error('Error', error.message || 'Failed to close job post');
             }
           },
         },
@@ -127,10 +127,10 @@ export default function JobPostDetailsScreen() {
           onPress: async () => {
             try {
               await dispatch(deleteJobPost(id)).unwrap();
-              notificationService.success('Success', 'Job post deleted successfully');
+              notification.success('Success', 'Job post deleted successfully');
               router.back();
             } catch (error: any) {
-              notificationService.error('Error', error || 'Failed to delete job post');
+              notification.error('Error', error.message || 'Failed to delete job post');
             }
           },
         },

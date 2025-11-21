@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchUserChats, fetchUnreadCount } from '@/store/slices/chatSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function MessagesScreen() {
@@ -34,7 +34,7 @@ export default function MessagesScreen() {
     try {
       await dispatch(fetchUserChats()).unwrap();
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load chats');
+      notification.error('Error', error.message || 'Failed to load chats');
     }
   };
 

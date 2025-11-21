@@ -15,7 +15,7 @@ import api from '@/libs/api';
 import endpoints from '@/constants/endpoints';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function ForgotPasswordScreen() {
@@ -53,12 +53,12 @@ export default function ForgotPasswordScreen() {
     try {
       await api.post(endpoints.auth.forgotPassword, { email });
       setEmailSent(true);
-      notificationService.success(
+      notification.success(
         'Email Sent',
         'If an account with that email exists, a password reset link has been sent.'
       );
     } catch (error: any) {
-      notificationService.error('Error', error.message || 'Failed to send reset email');
+      notification.error('Error', error.message || 'Failed to send reset email');
     } finally {
       setIsLoading(false);
     }

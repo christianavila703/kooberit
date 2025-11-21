@@ -19,7 +19,7 @@ import {
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import LocationPicker from '@/components/LocationPicker';
 
 export default function ProfileScreen() {
@@ -86,9 +86,9 @@ export default function ProfileScreen() {
       }
 
       await dispatch(updateProfileSettings(updateData)).unwrap();
-      notificationService.success('Success', 'Settings saved successfully');
+      notification.success('Success', 'Settings saved successfully');
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to save settings');
+      notification.error('Error', error.message || 'Failed to save settings');
     }
   };
 

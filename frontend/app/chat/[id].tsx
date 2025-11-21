@@ -22,7 +22,7 @@ import {
 import socketService from '@/services/socket';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notificationService from '@/services/notification';
+import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as ImagePicker from 'expo-image-picker';
 import { API_CONFIG } from '@/constants/config';
@@ -125,7 +125,7 @@ export default function ChatScreen() {
     try {
       await dispatch(fetchChatById(id!)).unwrap();
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load chat');
+      notification.error('Error', error.message || 'Failed to load chat');
       router.back();
     }
   };
@@ -134,7 +134,7 @@ export default function ChatScreen() {
     try {
       await dispatch(fetchChatMessages({ chatId: id! })).unwrap();
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to load messages');
+      notification.error('Error', error.message || 'Failed to load messages');
     }
   };
 
@@ -161,7 +161,7 @@ export default function ChatScreen() {
         })
       ).unwrap();
     } catch (error: any) {
-      notificationService.error('Error', error || 'Failed to send message');
+      notification.error('Error', error.message || 'Failed to send message');
       setMessageText(text); // Restore message on error
     } finally {
       setSending(false);
@@ -172,7 +172,7 @@ export default function ChatScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        notificationService.error('Permission Required', 'Please grant camera roll permissions to send images');
+        notification.error('Permission Required', 'Please grant camera roll permissions to send images');
         return;
       }
 
@@ -201,13 +201,13 @@ export default function ChatScreen() {
             })
           ).unwrap();
         } catch (error: any) {
-          notificationService.error('Error', 'Failed to send image');
+          notification.error('Error', 'Failed to send image');
         } finally {
           setSending(false);
         }
       }
     } catch (error: any) {
-      notificationService.error('Error', 'Failed to pick image');
+      notification.error('Error', 'Failed to pick image');
     }
   };
 

@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import * as contractorController from '@/controllers/contractorController';
-import { authenticate } from '@/middlewares/auth';
 
 const router = Router();
 
@@ -9,21 +8,21 @@ const router = Router();
  * @desc    Get job board for contractor (filtered by radius and categories)
  * @access  Private (Contractor)
  */
-router.get('/job-board', authenticate, contractorController.getJobBoard);
+router.get('/job-board', contractorController.getJobBoard);
 
 /**
  * @route   GET /api/contractor/settings
  * @desc    Get contractor settings
  * @access  Private (Contractor)
  */
-router.get('/settings', authenticate, contractorController.getContractorSettings);
+router.get('/settings', contractorController.getContractorSettings);
 
 /**
  * @route   PUT /api/contractor/settings
  * @desc    Update contractor settings
  * @access  Private (Contractor)
  */
-router.put('/settings', authenticate, contractorController.updateContractorSettings);
+router.put('/settings', contractorController.updateContractorSettings);
 
 export default router;
 

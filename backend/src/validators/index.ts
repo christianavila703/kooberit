@@ -4,6 +4,7 @@ export * from './authSchema';
 export * from './userSchema';
 export * from './jobPostSchema';
 export * from './chatSchema';
+export * from './paymentSchema';
 
 /**
  * Global

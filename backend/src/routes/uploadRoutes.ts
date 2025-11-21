@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { authenticate } from '@/middlewares/auth';
 import logger from '@/utils/logger';
 
 const router = Router();
@@ -42,7 +41,7 @@ const upload = multer({
  * @desc    Upload file for chat
  * @access  Private
  */
-router.post('/chat-file', authenticate, upload.single('file'), (req, res) => {
+router.post('/chat-file', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({

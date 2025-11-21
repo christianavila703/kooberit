@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as jobPostController from '@/controllers/jobPostController';
 import { validate } from '@/middlewares/validate';
-import { authenticate } from '@/middlewares/auth';
 import { createJobPostSchema, updateJobPostSchema } from '@/validators';
 
 const router = Router();
@@ -11,42 +10,42 @@ const router = Router();
  * @desc    Create a new job post
  * @access  Private (Homeowner)
  */
-router.post('/', authenticate, validate(createJobPostSchema, 'body'), jobPostController.createJobPost);
+router.post('/', validate(createJobPostSchema, 'body'), jobPostController.createJobPost);
 
 /**
  * @route   GET /api/job-posts/homeowner
  * @desc    Get all job posts for homeowner
  * @access  Private (Homeowner)
  */
-router.get('/homeowner', authenticate, jobPostController.getHomeownerJobPosts);
+router.get('/homeowner', jobPostController.getHomeownerJobPosts);
 
 /**
  * @route   GET /api/job-posts/:id
  * @desc    Get job post by ID
  * @access  Private
  */
-router.get('/:id', authenticate, jobPostController.getJobPostById);
+router.get('/:id', jobPostController.getJobPostById);
 
 /**
  * @route   PUT /api/job-posts/:id
  * @desc    Update job post
  * @access  Private (Homeowner)
  */
-router.put('/:id', authenticate, validate(updateJobPostSchema, 'body'), jobPostController.updateJobPost);
+router.put('/:id', validate(updateJobPostSchema, 'body'), jobPostController.updateJobPost);
 
 /**
  * @route   PATCH /api/job-posts/:id/close
  * @desc    Close job post
  * @access  Private (Homeowner)
  */
-router.patch('/:id/close', authenticate, jobPostController.closeJobPost);
+router.patch('/:id/close', jobPostController.closeJobPost);
 
 /**
  * @route   DELETE /api/job-posts/:id
  * @desc    Delete job post
  * @access  Private (Homeowner)
  */
-router.delete('/:id', authenticate, jobPostController.deleteJobPost);
+router.delete('/:id', jobPostController.deleteJobPost);
 
 export default router;
 

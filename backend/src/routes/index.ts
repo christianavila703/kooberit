@@ -4,6 +4,7 @@ import userRoutes from './userRoutes';
 import jobPostRoutes from './jobPostRoutes';
 import contractorContactRoutes from './contractorContactRoutes';
 import contractorRoutes from './contractorRoutes';
+import profileRoutes from './profileRoutes';
 import chatRoutes from './chatRoutes';
 import uploadRoutes from './uploadRoutes';
 import paymentRoutes from './paymentRoutes';
@@ -25,6 +26,9 @@ router.use('/contractor-contacts', isAuthenticated, contractorContactRoutes);
 
 // Contractor routes
 router.use('/contractor', isAuthenticated, contractorRoutes);
+
+// Profile routes (settings for both contractor and homeowner)
+router.use('/profile', isAuthenticated, profileRoutes);
 
 // Chat routes
 router.use('/chats', isAuthenticated, chatRoutes);

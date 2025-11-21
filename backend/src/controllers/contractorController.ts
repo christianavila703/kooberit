@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import jobPostService from '@/services/jobPostService';
 import userService from '@/services/userService';
-import emailService from '@/services/emailService';
 import logger from '@/utils/logger';
-import { JobPost } from '@/models';
 
 /**
  * Get job posts for contractor (filtered by radius and categories)
@@ -74,92 +72,6 @@ export const getJobBoard = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error('Get job board error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-/**
- * Update contractor settings (address, notifications)
- */
-export const updateContractorSettings = async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    if (user.role !== 'contractor') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only contractors can update contractor settings',
-      });
-    }
-
-    const { contractorAddress, notificationEnabled, notificationRadius } = req.body;
-
-    const updateData: any = {};
-    if (contractorAddress) {
-      updateData.contractorAddress = contractorAddress;
-    }
-    if (notificationEnabled !== undefined) {
-      updateData.notificationEnabled = notificationEnabled;
-    }
-    if (notificationRadius !== undefined) {
-      updateData.notificationRadius = notificationRadius;
-    }
-
-    const updatedUser = await userService.updateUser(user.id, updateData);
-
-    logger.info(`Contractor settings updated: ${user.id}`);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Settings updated successfully',
-      data: {
-        id: updatedUser?.id,
-        email: updatedUser?.email,
-        firstName: updatedUser?.firstName,
-        lastName: updatedUser?.lastName,
-        role: updatedUser?.role,
-        contractorAddress: updatedUser?.contractorAddress,
-        notificationEnabled: updatedUser?.notificationEnabled,
-        notificationRadius: updatedUser?.notificationRadius,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Update contractor settings error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-/**
- * Get contractor settings
- */
-export const getContractorSettings = async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    if (user.role !== 'contractor') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only contractors can view contractor settings',
-      });
-    }
-
-    const contractor = await userService.findUserById(user.id);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Settings retrieved successfully',
-      data: {
-        contractorAddress: contractor?.contractorAddress,
-        notificationEnabled: contractor?.notificationEnabled ?? true,
-        notificationRadius: contractor?.notificationRadius ?? 50,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Get contractor settings error:', error);
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message,

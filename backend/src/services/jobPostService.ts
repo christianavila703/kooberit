@@ -79,7 +79,6 @@ class JobPostService {
     const [data, totalCount] = await Promise.all([
       JobPost.find(filters)
         .populate('homeowner', 'firstName lastName email')
-        .lean({ virtuals: true }) // Returns plain objects with virtuals
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

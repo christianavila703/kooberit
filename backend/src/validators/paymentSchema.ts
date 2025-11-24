@@ -4,26 +4,12 @@ export const processPaymentSchema = Joi.object({
     jobPostId: Joi.string().required().messages({
       'any.required': 'Job post ID is required',
     }),
-    cardNumber: Joi.string()
-      .pattern(/^\d{13,19}$/)
+    paymentMethodId: Joi.string()
+      .pattern(/^pm_[a-zA-Z0-9]+$/)
       .required()
       .messages({
-        'string.pattern.base': 'Card number must be 13-19 digits',
-        'any.required': 'Card number is required',
-      }),
-    expiryDate: Joi.string()
-      .pattern(/^\d{2}\/\d{2}$/)
-      .required()
-      .messages({
-        'string.pattern.base': 'Expiry date must be in MM/YY format',
-        'any.required': 'Expiry date is required',
-      }),
-    cvv: Joi.string()
-      .pattern(/^\d{3,4}$/)
-      .required()
-      .messages({
-        'string.pattern.base': 'CVV must be 3-4 digits',
-        'any.required': 'CVV is required',
+        'string.pattern.base': 'Payment method ID must be a valid Stripe payment method ID',
+        'any.required': 'Payment method ID is required',
       }),
     cardholderName: Joi.string().min(2).max(100).required().messages({
       'string.min': 'Cardholder name must be at least 2 characters',

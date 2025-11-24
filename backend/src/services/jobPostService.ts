@@ -188,8 +188,6 @@ class JobPostService {
       .limit(limit)
       .exec();
 
-      console.log(jobPosts)
-
     // Convert GeoJSON coordinates back to lat/lng format for frontend
     const convertedPosts = jobPosts.map((jobPost) => {
       if (jobPost.location?.coordinates) {

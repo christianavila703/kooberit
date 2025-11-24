@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import paymentService from '@/services/paymentService';
 import logger from '@/utils/logger';
 import { USER_ROLES } from '@enums';
+import { JobPost, ContractorContact} from '@/models';
 
 /**
  * Process payment
@@ -9,7 +10,7 @@ import { USER_ROLES } from '@enums';
 export const processPayment = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { jobPostId, cardNumber, expiryDate, cvv, cardholderName } = req.body;
+    const { jobPostId, paymentMethodId, cardholderName } = req.body;
 
     if (user.role !== USER_ROLES.CONTRACTOR) {
       return res.status(403).json({
@@ -18,11 +19,13 @@ export const processPayment = async (req: Request, res: Response) => {
       });
     }
 
-    // Parse expiry date (MM/YY format)
-    const [expiryMonth, expiryYear] = expiryDate.split('/');
+    if (!paymentMethodId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment method ID is required',
+      });
+    }
 
-    // Get job post to find homeowner
-    const { JobPost } = await import('@/models');
     const jobPost = await JobPost.findById(jobPostId).exec();
 
     if (!jobPost) {
@@ -32,21 +35,17 @@ export const processPayment = async (req: Request, res: Response) => {
       });
     }
 
-    // Process payment
-    const result = await paymentService.processPayment(
-      cardNumber,
-      expiryMonth,
-      expiryYear,
-      cvv,
+    // Process payment with payment method ID
+    const result = await paymentService.processPaymentWithMethodId(
+      paymentMethodId,
       cardholderName,
       jobPostId,
       user.id,
-      jobPost.homeowner.toString()
+      jobPost.homeownerId.toString()
     );
 
     if (result.success) {
       // Get chat ID from contact
-      const { ContractorContact } = await import('@/models');
       const contact = await ContractorContact.findOne({
         jobPostId,
         contractorId: user.id,

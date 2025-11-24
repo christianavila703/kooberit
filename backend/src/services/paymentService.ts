@@ -34,6 +34,7 @@ class PaymentService {
         metadata,
         automatic_payment_methods: {
           enabled: true,
+          allow_redirects: 'never', // Disable redirect-based payment methods (we only use cards)
         },
       });
 
@@ -46,6 +47,10 @@ class PaymentService {
 
   /**
    * Process payment with card details
+   * 
+   * Note: In TEST mode, Stripe restricts raw card data APIs by default for security.
+   *       You may need to request access from Stripe Support.
+   *       In PRODUCTION mode (sk_live_*), raw card data APIs are available but require PCI compliance.
    */
   async processPayment(
     cardNumber: string,
@@ -62,20 +67,97 @@ class PaymentService {
     }
 
     try {
-      // Create payment method
-      const paymentMethod = await this.stripe.paymentMethods.create({
-        type: 'card',
-        card: {
-          number: cardNumber,
-          exp_month: parseInt(expiryMonth),
-          exp_year: parseInt('20' + expiryYear),
-          cvc: cvv,
-        },
-        billing_details: {
-          name: cardholderName,
-        },
-      });
+      const isTestMode = STRIPE_SECRET_KEY.startsWith('sk_test_');
+      let confirmedPayment: Stripe.PaymentIntent;
 
+      // Try method 1: Create payment method first, then confirm
+      try {
+        // Create payment intent first
+        const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
+          jobPostId,
+          contractorId,
+          homeownerId,
+        });
+
+        // Create payment method
+        const paymentMethod = await this.stripe.paymentMethods.create({
+          type: 'card',
+          card: {
+            number: cardNumber,
+            exp_month: parseInt(expiryMonth),
+            exp_year: parseInt('20' + expiryYear),
+            cvc: cvv,
+          },
+          billing_details: {
+            name: cardholderName,
+          },
+        });
+
+        // Confirm payment with the payment method
+        confirmedPayment = await this.stripe.paymentIntents.confirm(paymentIntent.id, {
+          payment_method: paymentMethod.id,
+        });
+      } catch (cardError: any) {
+        throw cardError;
+      }
+
+      if (confirmedPayment.status === 'succeeded') {
+        // Create contractor contact
+        const contact = await contractorContactService.createContact(
+          jobPostId,
+          contractorId,
+          homeownerId
+        );
+
+        // Create chat room (chatService expects strings, it will convert to ObjectId internally)
+        const chat = await chatService.createOrGetChat({
+          jobPostId: jobPostId,
+          homeownerId: homeownerId,
+          contractorId: contractorId,
+        } as any);
+        await contractorContactService.linkChatToContact(contact._id.toString(), chat._id.toString());
+
+        // Update payment status
+        await contractorContactService.updatePaymentStatus(contact._id.toString(), 'completed', {
+          paymentIntentId: confirmedPayment.id,
+          paymentDate: new Date(),
+        });
+
+        logger.info(`Payment successful: ${confirmedPayment.id} for job post: ${jobPostId}`);
+
+        return {
+          success: true,
+          paymentIntentId: confirmedPayment.id,
+        };
+      } else {
+        throw new CustomError('Payment was not successful', 400);
+      }
+    } catch (error: any) {
+      logger.error('Payment processing error:', error);
+      return {
+        success: false,
+        error: error.message || 'Payment processing failed',
+      };
+    }
+  }
+
+  /**
+   * Process payment with payment method ID (recommended approach)
+   * This method uses a payment method tokenized on the frontend, which is secure
+   * and works in both test and production modes without special access.
+   */
+  async processPaymentWithMethodId(
+    paymentMethodId: string,
+    cardholderName: string,
+    jobPostId: string,
+    contractorId: string,
+    homeownerId: string
+  ): Promise<{ success: boolean; paymentIntentId?: string; error?: string }> {
+    if (!this.stripe) {
+      throw new CustomError('Stripe is not configured', 500);
+    }
+
+    try {
       // Create payment intent
       const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
         jobPostId,
@@ -83,9 +165,9 @@ class PaymentService {
         homeownerId,
       });
 
-      // Confirm payment
+      // Confirm payment with the payment method ID (tokenized on frontend)
       const confirmedPayment = await this.stripe.paymentIntents.confirm(paymentIntent.id, {
-        payment_method: paymentMethod.id,
+        payment_method: paymentMethodId,
       });
 
       if (confirmedPayment.status === 'succeeded') {

@@ -308,6 +308,32 @@ export default function ChatScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      {/* Homeowner Info Section (for contractors) */}
+      {user?.role === 'contractor' && currentChat?.homeowner && (
+        <View style={[styles.infoSection, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5', borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+          <View style={styles.infoContent}>
+            <View style={styles.infoHeader}>
+              <IconSymbol name="person.fill" size={20} color={colors.tint} />
+              <Text style={[styles.infoTitle, { color: colors.text }]}>Homeowner</Text>
+            </View>
+            <Text style={[styles.infoName, { color: colors.text }]}>
+              {currentChat.homeowner.firstName} {currentChat.homeowner.lastName}
+            </Text>
+            <Text style={[styles.infoEmail, { color: colors.icon }]}>
+              {currentChat.homeowner.email}
+            </Text>
+          </View>
+          {currentChat.jobPostId && (
+            <TouchableOpacity
+              style={[styles.jobButton, { backgroundColor: colors.tint }]}
+              onPress={() => router.push(`/job-post/${currentChat.jobPostId}` as any)}>
+              <IconSymbol name="briefcase.fill" size={16} color="#FFFFFF" />
+              <Text style={styles.jobButtonText}>View Job</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Messages */}
       {isLoading && chatMessages.length === 0 ? (
         <View style={styles.loadingContainer}>
@@ -553,6 +579,49 @@ const styles = StyleSheet.create({
   },
   attachButton: {
     padding: 8,
+  },
+  infoSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  infoTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  infoName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  infoEmail: {
+    fontSize: 13,
+  },
+  jobButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  jobButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

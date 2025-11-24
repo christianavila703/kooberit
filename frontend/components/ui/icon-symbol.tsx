@@ -54,6 +54,7 @@ const MAPPING = {
   'hand.raised.fill': 'privacy-tip',
   'map': 'map',
   'map.fill': 'map',
+  'briefcase.fill': 'work',
 } as IconMapping;
 
 /**

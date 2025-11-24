@@ -129,7 +129,11 @@ const chatSlice = createSlice({
       if (!state.messages[chatId]) {
         state.messages[chatId] = [];
       }
-      state.messages[chatId].push(message);
+      // Prevent duplicate messages by checking if message ID already exists
+      const existingIndex = state.messages[chatId].findIndex((m) => m.id === message.id);
+      if (existingIndex === -1) {
+        state.messages[chatId].push(message);
+      }
     },
     clearMessages: (state, action: PayloadAction<string>) => {
       state.messages[action.payload] = [];
@@ -203,7 +207,11 @@ const chatSlice = createSlice({
         if (!state.messages[chatId]) {
           state.messages[chatId] = [];
         }
-        state.messages[chatId].push(message);
+        // Prevent duplicate messages by checking if message ID already exists
+        const existingIndex = state.messages[chatId].findIndex((m) => m.id === message.id);
+        if (existingIndex === -1) {
+          state.messages[chatId].push(message);
+        }
         // Update chat's last message
         const chatIndex = state.chats.findIndex((c) => c.id === chatId);
         if (chatIndex !== -1) {

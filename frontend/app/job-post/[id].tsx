@@ -252,7 +252,16 @@ export default function JobPostDetailsScreen() {
               </Text>
             </View>
           ) : (
-            contractorContacts.map((contact) => (
+            contractorContacts.map((contact) => {
+              // Use contractor virtual field (backend now uses virtuals)
+              const contractor = contact.contractor;
+              const contractorName = contractor?.firstName && contractor?.lastName
+                ? `${contractor.firstName} ${contractor.lastName}`
+                : contractor?.firstName || contractor?.lastName || 'Contractor';
+              const contractorEmail = contractor?.email || '';
+              const contractorInitials = (contractor?.firstName?.[0] || 'C') + (contractor?.lastName?.[0] || '');
+
+              return (
               <TouchableOpacity
                 key={contact.id}
                 style={[styles.contactCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
@@ -262,16 +271,12 @@ export default function JobPostDetailsScreen() {
                   <View style={styles.contactInfo}>
                     <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
                       <Text style={styles.avatarText}>
-                        {contact.contractor?.firstName?.[0] || 'C'}
-                        {contact.contractor?.lastName?.[0] || ''}
+                        {contractorInitials}
                       </Text>
                     </View>
                     <View>
                       <Text style={[styles.contactName, { color: colors.text }]}>
-                        {contact.contractor?.firstName} {contact.contractor?.lastName}
-                      </Text>
-                      <Text style={[styles.contactEmail, { color: colors.icon }]}>
-                        {contact.contractor?.email}
+                        {contractorName}
                       </Text>
                     </View>
                   </View>
@@ -284,7 +289,8 @@ export default function JobPostDetailsScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-            ))
+              );
+            })
           )}
           </View>
         )}

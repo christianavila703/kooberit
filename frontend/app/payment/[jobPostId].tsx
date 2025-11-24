@@ -157,23 +157,6 @@ export default function PaymentScreen() {
               editable={!isProcessing}
             />
           </View>
-
-          <TouchableOpacity
-            style={styles.saveCardContainer}
-            onPress={() => setSaveCard(!saveCard)}
-            disabled={isProcessing}>
-            <View
-              style={[
-                styles.checkbox,
-                {
-                  backgroundColor: saveCard ? colors.tint : 'transparent',
-                  borderColor: colors.tint,
-                },
-              ]}>
-              {saveCard && <IconSymbol name="checkmark" size={16} color="#FFFFFF" />}
-            </View>
-            <Text style={[styles.saveCardText, { color: colors.text }]}>Save card for future use</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Payment Button */}

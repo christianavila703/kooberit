@@ -47,7 +47,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="create-job-post" options={{ headerShown: true, title: 'Create Job' }} />
             <Stack.Screen name="job-post" options={{ headerShown: true, title: 'Job Details' }} />
-            <Stack.Screen name="chat" options={{ headerShown: false }} />
+            <Stack.Screen name="chat" options={{ headerShown: true, title: 'Chat' }} />
             <Stack.Screen name="payment" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>

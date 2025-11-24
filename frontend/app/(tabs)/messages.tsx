@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchUserChats, fetchUnreadCount } from '@/store/slices/chatSlice';
 import { Colors } from '@/constants/theme';
@@ -24,27 +25,29 @@ export default function MessagesScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    loadChats();
-    loadUnreadCount();
-  }, []);
-
-  const loadChats = async () => {
+  const loadChats = useCallback(async () => {
     try {
       await dispatch(fetchUserChats()).unwrap();
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load chats');
     }
-  };
+  }, [dispatch]);
 
-  const loadUnreadCount = async () => {
+  const loadUnreadCount = useCallback(async () => {
     try {
       await dispatch(fetchUnreadCount()).unwrap();
     } catch (error: any) {
       // Silently fail
     }
-  };
+  }, [dispatch]);
+
+  // Load chats and unread count whenever the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadChats();
+      loadUnreadCount();
+    }, [loadUnreadCount])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

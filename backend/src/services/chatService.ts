@@ -46,9 +46,9 @@ class ChatService {
       return null;
     }
     return Chat.findById(id)
-      .populate('homeownerId', 'firstName lastName email')
-      .populate('contractorId', 'firstName lastName email')
-      .populate('jobPostId', 'description categories')
+      .populate('homeowner', 'firstName lastName email')
+      .populate('contractor', 'firstName lastName email')
+      .populate('jobPost', 'description categories status')
       .exec();
   }
 
@@ -61,8 +61,9 @@ class ChatService {
       : { contractorId: new Types.ObjectId(userId) };
 
     return Chat.find(filter)
-      .populate(role === 'homeowner' ? 'contractorId' : 'homeownerId', 'firstName lastName email')
-      .populate('jobPostId', 'description categories status')
+      .populate('homeowner', 'firstName lastName email')
+      .populate('contractor', 'firstName lastName email')
+      .populate('jobPost', 'description categories status')
       .sort({ lastMessageAt: -1 })
       .exec();
   }
@@ -80,9 +81,9 @@ class ChatService {
       homeownerId: new Types.ObjectId(homeownerId),
       contractorId: new Types.ObjectId(contractorId),
     })
-      .populate('homeownerId', 'firstName lastName email')
-      .populate('contractorId', 'firstName lastName email')
-      .populate('jobPostId', 'description categories')
+      .populate('homeowner', 'firstName lastName email')
+      .populate('contractor', 'firstName lastName email')
+      .populate('jobPost', 'description categories status')
       .exec();
   }
 
@@ -96,6 +97,9 @@ class ChatService {
       senderId: new Types.ObjectId(messageData.senderId),
       isRead: false,
     });
+
+    // Populate sender before returning
+    await message.populate('sender', 'firstName lastName email');
 
     // Update chat's last message
     const chat = await Chat.findById(messageData.chatId).exec();
@@ -127,7 +131,7 @@ class ChatService {
     }
 
     return Message.find(filter)
-      .populate('senderId', 'firstName lastName email')
+      .populate('sender', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .limit(limit)
       .exec();

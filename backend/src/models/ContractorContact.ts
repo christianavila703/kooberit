@@ -53,6 +53,34 @@ const contractorContactSchema = new Schema<IContractorContactDocument>(
   }
 );
 
+contractorContactSchema.virtual('contractor', {
+  ref: 'User',
+  localField: 'contractorId',
+  foreignField: '_id',
+  justOne: true
+});
+
+contractorContactSchema.virtual('homeowner', {
+  ref: 'User',
+  localField: 'homeownerId',
+  foreignField: '_id',
+  justOne: true
+});
+
+contractorContactSchema.virtual('jobPost', {
+  ref: 'JobPost',
+  localField: 'jobPostId',
+  foreignField: '_id',
+  justOne: true
+});
+
+contractorContactSchema.virtual('chatRoom', {
+  ref: 'Chat',
+  localField: 'chatRoomId',
+  foreignField: '_id',
+  justOne: true
+});
+
 contractorContactSchema.index({ jobPostId: 1, contractorId: 1 }, { unique: true });
 contractorContactSchema.index({ contractorId: 1, createdAt: -1 });
 contractorContactSchema.index({ homeownerId: 1, createdAt: -1 });

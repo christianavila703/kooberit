@@ -45,6 +45,27 @@ const chatSchema = new Schema<IChatDocument>(
   }
 );
 
+chatSchema.virtual('homeowner', {
+  ref: 'User',
+  localField: 'homeownerId',
+  foreignField: '_id',
+  justOne: true
+});
+
+chatSchema.virtual('contractor', {
+  ref: 'User',
+  localField: 'contractorId',
+  foreignField: '_id',
+  justOne: true
+});
+
+chatSchema.virtual('jobPost', {
+  ref: 'JobPost',
+  localField: 'jobPostId',
+  foreignField: '_id',
+  justOne: true
+});
+
 chatSchema.index({ homeownerId: 1, contractorId: 1, jobPostId: 1 }, { unique: true });
 chatSchema.index({ homeownerId: 1, lastMessageAt: -1 });
 chatSchema.index({ contractorId: 1, lastMessageAt: -1 });

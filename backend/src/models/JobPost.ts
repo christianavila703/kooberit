@@ -63,6 +63,13 @@ const jobPostSchema = new Schema<IJobPostDocument>(
   }
 );
 
+jobPostSchema.virtual('homeowner', {
+  ref: 'User',
+  localField: 'homeownerId',
+  foreignField: '_id',
+  justOne: true
+});
+
 jobPostSchema.index({ homeownerId: 1, status: 1 });
 jobPostSchema.index({ status: 1, createdAt: -1 });
 jobPostSchema.index({ 'location.coordinates': '2dsphere' });

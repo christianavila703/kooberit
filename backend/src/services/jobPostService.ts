@@ -56,7 +56,7 @@ class JobPostService {
       return null;
     }
     return JobPost.findById(id)
-      .populate('homeownerId', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email')
       .exec();
   }
 
@@ -78,7 +78,7 @@ class JobPostService {
 
     const [data, totalCount] = await Promise.all([
       JobPost.find(filters)
-        .populate('homeownerId', 'firstName lastName email')
+        .populate('homeowner', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -119,7 +119,7 @@ class JobPostService {
     }
 
     const updated = await JobPost.findByIdAndUpdate(id, updateData, { new: true })
-      .populate('homeownerId', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email')
       .exec();
     return updated;
   }
@@ -182,7 +182,7 @@ class JobPostService {
     const skip = (page - 1) * limit;
 
     let jobPosts = await JobPost.find(filters)
-      .populate('homeownerId', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -202,25 +202,12 @@ class JobPostService {
       return jobPost;
     });
 
-    // If excludeContractorId is provided, filter out job posts where contractor already contacted
-    let filteredPosts = convertedPosts;
-    if (excludeContractorId) {
-      const { ContractorContact } = await import('@/models');
-      const contactedJobPostIds = await ContractorContact.find({
-        contractorId: new Types.ObjectId(excludeContractorId),
-      })
-        .distinct('jobPostId')
-        .exec();
 
-      filteredPosts = convertedPosts.filter(
-        (jobPost) => !contactedJobPostIds.some((id) => id.toString() === jobPost._id.toString())
-      );
-    }
 
     // Note: totalCount is calculated before exclusion, so it may be slightly higher than actual
     // This is acceptable for pagination purposes as it provides an upper bound
     return {
-      data: filteredPosts,
+      data: convertedPosts,
       pagination: {
         currentPage: page,
         totalPages,

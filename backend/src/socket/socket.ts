@@ -52,57 +52,45 @@ class SocketService {
 
       // Join chat room
       socket.on('join_chat', async (chatId: string) => {
+        if (!chatId || typeof chatId !== 'string') {
+          logger.error(`Invalid chatId received: ${chatId}`);
+          return;
+        }
         socket.join(`chat:${chatId}`);
         logger.info(`User ${socket.userId} joined chat ${chatId}`);
       });
 
       // Leave chat room
       socket.on('leave_chat', (chatId: string) => {
+        if (!chatId || typeof chatId !== 'string') {
+          logger.error(`Invalid chatId received: ${chatId}`);
+          return;
+        }
         socket.leave(`chat:${chatId}`);
         this.typingUsers.delete(chatId);
         logger.info(`User ${socket.userId} left chat ${chatId}`);
       });
 
-      // Send message
-      socket.on('send_message', async (data: { chatId: string; content: string; type?: string; fileUrl?: string }) => {
-        try {
-          if (!socket.userId) {
-            socket.emit('error', { message: 'Not authenticated' });
-            return;
-          }
-
-          const message = await chatService.createMessage({
-            chatId: data.chatId as any,
-            senderId: socket.userId! as any,
-            content: data.content,
-            type: (data.type as any) || 'text',
-            fileUrl: data.fileUrl,
-          } as any);
-
-          // Emit to all users in the chat room
-          this.io!.to(`chat:${data.chatId}`).emit('new_message', message);
-
-          // Stop typing
-          this.stopTyping(data.chatId, socket.userId);
-        } catch (error: any) {
-          logger.error('Send message error:', error);
-          socket.emit('error', { message: error.message || 'Failed to send message' });
-        }
-      });
+      // Note: Message creation is handled by API endpoint
+      // Socket is only used for broadcasting messages created via API
+      // This prevents duplicate message creation
 
       // Typing indicator
       socket.on('typing', (data: { chatId: string }) => {
         if (!socket.userId) return;
 
-        const chatId = data.chatId;
-        if (!this.typingUsers.has(chatId)) {
-          this.typingUsers.set(chatId, new Set());
+        if (!data.chatId || typeof data.chatId !== 'string') {
+          return;
         }
-        this.typingUsers.get(chatId)!.add(socket.userId);
+
+        if (!this.typingUsers.has(data.chatId)) {
+          this.typingUsers.set(data.chatId, new Set());
+        }
+        this.typingUsers.get(data.chatId)!.add(socket.userId);
 
         // Emit to other users in the chat
-        socket.to(`chat:${chatId}`).emit('user_typing', {
-          chatId,
+        socket.to(`chat:${data.chatId}`).emit('user_typing', {
+          chatId: data.chatId,
           userId: socket.userId,
         });
       });
@@ -110,6 +98,11 @@ class SocketService {
       // Stop typing
       socket.on('stop_typing', (data: { chatId: string }) => {
         if (!socket.userId) return;
+
+        if (!data.chatId || typeof data.chatId !== 'string') {
+          return;
+        }
+
         this.stopTyping(data.chatId, socket.userId);
       });
 
@@ -117,6 +110,10 @@ class SocketService {
       socket.on('mark_read', async (data: { chatId: string }) => {
         try {
           if (!socket.userId) return;
+
+          if (!data.chatId || typeof data.chatId !== 'string') {
+            return;
+          }
 
           await chatService.markMessagesAsRead(data.chatId, socket.userId);
 

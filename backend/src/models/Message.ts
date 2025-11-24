@@ -45,6 +45,20 @@ const messageSchema = new Schema<IMessageDocument>(
   }
 );
 
+messageSchema.virtual('sender', {
+  ref: 'User',
+  localField: 'senderId',
+  foreignField: '_id',
+  justOne: true
+});
+
+messageSchema.virtual('chat', {
+  ref: 'Chat',
+  localField: 'chatId',
+  foreignField: '_id',
+  justOne: true
+});
+
 messageSchema.index({ chatId: 1, createdAt: -1 });
 messageSchema.index({ senderId: 1, createdAt: -1 });
 

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import contractorContactService from '@/services/contractorContactService';
 import emailService from '@/services/emailService';
 import logger from '@/utils/logger';
@@ -20,10 +21,14 @@ export const getContractorContactsByJobPost = async (req: Request, res: Response
 
     const contacts = await contractorContactService.findContractorContactsByJobPost(jobPostId);
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    const contactsData = contacts.map((contact) => contact.toObject({ virtuals: true }));
+
     return res.status(200).json({
       success: true,
       message: 'Contractor contacts retrieved successfully',
-      data: contacts,
+      data: contactsData,
     });
   } catch (error: any) {
     logger.error('Get contractor contacts error:', error);
@@ -50,10 +55,14 @@ export const getHomeownerContractorContacts = async (req: Request, res: Response
 
     const contacts = await contractorContactService.findContractorContactsByHomeowner(user.id);
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    const contactsData = contacts.map((contact) => contact.toObject({ virtuals: true }));
+
     return res.status(200).json({
       success: true,
       message: 'Contractor contacts retrieved successfully',
-      data: contacts,
+      data: contactsData,
     });
   } catch (error: any) {
     logger.error('Get homeowner contractor contacts error:', error);
@@ -84,12 +93,17 @@ export const checkContractorContact = async (req: Request, res: Response) => {
       user.id
     );
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    // Note: chatRoomId is a field (ObjectId), chatRoom is a virtual (populated object)
+    const transformedContact = contact ? contact.toObject({ virtuals: true }) : null;
+
     return res.status(200).json({
       success: true,
       message: 'Contact status retrieved successfully',
       data: {
         hasContacted: !!contact,
-        contact: contact || null,
+        contact: transformedContact,
       },
     });
   } catch (error: any) {
@@ -119,7 +133,7 @@ export const createContractorContact = async (req: Request, res: Response) => {
     // Get job post to find homeowner
     const { JobPost } = await import('@/models');
     const jobPost = await JobPost.findById(jobPostId)
-      .populate('homeownerId')
+      .populate('homeowner', 'firstName lastName email')
       .exec();
 
     if (!jobPost) {
@@ -129,10 +143,10 @@ export const createContractorContact = async (req: Request, res: Response) => {
       });
     }
 
-    const contactData = {
-      jobPostId,
-      contractorId: user.id,
-      homeownerId: (jobPost.homeownerId as any)._id.toString(),
+    let contactData = {
+      jobPostId: jobPostId as any,
+      contractorId: user.id as any,
+      homeownerId: jobPost.homeownerId as any,
       paymentAmount: 19.99,
       paymentTransactionId,
       paymentStatus: 'completed' as const,
@@ -142,7 +156,7 @@ export const createContractorContact = async (req: Request, res: Response) => {
 
     // Send email notification to homeowner
     try {
-      const homeowner = jobPost.homeownerId as any;
+      const homeowner = (jobPost as any).homeowner || { email: '', firstName: '', lastName: '' };
       await emailService.sendContractorContactNotification(
         homeowner.email,
         `${homeowner.firstName} ${homeowner.lastName}`,
@@ -156,10 +170,14 @@ export const createContractorContact = async (req: Request, res: Response) => {
 
     logger.info(`Contractor contact created: ${contact._id} by contractor: ${user.id}`);
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    contactData = contact.toObject({ virtuals: true });
+
     return res.status(201).json({
       success: true,
       message: 'Contact created successfully',
-      data: contact,
+      data: contactData,
     });
   } catch (error: any) {
     logger.error('Create contractor contact error:', error);

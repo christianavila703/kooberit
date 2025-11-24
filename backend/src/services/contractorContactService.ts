@@ -72,9 +72,9 @@ class ContractorContactService {
       return null;
     }
     return ContractorContact.findById(id)
-      .populate('contractorId', 'firstName lastName email')
-      .populate('homeownerId', 'firstName lastName email')
-      .populate('jobPostId')
+      .populate('contractor', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email')
+      .populate('jobPost')
       .exec();
   }
 
@@ -85,8 +85,8 @@ class ContractorContactService {
     jobPostId: string
   ): Promise<IContractorContactDocument[]> {
     return ContractorContact.find({ jobPostId: new Types.ObjectId(jobPostId) })
-      .populate('contractorId', 'firstName lastName email')
-      .populate('chatRoomId')
+      .populate('contractor', 'firstName lastName email')
+      .populate('chatRoom')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -98,9 +98,9 @@ class ContractorContactService {
     homeownerId: string
   ): Promise<IContractorContactDocument[]> {
     return ContractorContact.find({ homeownerId: new Types.ObjectId(homeownerId) })
-      .populate('contractorId', 'firstName lastName email')
-      .populate('jobPostId', 'description categories status')
-      .populate('chatRoomId')
+      .populate('contractor', 'firstName lastName email')
+      .populate('jobPost', 'description categories status')
+      .populate('chatRoom')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -116,8 +116,8 @@ class ContractorContactService {
       jobPostId: new Types.ObjectId(jobPostId),
       contractorId: new Types.ObjectId(contractorId),
     })
-      .populate('contractorId', 'firstName lastName email')
-      .populate('chatRoomId')
+      .populate('contractor', 'firstName lastName email')
+      .populate('chatRoom')
       .exec();
   }
 

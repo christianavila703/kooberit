@@ -19,10 +19,14 @@ export const getUserChats = async (req: Request, res: Response) => {
 
     const chats = await chatService.findChatsByUser(user.id, role);
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    const chatsData = chats.map((chat) => chat.toObject({ virtuals: true }));
+
     return res.status(200).json({
       success: true,
       message: 'Chats retrieved successfully',
-      data: chats,
+      data: chatsData,
     });
   } catch (error: any) {
     logger.error('Get user chats error:', error);
@@ -60,10 +64,13 @@ export const getChatById = async (req: Request, res: Response) => {
       });
     }
 
+    // Serialize chat with virtuals included (toJSON handles this automatically)
+    const chatData = chat.toObject ? chat.toObject({ virtuals: true }) : chat;
+
     return res.status(200).json({
       success: true,
       message: 'Chat retrieved successfully',
-      data: chat,
+      data: chatData,
     });
   } catch (error: any) {
     logger.error('Get chat error:', error);
@@ -105,10 +112,16 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
     const messages = await chatService.findMessagesByChatId(chatId, limit, before);
 
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    const messagesData = messages.map((message) => 
+      message.toObject({ virtuals: true })
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Messages retrieved successfully',
-      data: messages.reverse(), // Reverse to show oldest first
+      data: messagesData.reverse(), // Reverse to show oldest first
     });
   } catch (error: any) {
     logger.error('Get chat messages error:', error);
@@ -148,19 +161,31 @@ export const sendMessage = async (req: Request, res: Response) => {
     }
 
     const message = await chatService.createMessage({
-      chatId,
-      senderId: user.id,
+      chatId: chatId as any,
+      senderId: user.id as any,
       content,
       type,
       fileUrl,
     });
+
+    // Mongoose automatically converts ObjectIds to strings in JSON
+    // Serialize with virtuals included
+    const messageData = message.toObject({ virtuals: true });
+
+    // Broadcast to other users via socket (sender gets message from API response)
+    const { default: socketService } = await import('@/socket/socket');
+    const io = socketService.getIO();
+    if (io) {
+      // Emit to others only (not sender) - socket.to excludes the sender socket
+      io.to(`chat:${chatId}`).emit('new_message', messageData);
+    }
 
     logger.info(`Message sent: ${message._id} in chat: ${chatId} by user: ${user.id}`);
 
     return res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: message,
+      data: messageData,
     });
   } catch (error: any) {
     logger.error('Send message error:', error);

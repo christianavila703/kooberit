@@ -32,6 +32,7 @@ export default function JobPostDetailsScreen() {
   const [contractorContacts, setContractorContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [hasContacted, setHasContacted] = useState(false);
+  const [contactData, setContactData] = useState<any>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor';
@@ -81,9 +82,11 @@ export default function JobPostDetailsScreen() {
     try {
       const result = await contractorContactService.checkContractorContact(id);
       setHasContacted(result.hasContacted);
+      setContactData(result.contact);
     } catch (error: any) {
       // Silently fail - if error, assume not contacted
       setHasContacted(false);
+      setContactData(null);
     }
   };
 
@@ -219,11 +222,21 @@ export default function JobPostDetailsScreen() {
         {isContractor && currentJobPost.status === 'active' && (
           <View style={styles.section}>
             {hasContacted ? (
-              <View style={[styles.contactedCard, { backgroundColor: '#4CAF50' + '20' }]}>
-                <IconSymbol name="checkmark.circle.fill" size={24} color="#4CAF50" />
-                <Text style={[styles.contactedText, { color: '#4CAF50' }]}>
-                  You have already contacted this homeowner
-                </Text>
+              <View>
+                <View style={[styles.contactedCard, { backgroundColor: '#4CAF50' + '20' }]}>
+                  <IconSymbol name="checkmark.circle.fill" size={24} color="#4CAF50" />
+                  <Text style={[styles.contactedText, { color: '#4CAF50' }]}>
+                    You have already contacted this homeowner
+                  </Text>
+                </View>
+                {contactData?.chatRoomId && (
+                  <TouchableOpacity
+                    style={[styles.chatButtonFull, { backgroundColor: colors.tint }]}
+                    onPress={() => handleChatPress(contactData.chatRoomId)}>
+                    <IconSymbol name="message.fill" size={20} color="#FFFFFF" />
+                    <Text style={styles.chatButtonText}>Open Chat</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <TouchableOpacity
@@ -497,6 +510,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+  },
+  chatButtonFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 

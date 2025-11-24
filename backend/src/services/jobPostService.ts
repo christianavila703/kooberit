@@ -79,6 +79,7 @@ class JobPostService {
     const [data, totalCount] = await Promise.all([
       JobPost.find(filters)
         .populate('homeowner', 'firstName lastName email')
+        .lean({ virtuals: true }) // Returns plain objects with virtuals
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -181,19 +182,21 @@ class JobPostService {
 
     const skip = (page - 1) * limit;
 
+    // Use .lean() to get plain JavaScript objects directly (not Mongoose documents)
     let jobPosts = await JobPost.find(filters)
       .populate('homeowner', 'firstName lastName email')
+      .lean({ virtuals: true }) // Returns plain objects with virtuals
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
 
     // Convert GeoJSON coordinates back to lat/lng format for frontend
-    const convertedPosts = jobPosts.map((jobPost) => {
+    const convertedPosts = jobPosts.map((jobPost: any) => {
       if (jobPost.location?.coordinates) {
         const coords = jobPost.location.coordinates as any;
         if (coords.coordinates && Array.isArray(coords.coordinates)) {
-          (jobPost.location as any).coordinates = {
+          jobPost.location.coordinates = {
             latitude: coords.coordinates[1],
             longitude: coords.coordinates[0],
           };

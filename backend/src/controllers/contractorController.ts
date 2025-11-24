@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jobPostService from '@/services/jobPostService';
 import userService from '@/services/userService';
+import contractorContactService from '@/services/contractorContactService';
 import logger from '@/utils/logger';
 
 /**
@@ -62,11 +63,27 @@ export const getJobBoard = async (req: Request, res: Response) => {
       );
     }
 
+    // Check contact status for each job post
+    const jobPostsWithContactStatus = await Promise.all(
+      filteredPosts.map(async (post) => {
+        const postId = (post as any).id || (post as any)._id?.toString() || '';
+        const contact = await contractorContactService.findContractorContactByJobPostAndContractor(
+          postId,
+          user.id
+        );
+        
+        return {
+          ...post,
+          hasContacted: !!contact,
+        };
+      })
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Job posts retrieved successfully',
       data: {
-        jobPosts: filteredPosts,
+        jobPosts: jobPostsWithContactStatus,
         pagination: pagination,
       },
     });

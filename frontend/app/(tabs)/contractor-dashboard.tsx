@@ -419,30 +419,47 @@ export default function ContractorDashboard() {
         renderItem={({ item: jobPost }) => (
           <TouchableOpacity
             style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-            onPress={() => handleJobPostPress(jobPost.id)}
+            onPress={() => jobPost.id && handleJobPostPress(jobPost.id)}
             activeOpacity={0.7}>
             <View style={styles.jobCardHeader}>
-              <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
-                {jobPost.description.substring(0, 80)}
-                {jobPost.description.length > 80 ? '...' : ''}
-              </Text>
+              <View style={styles.jobCardTitleContainer}>
+                <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
+                  {jobPost.description
+                    ? jobPost.description.length > 80
+                      ? jobPost.description.substring(0, 80) + '...'
+                      : jobPost.description
+                    : 'No description'}
+                </Text>
+                {jobPost.hasContacted && (
+                  <View
+                    style={[
+                      styles.contactedBadge,
+                      { backgroundColor: isDark ? '#2E7D32' : '#4CAF50' },
+                    ]}>
+                    <IconSymbol name="checkmark.circle.fill" size={14} color="#FFFFFF" />
+                    <Text style={styles.contactedBadgeText}>Contacted</Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             <View style={styles.jobCardBody}>
               <View style={styles.categoriesContainer}>
-                {jobPost.categories.slice(0, 3).map((category: string, index: number) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.categoryTag,
-                      { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
-                    ]}>
-                    <Text style={[styles.categoryText, { color: colors.text }]}>
-                      {category}
-                    </Text>
-                  </View>
-                ))}
-                {jobPost.categories.length > 3 && (
+                {jobPost.categories && jobPost.categories.length > 0
+                  ? jobPost.categories.slice(0, 3).map((category: string, index: number) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.categoryTag,
+                          { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
+                        ]}>
+                        <Text style={[styles.categoryText, { color: colors.text }]}>
+                          {category}
+                        </Text>
+                      </View>
+                    ))
+                  : null}
+                {jobPost.categories && jobPost.categories.length > 3 && (
                   <Text style={[styles.moreCategories, { color: colors.icon }]}>
                     +{jobPost.categories.length - 3}
                   </Text>
@@ -697,10 +714,31 @@ const styles = StyleSheet.create({
   jobCardHeader: {
     marginBottom: 12,
   },
+  jobCardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   jobCardTitle: {
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
+    flex: 1,
+  },
+  contactedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  contactedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   jobCardBody: {
     gap: 12,

@@ -93,6 +93,7 @@ export interface IJobPost {
   };
   status: IJobPostStatus;
   contractorContactsCount: number;
+  hasContacted?: boolean;
   createdAt?: string;
   updatedAt?: string;
   homeowner?: {

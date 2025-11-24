@@ -1,6 +1,6 @@
 import userService from './userService';
 import logger from '@/utils/logger';
-import { CustomError } from '@/utils/customError';
+import CustomError from '@/utils/customError';
 
 export interface IProfileSettings {
   contractorAddress?: {

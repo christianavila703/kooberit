@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { CardField, useStripe } from '@stripe/stripe-react-native';
 import contractorContactService from '@/services/contractorContact';
 import { useAppSelector } from '@/store/hooks';
 import { Colors } from '@/constants/theme';
@@ -23,13 +24,12 @@ export default function PaymentScreen() {
   const { user } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { createPaymentMethod } = useStripe();
 
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
   const [cardholderName, setCardholderName] = useState('');
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cardDetails, setCardDetails] = useState<any>(null);
 
   // Set header title
   useLayoutEffect(() => {
@@ -38,22 +38,8 @@ export default function PaymentScreen() {
     });
   }, [navigation]);
 
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\s/g, '');
-    const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
-    return formatted.substring(0, 19);
-  };
-
-  const formatExpiryDate = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
-    }
-    return cleaned;
-  };
-
   const handlePayment = async () => {
-    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
+    if (!cardDetails?.complete || !cardholderName) {
       notificationService.error('Payment Error', 'Please fill in all payment details');
       return;
     }
@@ -65,12 +51,24 @@ export default function PaymentScreen() {
 
     setIsProcessing(true);
     try {
-      // Process payment through Stripe
+      // Create payment method using Stripe
+      const { paymentMethod, error: pmError } = await createPaymentMethod({
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          billingDetails: {
+            name: cardholderName,
+          },
+        },
+      });
+
+      if (pmError || !paymentMethod) {
+        throw new Error(pmError?.message || 'Failed to create payment method');
+      }
+
+      // Process payment through backend with payment method ID
       const paymentResult = await contractorContactService.processPayment({
         jobPostId: jobPostId,
-        cardNumber: cardNumber.replace(/\s/g, ''),
-        expiryDate,
-        cvv,
+        paymentMethodId: paymentMethod.id,
         cardholderName,
         saveCard,
       });
@@ -112,23 +110,34 @@ export default function PaymentScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Card Information</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Card Number</Text>
-            <TextInput
+            <Text style={[styles.label, { color: colors.text }]}>Card Details</Text>
+            <View
               style={[
-                styles.input,
+                styles.cardFieldContainer,
                 {
                   backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
-                  color: colors.text,
                 },
-              ]}
-              placeholder="1234 5678 9012 3456"
-              placeholderTextColor={colors.icon}
-              value={cardNumber}
-              onChangeText={(text) => setCardNumber(formatCardNumber(text))}
-              keyboardType="number-pad"
-              maxLength={19}
-              editable={!isProcessing}
-            />
+              ]}>
+              <CardField
+                postalCodeEnabled={false}
+                placeholders={{
+                  number: '4242 4242 4242 4242',
+                }}
+                cardStyle={{
+                  backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                  textColor: colors.text,
+                  borderColor: cardDetails?.complete ? '#4CAF50' : colors.icon,
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  fontSize: 16,
+                  placeholderColor: colors.icon,
+                }}
+                style={styles.cardField}
+                onCardChange={(cardDetails) => {
+                  setCardDetails(cardDetails);
+                }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputContainer}>
@@ -147,49 +156,6 @@ export default function PaymentScreen() {
               onChangeText={setCardholderName}
               editable={!isProcessing}
             />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: colors.text }]}>Expiry Date</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
-                    color: colors.text,
-                  },
-                ]}
-                placeholder="MM/YY"
-                placeholderTextColor={colors.icon}
-                value={expiryDate}
-                onChangeText={(text) => setExpiryDate(formatExpiryDate(text))}
-                keyboardType="number-pad"
-                maxLength={5}
-                editable={!isProcessing}
-              />
-            </View>
-
-            <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: colors.text }]}>CVV</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
-                    color: colors.text,
-                  },
-                ]}
-                placeholder="123"
-                placeholderTextColor={colors.icon}
-                value={cvv}
-                onChangeText={(text) => setCvv(text.replace(/\D/g, '').substring(0, 4))}
-                keyboardType="number-pad"
-                maxLength={4}
-                secureTextEntry
-                editable={!isProcessing}
-              />
-            </View>
           </View>
 
           <TouchableOpacity
@@ -296,6 +262,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
+  },
+  cardFieldContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    padding: 4,
+  },
+  cardField: {
+    width: '100%',
+    height: 56,
   },
   row: {
     flexDirection: 'row',

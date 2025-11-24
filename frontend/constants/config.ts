@@ -23,3 +23,11 @@ export const API_CONFIG = {
 };
   
 export const TOKEN_KEY = '@kooberit:token';
+
+/**
+ * Stripe Configuration
+ * Get your publishable key from: https://dashboard.stripe.com/apikeys
+ */
+export const STRIPE_PUBLISHABLE_KEY = __DEV__
+  ? process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || ''
+  : process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE || '';

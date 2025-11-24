@@ -56,9 +56,7 @@ class ContractorContactService {
    */
   async processPayment(data: {
     jobPostId: string;
-    cardNumber: string;
-    expiryDate: string;
-    cvv: string;
+    paymentMethodId: string;
     cardholderName: string;
     saveCard: boolean;
   }): Promise<{ success: boolean; chatId?: string; error?: string }> {

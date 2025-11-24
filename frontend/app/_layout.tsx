@@ -11,6 +11,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { store } from '@/store';
 import { AuthProvider } from '@/components/auth-provider';
 import { Colors } from '@/constants/theme';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { STRIPE_PUBLISHABLE_KEY } from '@/constants/config';
 
 SplashScreen.hide();
 
@@ -35,9 +37,10 @@ export default function RootLayout() {
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <Provider store={store}>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+      <Provider store={store}>
+        <AuthProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
             <Stack.Screen name="splash" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -119,6 +122,7 @@ export default function RootLayout() {
         </ThemeProvider>
       </AuthProvider>
     </Provider>
+    </StripeProvider>
   );
 }
 

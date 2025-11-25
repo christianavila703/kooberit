@@ -89,10 +89,13 @@ export const sendMessage = createAsyncThunk(
  */
 export const markMessagesAsRead = createAsyncThunk(
   'chat/markAsRead',
-  async (chatId: string, { rejectWithValue }) => {
+  async (chatId: string, { rejectWithValue, getState }) => {
     try {
       await chatService.markMessagesAsRead(chatId);
-      return chatId;
+      // Get current user ID from auth state
+      const state = getState() as any;
+      const currentUserId = state.auth?.user?.id;
+      return { chatId, currentUserId };
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to mark messages as read');
     }
@@ -137,6 +140,27 @@ const chatSlice = createSlice({
     },
     clearMessages: (state, action: PayloadAction<string>) => {
       state.messages[action.payload] = [];
+    },
+    markMessagesAsReadInChat: (state, action: PayloadAction<{ chatId: string; currentUserId: string }>) => {
+      const { chatId, currentUserId } = action.payload;
+      // Only mark messages from other users as read
+      if (state.messages[chatId]) {
+        state.messages[chatId].forEach((msg) => {
+          if (msg.senderId !== currentUserId && !msg.isRead) {
+            msg.isRead = true;
+          }
+        });
+      }
+      // Update unread counts
+      const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+      if (chatIndex !== -1) {
+        state.chats[chatIndex].homeownerUnreadCount = 0;
+        state.chats[chatIndex].contractorUnreadCount = 0;
+      }
+      if (state.currentChat?.id === chatId) {
+        state.currentChat.homeownerUnreadCount = 0;
+        state.currentChat.contractorUnreadCount = 0;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -232,7 +256,15 @@ const chatSlice = createSlice({
     // Mark messages as read
     builder
       .addCase(markMessagesAsRead.fulfilled, (state, action) => {
-        const chatId = action.payload;
+        const { chatId, currentUserId } = action.payload;
+        // Only mark messages from other users as read
+        if (state.messages[chatId] && currentUserId) {
+          state.messages[chatId].forEach((msg) => {
+            if (msg.senderId !== currentUserId && !msg.isRead) {
+              msg.isRead = true;
+            }
+          });
+        }
         // Update unread counts
         const chatIndex = state.chats.findIndex((c) => c.id === chatId);
         if (chatIndex !== -1) {
@@ -242,12 +274,6 @@ const chatSlice = createSlice({
         if (state.currentChat?.id === chatId) {
           state.currentChat.homeownerUnreadCount = 0;
           state.currentChat.contractorUnreadCount = 0;
-        }
-        // Mark messages as read
-        if (state.messages[chatId]) {
-          state.messages[chatId].forEach((msg) => {
-            msg.isRead = true;
-          });
         }
       });
 
@@ -259,6 +285,6 @@ const chatSlice = createSlice({
   },
 });
 
-export const { clearError, setCurrentChat, addMessage, clearMessages } = chatSlice.actions;
+export const { clearError, setCurrentChat, addMessage, clearMessages, markMessagesAsReadInChat } = chatSlice.actions;
 export default chatSlice.reducer;
 

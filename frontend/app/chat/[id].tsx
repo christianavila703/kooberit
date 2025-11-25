@@ -19,6 +19,7 @@ import {
   sendMessage,
   markMessagesAsRead,
   addMessage,
+  markMessagesAsReadInChat,
 } from '@/store/slices/chatSlice';
 import socketService from '@/services/socket';
 import { Colors } from '@/constants/theme';
@@ -101,10 +102,17 @@ export default function ChatScreen() {
           }
         });
 
-        // Listen for read receipts
+        // Listen for read receipts (when other user marks messages as read)
         socketService.on('messages_read', (data: { chatId: string; userId: string }) => {
-          if (data.chatId === chatId) {
-            // Update read status in Redux if needed
+          if (data.chatId === chatId && data.userId !== user?.id) {
+            // Other user marked messages as read - update read indicators for our sent messages
+            const chatMessages = messages[chatId] || [];
+            chatMessages.forEach((msg) => {
+              if (msg.senderId === user?.id && !msg.isRead) {
+                // Update message in Redux to show read receipt
+                dispatch(addMessage({ chatId: chatId, message: { ...msg, isRead: true } }));
+              }
+            });
           }
         });
       }
@@ -130,8 +138,8 @@ export default function ChatScreen() {
       if (hasUnreadMessages) {
         // Small delay to ensure messages are loaded
         const timer = setTimeout(() => {
+          // Mark messages as read via API (Redux will update state automatically)
           dispatch(markMessagesAsRead(chatId));
-          socketService.markRead(chatId);
         }, 300);
 
         return () => clearTimeout(timer);
@@ -364,8 +372,8 @@ export default function ChatScreen() {
               );
               
               if (hasUnreadMessages) {
+                // Mark messages as read via API (Redux will update state automatically)
                 dispatch(markMessagesAsRead(chatId));
-                socketService.markRead(chatId);
               }
             }
           }}

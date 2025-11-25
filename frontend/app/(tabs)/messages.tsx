@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import socketService from '@/services/socket';
 
 export default function MessagesScreen() {
   const router = useRouter();
@@ -41,12 +42,73 @@ export default function MessagesScreen() {
     }
   }, [dispatch]);
 
+  // Store handlers in refs so they can be cleaned up properly
+  const handlersRef = useRef<{
+    handleNewMessage: ((message: any) => void) | null;
+    handleMessagesRead: ((data: { chatId: string; userId: string }) => void) | null;
+  }>({ handleNewMessage: null, handleMessagesRead: null });
+
   // Load chats and unread count whenever the screen comes into focus
+  // Also set up socket listeners to auto-refresh when events occur
   useFocusEffect(
     React.useCallback(() => {
       loadChats();
       loadUnreadCount();
-    }, [loadUnreadCount])
+
+      // Set up socket connection and listeners
+      const setupSocketListeners = async () => {
+        try {
+          await socketService.connect();
+          
+          // Verify connection
+          if (!socketService.isConnected()) {
+            console.warn('Socket not connected after connect() call');
+            return;
+          }
+
+          // Listen for new messages - refresh chats list when any new message arrives
+          const handleNewMessage = (message: any) => {
+            console.log('New message received on messages screen:', message);
+            // Refresh chats list to update last message and timestamp
+            loadChats();
+            loadUnreadCount();
+          };
+
+          // Listen for messages read events - refresh to update unread counts
+          const handleMessagesRead = (data: { chatId: string; userId: string }) => {
+            console.log('Messages read event received:', data);
+            // Only refresh if it's not the current user who read the messages
+            if (data.userId !== user?.id) {
+              loadChats();
+              loadUnreadCount();
+            }
+          };
+
+          // Store handlers in ref for cleanup
+          handlersRef.current.handleNewMessage = handleNewMessage;
+          handlersRef.current.handleMessagesRead = handleMessagesRead;
+
+          socketService.on('new_message', handleNewMessage);
+          socketService.on('messages_read', handleMessagesRead);
+        } catch (error) {
+          console.error('Socket setup error:', error);
+        }
+      };
+
+      setupSocketListeners();
+
+      // Cleanup on unmount or when screen loses focus
+      return () => {
+        if (handlersRef.current.handleNewMessage) {
+          socketService.off('new_message', handlersRef.current.handleNewMessage);
+          handlersRef.current.handleNewMessage = null;
+        }
+        if (handlersRef.current.handleMessagesRead) {
+          socketService.off('messages_read', handlersRef.current.handleMessagesRead);
+          handlersRef.current.handleMessagesRead = null;
+        }
+      };
+    }, [loadChats, loadUnreadCount, user?.id])
   );
 
   const onRefresh = async () => {

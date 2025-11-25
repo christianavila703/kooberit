@@ -27,9 +27,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as ImagePicker from 'expo-image-picker';
-import { API_CONFIG } from '@/constants/config';
-import endpoints from '@/constants/endpoints';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -104,15 +101,9 @@ export default function ChatScreen() {
 
         // Listen for read receipts (when other user marks messages as read)
         socketService.on('messages_read', (data: { chatId: string; userId: string }) => {
+          console.log('messages_read', data);
           if (data.chatId === chatId && data.userId !== user?.id) {
-            // Other user marked messages as read - update read indicators for our sent messages
-            const chatMessages = messages[chatId] || [];
-            chatMessages.forEach((msg) => {
-              if (msg.senderId === user?.id && !msg.isRead) {
-                // Update message in Redux to show read receipt
-                dispatch(addMessage({ chatId: chatId, message: { ...msg, isRead: true } }));
-              }
-            });
+            dispatch(markMessagesAsReadInChat({ chatId: chatId, currentUserId: data.userId }));
           }
         });
       }

@@ -176,8 +176,17 @@ export const sendMessage = async (req: Request, res: Response) => {
     const { default: socketService } = await import('@/socket/socket');
     const io = socketService.getIO();
     if (io) {
-      // Emit to others only (not sender) - socket.to excludes the sender socket
+      // Get the recipient user ID (the other person in the chat)
+      const recipientId = isHomeowner 
+        ? chat.contractorId.toString() 
+        : chat.homeownerId.toString();
+      
+      // Emit to chat room (for users currently in the chat)
       io.to(`chat:${chatId}`).emit('new_message', messageData);
+      
+      // Also emit to recipient's personal room (so they receive it even when not in the chat)
+      // This allows the messages list screen to receive updates
+      socketService.emitToUser(recipientId, 'new_message', messageData);
     }
 
     logger.info(`Message sent: ${message._id} in chat: ${chatId} by user: ${user.id}`);
@@ -224,6 +233,27 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
     }
 
     await chatService.markMessagesAsRead(chatId, user.id);
+
+    // Broadcast to other users via socket
+    const { default: socketService } = await import('@/socket/socket');
+    const io = socketService.getIO();
+    if (io) {
+      // Get the recipient user ID (the other person in the chat)
+      const recipientId = isHomeowner 
+        ? chat.contractorId.toString() 
+        : chat.homeownerId.toString();
+      
+      const readData = {
+        chatId,
+        userId: user.id,
+      };
+      
+      // Emit to chat room (for users currently in the chat)
+      io.to(`chat:${chatId}`).emit('messages_read', readData);
+      
+      // Also emit to recipient's personal room (so they receive it even when not in the chat)
+      socketService.emitToUser(recipientId, 'messages_read', readData);
+    }
 
     return res.status(200).json({
       success: true,

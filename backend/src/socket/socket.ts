@@ -4,6 +4,7 @@ import { verifyToken } from '@/utils/jwt';
 import authService from '@/services/authService';
 import chatService from '@/services/chatService';
 import logger from '@/utils/logger';
+import { CORS_ALLOWED_ORIGINS } from '@/config/constants';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -17,10 +18,12 @@ class SocketService {
   initialize(server: HTTPServer) {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || '*',
+        origin: CORS_ALLOWED_ORIGINS,
         methods: ['GET', 'POST'],
         credentials: true,
       },
+      transports: ['websocket', 'polling'],
+      allowEIO3: true,
     });
 
     // Authentication middleware

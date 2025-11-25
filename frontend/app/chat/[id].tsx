@@ -471,12 +471,12 @@ export default function ChatScreen() {
               maxLength={5000}
               editable={!sending}
             />
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.attachButton}
               onPress={handlePickImage}
               disabled={sending}>
               <IconSymbol name="photo" size={20} color={colors.icon} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         <TouchableOpacity
           style={[
             styles.sendButton,

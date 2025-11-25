@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AnimatedTabIcon } from '@/components/animated-tab-icon';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppSelector } from '@/store/hooks';
@@ -22,6 +22,16 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // Tab bar styling for better visual feedback
+        tabBarStyle: {
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        tabBarHideOnKeyboard: true,
       }}
       initialRouteName={isHomeowner ? 'homeowner-dashboard' : 'contractor-dashboard'}>
       {/* Homeowner Dashboard - only show for homeowners */}
@@ -29,7 +39,9 @@ export default function TabLayout() {
         name="homeowner-dashboard"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
+          ),
           href: isHomeowner ? undefined : null,
         }}
       />
@@ -39,7 +51,9 @@ export default function TabLayout() {
         name="contractor-dashboard"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
+          ),
           href: isContractor ? undefined : null,
         }}
       />
@@ -49,7 +63,9 @@ export default function TabLayout() {
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon size={28} name="message.fill" color={color} focused={focused} />
+          ),
         }}
       />
       
@@ -58,7 +74,9 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon size={28} name="person.fill" color={color} focused={focused} />
+          ),
         }}
       />
 
@@ -66,7 +84,9 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'index',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
+          ),
           href: null,
         }}
       />

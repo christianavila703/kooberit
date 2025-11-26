@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notificationService from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Modal } from '@/components/ui/modal';
+import jobPostService from '@/services/jobPost';
 
 export default function PaymentScreen() {
   const router = useRouter();
@@ -30,6 +32,8 @@ export default function PaymentScreen() {
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState<any>(null);
+  const [showContractorLimitPopup, setShowContractorLimitPopup] = useState(false);
+  const [jobPost, setJobPost] = useState<any>(null);
 
   // Set header title
   useLayoutEffect(() => {
@@ -37,6 +41,22 @@ export default function PaymentScreen() {
       title: 'Payment',
     });
   }, [navigation]);
+
+  // Load job post to get contractor limit
+  useEffect(() => {
+    if (jobPostId) {
+      loadJobPost();
+    }
+  }, [jobPostId]);
+
+  const loadJobPost = async () => {
+    try {
+      const post = await jobPostService.getJobPostById(jobPostId);
+      setJobPost(post);
+    } catch (error: any) {
+      notificationService.error('Error', 'Failed to load job post details');
+    }
+  };
 
   const handlePayment = async () => {
     if (!cardDetails?.complete || !cardholderName) {
@@ -49,6 +69,16 @@ export default function PaymentScreen() {
       return;
     }
 
+    // Show popup about contractor limit before processing payment
+    if (jobPost?.contractorLimit) {
+      setShowContractorLimitPopup(true);
+      return;
+    }
+
+    processPayment();
+  };
+
+  const processPayment = async () => {
     setIsProcessing(true);
     try {
       // Create payment method using Stripe
@@ -182,6 +212,35 @@ export default function PaymentScreen() {
           🔒 Your payment is secure and encrypted
         </Text>
       </ScrollView>
+
+      {/* Contractor Limit Popup */}
+      <Modal visible={showContractorLimitPopup} onClose={() => setShowContractorLimitPopup(false)}>
+        <View style={styles.popupContainer}>
+          <View style={styles.popupHeader}>
+            <Text style={[styles.popupTitle, { color: colors.text }]}>Important Notice</Text>
+          </View>
+          <View style={styles.popupContent}>
+            <Text style={[styles.popupMessage, { color: colors.text }]}>
+              Please note that the Homeowner has indicated that they would like {jobPost?.contractorLimit || 'X'} number of contractors to contact them. We cannot guarantee their response as their circumstances might have changed since posting the job.
+            </Text>
+          </View>
+          <View style={styles.popupButtons}>
+            <TouchableOpacity
+              style={[styles.popupButtonCancel, { borderColor: colors.tint }]}
+              onPress={() => setShowContractorLimitPopup(false)}>
+              <Text style={[styles.popupButtonCancelText, { color: colors.tint }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.popupButtonConfirm, { backgroundColor: colors.tint }]}
+              onPress={() => {
+                setShowContractorLimitPopup(false);
+                processPayment();
+              }}>
+              <Text style={styles.popupButtonConfirmText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -305,6 +364,53 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     marginTop: 8,
+  },
+  popupContainer: {
+    padding: 24,
+  },
+  popupHeader: {
+    marginBottom: 20,
+  },
+  popupTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  popupContent: {
+    marginBottom: 24,
+  },
+  popupMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  popupButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  popupButtonCancel: {
+    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  popupButtonConfirm: {
+    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupButtonConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

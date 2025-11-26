@@ -11,45 +11,26 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { createJobPost } from '@/store/slices/jobPostSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Modal } from '@/components/ui/modal';
 import LocationPicker from '@/components/LocationPicker';
+import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 
-const CONSTRUCTION_CATEGORIES = [
-  'roof',
-  'eavestrough',
-  'sofit',
-  'siding',
-  'brickwork',
-  'windows',
-  'doors',
-  'foundation',
-  'exterior stairs',
-  'attic',
-  'ceiling',
-  'interior stairs',
-  'interior walls',
-  'bedroom',
-  'living room',
-  'kitchen',
-  'washroom',
-  'basement',
-  'plumbing',
-  'heating',
-  'cooling',
-  'electrical',
-];
 
 export default function CreateJobPostScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { currentJobPost } = useAppSelector((state) => state.jobPost);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const [projectTitle, setProjectTitle] = useState('');
+  const [jobSize, setJobSize] = useState<'micro' | 'small' | 'big' | 'very_big' | ''>('');
   const [description, setDescription] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorLimit, setContractorLimit] = useState(3);
@@ -58,6 +39,7 @@ export default function CreateJobPostScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showPostJobPopup, setShowPostJobPopup] = useState(false);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -69,6 +51,14 @@ export default function CreateJobPostScreen() {
 
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
+
+    if (!projectTitle.trim()) {
+      newErrors.projectTitle = 'Project title is required';
+    }
+
+    if (!jobSize) {
+      newErrors.jobSize = 'Job size is required';
+    }
 
     if (description.trim().length < 10) {
       newErrors.description = 'Description must be at least 10 characters';
@@ -103,6 +93,8 @@ export default function CreateJobPostScreen() {
     try {
       const jobPost = await dispatch(
         createJobPost({
+          projectTitle: projectTitle.trim(),
+          jobSize: jobSize as 'micro' | 'small' | 'big' | 'very_big',
           description: description.trim(),
           categories: selectedCategories,
           contractorLimit,
@@ -116,12 +108,21 @@ export default function CreateJobPostScreen() {
         })
       ).unwrap();
 
-      notification.success('Success', 'Job post created successfully');
-      router.replace(`/job-post/${jobPost.id}` as any);
+      // Show popup after successful job post
+      setShowPostJobPopup(true);
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to create job post');
-    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePopupClose = () => {
+    setShowPostJobPopup(false);
+    setIsLoading(false);
+    if (currentJobPost?.id) {
+      router.replace(`/job-post/${currentJobPost.id}` as any);
+    } else {
+      router.back();
     }
   };
 
@@ -135,6 +136,93 @@ export default function CreateJobPostScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled">
+        {/* Project Title */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Project Title</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                color: colors.text,
+                borderColor: errors.projectTitle ? '#FF3B30' : 'transparent',
+              },
+            ]}
+            placeholder="Enter project title"
+            placeholderTextColor={colors.icon}
+            value={projectTitle}
+            onChangeText={(text) => {
+              setProjectTitle(text);
+              if (errors.projectTitle) {
+                setErrors({ ...errors, projectTitle: '' });
+              }
+            }}
+            editable={!isLoading}
+          />
+          {errors.projectTitle && (
+            <Text style={styles.errorText}>{errors.projectTitle}</Text>
+          )}
+        </View>
+
+        {/* Job Size */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Job Size</Text>
+          <Text style={[styles.subLabel, { color: colors.icon }]}>
+            Select the estimated job size
+          </Text>
+          <View style={styles.jobSizeContainer}>
+            {[
+              { value: 'micro', label: 'Micro Job', range: '$0 - $2,500' },
+              { value: 'small', label: 'Small Job', range: '$2,500 - $10,000' },
+              { value: 'big', label: 'Big Job', range: '$10,000 - $50,000' },
+              { value: 'very_big', label: 'Very Big Job', range: '$50,000+' },
+            ].map((size) => (
+              <TouchableOpacity
+                key={size.value}
+                style={[
+                  styles.jobSizeButton,
+                  {
+                    backgroundColor:
+                      jobSize === size.value
+                        ? colors.tint
+                        : isDark
+                        ? '#1E1E1E'
+                        : '#F5F5F5',
+                    borderColor: jobSize === size.value ? colors.tint : isDark ? '#2E2E2E' : '#E0E0E0',
+                  },
+                ]}
+                onPress={() => {
+                  setJobSize(size.value as any);
+                  if (errors.jobSize) {
+                    setErrors({ ...errors, jobSize: '' });
+                  }
+                }}
+                disabled={isLoading}>
+                <Text
+                  style={[
+                    styles.jobSizeLabel,
+                    {
+                      color: jobSize === size.value ? '#FFFFFF' : colors.text,
+                      fontWeight: jobSize === size.value ? '600' : '400',
+                    },
+                  ]}>
+                  {size.label}
+                </Text>
+                <Text
+                  style={[
+                    styles.jobSizeRange,
+                    {
+                      color: jobSize === size.value ? '#FFFFFF' : colors.icon,
+                    },
+                  ]}>
+                  {size.range}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {errors.jobSize && <Text style={styles.errorText}>{errors.jobSize}</Text>}
+        </View>
+
         {/* Description */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Job Description</Text>
@@ -326,6 +414,33 @@ export default function CreateJobPostScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Post Job Popup */}
+      <Modal visible={showPostJobPopup} onClose={handlePopupClose}>
+        <View style={styles.popupContainer}>
+          <View style={styles.popupHeader}>
+            <Text style={[styles.popupTitle, { color: colors.text }]}>Job Posted Successfully</Text>
+          </View>
+          <View style={styles.popupContent}>
+            <Text style={[styles.popupMessage, { color: colors.text }]}>
+              Please note we are in initial stages of app deployment, it may take a few days for contractors to contact you. At full app deployment we expect instantaneous responses.
+            </Text>
+            {currentJobPost?.projectNumber && (
+              <View style={[styles.projectNumberContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
+                <Text style={[styles.projectNumberLabel, { color: colors.icon }]}>Project Number</Text>
+                <Text style={[styles.projectNumber, { color: colors.tint }]}>
+                  {currentJobPost.projectNumber}
+                </Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[styles.popupButton, { backgroundColor: colors.tint }]}
+            onPress={handlePopupClose}>
+            <Text style={styles.popupButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -435,6 +550,65 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  jobSizeContainer: {
+    gap: 12,
+  },
+  jobSizeButton: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  jobSizeLabel: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  jobSizeRange: {
+    fontSize: 13,
+  },
+  popupContainer: {
+    padding: 24,
+  },
+  popupHeader: {
+    marginBottom: 20,
+  },
+  popupTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  popupContent: {
+    marginBottom: 24,
+  },
+  popupMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  projectNumberContainer: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  projectNumberLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  projectNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  popupButton: {
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '600',
   },
 });

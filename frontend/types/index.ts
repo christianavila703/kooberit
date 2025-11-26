@@ -32,6 +32,7 @@ export interface IUser {
   lastName: string;
   role: string;
   status: string;
+  phone?: string;
   contractorAddress?: {
     address: string;
     coordinates: {
@@ -39,6 +40,7 @@ export interface IUser {
       longitude: number;
     };
   };
+  constructionCategories?: string[];
   notificationEnabled?: boolean;
   notificationRadius?: number;
 }
@@ -78,9 +80,14 @@ export interface INotificationOptions {
 // Job Post Types
 export type IJobPostStatus = 'active' | 'closed';
 
+export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
+
 export interface IJobPost {
   id: string;
   homeownerId: string;
+  projectTitle: string;
+  projectNumber: string;
+  jobSize: IJobSize;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -105,6 +112,8 @@ export interface IJobPost {
 }
 
 export interface ICreateJobPostRequest {
+  projectTitle: string;
+  jobSize: IJobSize;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -118,6 +127,8 @@ export interface ICreateJobPostRequest {
 }
 
 export interface IUpdateJobPostRequest {
+  projectTitle?: string;
+  jobSize?: IJobSize;
   description?: string;
   categories?: string[];
   contractorLimit?: number;
@@ -181,12 +192,14 @@ export interface IChat {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
   };
   contractor?: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
   };
   jobPost?: {
     id: string;
@@ -215,6 +228,7 @@ export interface IMessage {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
   };
 }
 

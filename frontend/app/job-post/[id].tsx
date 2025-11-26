@@ -173,6 +173,39 @@ export default function JobPostDetailsScreen() {
           </View>
         </View>
 
+        {/* Project Title */}
+        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Project Title</Text>
+          <Text style={[styles.projectTitle, { color: colors.text }]}>
+            {currentJobPost.projectTitle || 'No title'}
+          </Text>
+        </View>
+
+        {/* Project Number & Job Size */}
+        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+          <View style={styles.infoRow}>
+            {currentJobPost.projectNumber && (
+              <View style={styles.infoItem}>
+                <Text style={[styles.infoLabel, { color: colors.icon }]}>Project Number</Text>
+                <Text style={[styles.infoValue, { color: colors.tint }]}>
+                  #{currentJobPost.projectNumber}
+                </Text>
+              </View>
+            )}
+            {currentJobPost.jobSize && (
+              <View style={styles.infoItem}>
+                <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Size</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {currentJobPost.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
+                  {currentJobPost.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
+                  {currentJobPost.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
+                  {currentJobPost.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
         {/* Description */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Description</Text>
@@ -185,9 +218,9 @@ export default function JobPostDetailsScreen() {
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Categories</Text>
           <View style={styles.categoriesContainer}>
-            {currentJobPost.categories.map((category, index) => (
+            {currentJobPost.categories.map((category) => (
               <View
-                key={index}
+                key={`${currentJobPost.id}-${category}`}
                 style={[
                   styles.categoryTag,
                   { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
@@ -375,6 +408,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  projectTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 26,
+  },
+  infoRow: {
+    gap: 16,
+  },
+  infoItem: {
+    gap: 4,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   description: {
     fontSize: 15,

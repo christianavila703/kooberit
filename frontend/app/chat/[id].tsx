@@ -321,6 +321,11 @@ export default function ChatScreen() {
             <Text style={[styles.infoEmail, { color: colors.icon }]}>
               {currentChat.homeowner.email}
             </Text>
+            {currentChat.homeowner.phone && (
+              <Text style={[styles.infoPhone, { color: colors.icon }]}>
+                {currentChat.homeowner.phone}
+              </Text>
+            )}
           </View>
           {currentChat.jobPostId && (
             <TouchableOpacity
@@ -608,6 +613,10 @@ const styles = StyleSheet.create({
   },
   infoEmail: {
     fontSize: 13,
+  },
+  infoPhone: {
+    fontSize: 13,
+    marginTop: 2,
   },
   jobButton: {
     flexDirection: 'row',

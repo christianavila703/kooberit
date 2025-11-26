@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import notification from '@/services/notification';
 import LocationPicker from '@/components/LocationPicker';
+import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
+import PhoneInput from 'react-native-phone-number-input';
+import { parsePhoneNumber } from '@/utils/phoneFormatter';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -32,11 +35,17 @@ export default function ProfileScreen() {
   const isContractor = user?.role === 'contractor';
 
   // Local form state for editing (synced with Redux on load)
+  const [phone, setPhone] = useState('');
+  const [phoneFormatted, setPhoneFormatted] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState<string>('US');
+  const phoneInputRef = useRef<PhoneInput>(null);
   const [contractorAddress, setContractorAddress] = useState('');
   const [contractorLatitude, setContractorLatitude] = useState<number | null>(null);
   const [contractorLongitude, setContractorLongitude] = useState<number | null>(null);
+  const [constructionCategories, setConstructionCategories] = useState<string[]>([]);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [notificationRadius, setNotificationRadius] = useState(50);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Load settings from Redux on mount and sync local form state
   useEffect(() => {
@@ -46,9 +55,19 @@ export default function ProfileScreen() {
   // Sync local form state with Redux state when settings are loaded/updated
   useEffect(() => {
     if (profileSettings) {
+      // Parse phone number to extract country code and number
+      if (profileSettings.phone) {
+        const parsed = parsePhoneNumber(profileSettings.phone);
+        setPhoneCountryCode(parsed.countryCode);
+        setPhone(parsed.number);
+      } else {
+        setPhone('');
+        setPhoneCountryCode('US');
+      }
       setNotificationEnabled(profileSettings.notificationEnabled);
       if (isContractor) {
         setNotificationRadius(profileSettings.notificationRadius ?? 50);
+        setConstructionCategories(profileSettings.constructionCategories || []);
         if (profileSettings.contractorAddress) {
           setContractorAddress(profileSettings.contractorAddress.address);
           setContractorLatitude(profileSettings.contractorAddress.coordinates.latitude);
@@ -63,14 +82,26 @@ export default function ProfileScreen() {
     }
   }, [profileSettings, isContractor]);
 
-  const saveContractorSettings = async () => {
-    if (!contractorLatitude || !contractorLongitude) {
-      Alert.alert('Error', 'Please set your contractor address');
+  const toggleCategory = (category: string) => {
+    setConstructionCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const saveProfile = async () => {
+    if (isContractor && (!contractorLatitude || !contractorLongitude)) {
+      notification.error('Error', 'Please set your contractor address');
       return;
     }
 
     try {
+      // Get formatted phone number (E.164 format) from state
+      const phoneValue = phoneFormatted || phone || null;
+      
       const updateData: any = {
+        phone: phoneValue || null,
         notificationEnabled,
       };
       
@@ -82,13 +113,15 @@ export default function ProfileScreen() {
             longitude: contractorLongitude,
           },
         };
+        updateData.constructionCategories = constructionCategories;
         updateData.notificationRadius = notificationRadius;
       }
-
+      
       await dispatch(updateProfileSettings(updateData)).unwrap();
-      notification.success('Success', 'Settings saved successfully');
+      notification.success('Success', 'Profile updated successfully');
+      setIsEditingProfile(false);
     } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to save settings');
+      notification.error('Error', error.message || 'Failed to update profile');
     }
   };
 
@@ -111,6 +144,7 @@ export default function ProfileScreen() {
   };
 
   const isDark = colorScheme === 'dark';
+  console.log(user)
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -119,7 +153,12 @@ export default function ProfileScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Profile Info */}
         <View style={[styles.profileCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
@@ -132,11 +171,136 @@ export default function ProfileScreen() {
             {user?.firstName} {user?.lastName}
           </Text>
           <Text style={[styles.email, { color: colors.icon }]}>{user?.email}</Text>
+          {user?.phone && (
+            <Text style={[styles.phone, { color: colors.icon }]}>{user.phone}</Text>
+          )}
           <View style={[styles.roleBadge, { backgroundColor: colors.tint + '20' }]}>
             <Text style={[styles.roleText, { color: colors.tint }]}>
               {user?.role?.toUpperCase() || 'USER'}
             </Text>
           </View>
+        </View>
+
+        {/* Edit Profile Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Information</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
+            onPress={() => setIsEditingProfile(!isEditingProfile)}>
+            <View style={styles.settingLeft}>
+              <IconSymbol name="person.fill" size={20} color={colors.icon} />
+              <Text style={[styles.settingText, { color: colors.text }]}>
+                {isEditingProfile ? 'Cancel Editing' : 'Edit Profile'}
+              </Text>
+            </View>
+            <IconSymbol 
+              name={isEditingProfile ? "chevron.up" : "chevron.down"} 
+              size={20} 
+              color={colors.icon} 
+            />
+          </TouchableOpacity>
+
+          {isEditingProfile && (
+            <View style={[styles.editProfileCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: colors.text }]}>Phone Number</Text>
+                <PhoneInput
+                  ref={phoneInputRef}
+                  defaultValue={phone}
+                  defaultCode={phoneCountryCode as any}
+                  layout="first"
+                  onChangeText={(text) => setPhone(text)}
+                  onChangeFormattedText={(text) => setPhoneFormatted(text)}
+                  onChangeCountry={(country) => setPhoneCountryCode(country.cca2)}
+                  containerStyle={[
+                    styles.phoneInputContainer,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                    },
+                  ]}
+                  textContainerStyle={[
+                    styles.phoneInputTextContainer,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                    },
+                  ]}
+                  textInputStyle={[
+                    styles.phoneInputText,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                  codeTextStyle={[
+                    styles.phoneInputCodeText,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                  flagButtonStyle={[
+                    styles.phoneInputFlagButton,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                    },
+                  ]}
+                  disabled={isSaving}
+                  placeholder="Enter phone number"
+                />
+              </View>
+
+              {isContractor && (
+                <>
+                  <View style={styles.editField}>
+                    <Text style={[styles.editLabel, { color: colors.text }]}>
+                      Construction Categories
+                    </Text>
+                    <Text style={[styles.editDescription, { color: colors.icon }]}>
+                      Select all categories you work in
+                    </Text>
+                    <View style={styles.categoriesGrid}>
+                      {CONSTRUCTION_CATEGORIES.map((category) => (
+                        <TouchableOpacity
+                          key={category}
+                          style={[
+                            styles.categoryChip,
+                            {
+                              backgroundColor: constructionCategories.includes(category)
+                                ? colors.tint
+                                : isDark
+                                ? '#2E2E2E'
+                                : '#F5F5F5',
+                            },
+                          ]}
+                          onPress={() => toggleCategory(category)}
+                          disabled={isSaving}>
+                          <Text
+                            style={[
+                              styles.categoryText,
+                              {
+                                color: constructionCategories.includes(category)
+                                  ? '#FFFFFF'
+                                  : colors.text,
+                              },
+                            ]}>
+                            {category}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity
+                style={[styles.saveProfileButton, { backgroundColor: colors.tint }]}
+                onPress={saveProfile}
+                disabled={isSaving}>
+                <Text style={styles.saveProfileButtonText}>
+                  {isSaving ? 'Saving...' : 'Save Profile'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Contractor Settings */}
@@ -225,7 +389,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: colors.tint }]}
-              onPress={saveContractorSettings}
+              onPress={saveProfile}
               disabled={isSaving}>
               <Text style={styles.saveButtonText}>
                 {isSaving ? 'Saving...' : 'Save Settings'}
@@ -238,17 +402,6 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Settings</Text>
 
-          <TouchableOpacity
-            style={[styles.settingItem, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-            onPress={() => {
-              Alert.alert('Coming Soon', 'Edit profile feature will be available soon');
-            }}>
-            <View style={styles.settingLeft}>
-              <IconSymbol name="person.fill" size={20} color={colors.icon} />
-              <Text style={[styles.settingText, { color: colors.text }]}>Edit Profile</Text>
-            </View>
-            <IconSymbol name="chevron.right" size={20} color={colors.icon} />
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.settingItem, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
@@ -356,6 +509,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   email: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  phone: {
     fontSize: 14,
     marginBottom: 12,
   },
@@ -474,6 +631,83 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editProfileCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  editField: {
+    marginBottom: 20,
+  },
+  editLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  editDescription: {
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  editInput: {
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+  },
+  phoneInputContainer: {
+    borderRadius: 12,
+    width: '100%',
+    height: 48,
+  },
+  phoneInputTextContainer: {
+    borderRadius: 12,
+    paddingVertical: 0,
+  },
+  phoneInputText: {
+    fontSize: 16,
+    height: 48,
+  },
+  phoneInputCodeText: {
+    fontSize: 16,
+  },
+  phoneInputFlagButton: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  saveProfileButton: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveProfileButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

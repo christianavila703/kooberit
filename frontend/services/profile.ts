@@ -11,11 +11,13 @@ export interface IProfileAddress {
 }
 
 export interface IProfileSettings {
+  // Shared
+  phone?: string;
+  notificationEnabled: boolean;
   // Contractor-specific
   contractorAddress?: IProfileAddress | null;
+  constructionCategories?: string[];
   notificationRadius?: number;
-  // Shared
-  notificationEnabled: boolean;
 }
 
 /**

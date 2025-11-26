@@ -31,3 +31,28 @@ export const TOKEN_KEY = '@kooberit:token';
 export const STRIPE_PUBLISHABLE_KEY = __DEV__
   ? process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || ''
   : process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE || '';
+
+export const CONSTRUCTION_CATEGORIES = [
+  'roof',
+  'eavestrough',
+  'sofit',
+  'siding',
+  'brickwork',
+  'windows',
+  'doors',
+  'foundation',
+  'exterior stairs',
+  'attic',
+  'ceiling',
+  'interior stairs',
+  'interior walls',
+  'bedroom',
+  'living room',
+  'kitchen',
+  'washroom',
+  'basement',
+  'plumbing',
+  'heating',
+  'cooling',
+  'electrical',
+];

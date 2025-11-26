@@ -142,12 +142,32 @@ function HomeownerDashboard() {
             activeOpacity={0.7}>
             <View style={styles.jobCardHeader}>
               <View style={styles.jobCardTitleRow}>
-                <Text
-                  style={[styles.jobCardTitle, { color: colors.text }]}
-                  numberOfLines={2}>
-                  {jobPost.description.substring(0, 60)}
-                  {jobPost.description.length > 60 ? '...' : ''}
-                </Text>
+                <View style={styles.jobCardTitleContainer}>
+                  <Text
+                    style={[styles.jobCardTitle, { color: colors.text }]}
+                    numberOfLines={2}>
+                    {jobPost.projectTitle || jobPost.description
+                      ? (jobPost.projectTitle || jobPost.description).substring(0, 60)
+                      : 'No title'}
+                    {(jobPost.projectTitle || jobPost.description || '').length > 60 ? '...' : ''}
+                  </Text>
+                  {jobPost.projectNumber && (
+                    <Text style={[styles.projectNumber, { color: colors.icon }]}>
+                      Project #{jobPost.projectNumber}
+                    </Text>
+                  )}
+                  {jobPost.jobSize && (
+                    <View style={styles.jobSizeContainer}>
+                      <Text style={[styles.jobSizeLabel, { color: colors.icon }]}>Job Size: </Text>
+                      <Text style={[styles.jobSizeValue, { color: colors.tint }]}>
+                        {jobPost.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
+                        {jobPost.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
+                        {jobPost.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
+                        {jobPost.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <View
                   style={[
                     styles.statusBadge,
@@ -165,9 +185,9 @@ function HomeownerDashboard() {
 
             <View style={styles.jobCardBody}>
               <View style={styles.categoriesContainer}>
-                {jobPost.categories.slice(0, 3).map((category, index) => (
+                {jobPost.categories.slice(0, 3).map((category) => (
                   <View
-                    key={index}
+                    key={`${jobPost.id}-${category}`}
                     style={[
                       styles.categoryTag,
                       { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
@@ -331,11 +351,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  jobCardTitle: {
+  jobCardTitleContainer: {
     flex: 1,
+    gap: 4,
+  },
+  jobCardTitle: {
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
+  },
+  projectNumber: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  jobSizeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  jobSizeLabel: {
+    fontSize: 12,
+  },
+  jobSizeValue: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   statusBadge: {
     paddingHorizontal: 8,

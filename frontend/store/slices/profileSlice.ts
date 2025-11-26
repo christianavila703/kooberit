@@ -12,7 +12,9 @@ interface IProfileState {
 
 const initialState: IProfileState = {
   settings: {
+    phone: undefined,
     contractorAddress: null,
+    constructionCategories: [],
     notificationEnabled: true,
     notificationRadius: 50,
   },
@@ -106,6 +108,12 @@ const profileSlice = createSlice({
         }
         if (action.meta.arg.contractorAddress !== undefined) {
           state.settings.contractorAddress = action.meta.arg.contractorAddress;
+        }
+        if (action.meta.arg.phone !== undefined) {
+          state.settings.phone = action.meta.arg.phone;
+        }
+        if (action.meta.arg.constructionCategories !== undefined) {
+          state.settings.constructionCategories = action.meta.arg.constructionCategories;
         }
       })
       .addCase(updateProfileSettings.fulfilled, (state, action) => {

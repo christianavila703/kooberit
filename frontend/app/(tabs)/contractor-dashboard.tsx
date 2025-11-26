@@ -64,6 +64,7 @@ export default function ContractorDashboard() {
 
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
   const prevProfileCategoriesRef = useRef<string[] | undefined>(undefined);
+  const filtersManuallyAppliedRef = useRef(false);
 
   useEffect(() => {
     // Load profile settings from Redux
@@ -79,6 +80,11 @@ export default function ContractorDashboard() {
 
   // Sync filters with contractor's profile categories whenever they change
   useEffect(() => {
+    // Don't sync if filters were manually applied by user
+    if (filtersManuallyAppliedRef.current) {
+      return;
+    }
+
     const contractorCategories = profileSettings.constructionCategories || [];
     const prevCategories = prevProfileCategoriesRef.current;
     
@@ -101,14 +107,18 @@ export default function ContractorDashboard() {
       prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
       setCategoriesInitialized(true);
     } else if (categoriesChanged) {
-      // Profile categories changed - always sync filters with new profile categories
+      // Profile categories changed - sync filters with new profile categories
+      // Reset the manual flag since we're syncing with profile changes
+      filtersManuallyAppliedRef.current = false;
+      // Use current applied radius to preserve it
+      const currentAppliedRadius = appliedRadius;
       dispatch(setAppliedFilters({ 
-        radius: appliedRadius, 
+        radius: currentAppliedRadius, 
         categories: contractorCategories 
       }));
       prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
     }
-  }, [profileSettings.constructionCategories, lastFetched, categoriesInitialized, appliedCategories.length, appliedRadius, dispatch]);
+  }, [profileSettings.constructionCategories, lastFetched, categoriesInitialized, dispatch]);
 
   // Load job posts when applied filters change (after initialization)
   useEffect(() => {
@@ -157,7 +167,12 @@ export default function ContractorDashboard() {
       if (reset) {
         setJobPosts(result.data);
       } else {
-        setJobPosts((prev) => [...prev, ...result.data]);
+        // Deduplicate items by ID to prevent duplicate keys
+        setJobPosts((prev) => {
+          const existingIds = new Set(prev.map((post) => post.id));
+          const newItems = result.data.filter((post) => post.id && !existingIds.has(post.id));
+          return [...prev, ...newItems];
+        });
       }
 
       setPagination(result.pagination);
@@ -188,6 +203,8 @@ export default function ContractorDashboard() {
   };
 
   const handleApplyFilters = () => {
+    // Mark that filters were manually applied to prevent auto-sync from overriding
+    filtersManuallyAppliedRef.current = true;
     // Apply filters immediately using current values
     dispatch(setAppliedFilters({ radius, categories: selectedCategories }));
     // Update ref to prevent auto-sync until profile changes again
@@ -201,6 +218,8 @@ export default function ContractorDashboard() {
     // Reset to contractor's profile categories (or empty if none set)
     const defaultRadius: number | null = null; // "All"
     const contractorCategories = profileSettings.constructionCategories || [];
+    // Reset the manual flag since we're resetting to profile defaults
+    filtersManuallyAppliedRef.current = false;
     dispatch(setAppliedFilters({ radius: defaultRadius, categories: contractorCategories }));
     // Update ref to match current state
     prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
@@ -240,7 +259,12 @@ export default function ContractorDashboard() {
       if (reset) {
         setJobPosts(result.data);
       } else {
-        setJobPosts((prev) => [...prev, ...result.data]);
+        // Deduplicate items by ID to prevent duplicate keys
+        setJobPosts((prev) => {
+          const existingIds = new Set(prev.map((post) => post.id));
+          const newItems = result.data.filter((post) => post.id && !existingIds.has(post.id));
+          return [...prev, ...newItems];
+        });
       }
 
       setPagination(result.pagination);
@@ -459,7 +483,7 @@ export default function ContractorDashboard() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         data={jobPosts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.id || `job-post-${index}`}
         renderItem={({ item: jobPost }) => (
           <TouchableOpacity
             style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}

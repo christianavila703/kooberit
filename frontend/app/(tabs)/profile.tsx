@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { logoutUser } from '@/store/slices/authSlice';
+import { logoutUser, setUser } from '@/store/slices/authSlice';
 import {
   fetchProfileSettings,
   updateProfileSettings,
@@ -22,8 +22,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import notification from '@/services/notification';
 import LocationPicker from '@/components/LocationPicker';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
-import PhoneInput from 'react-native-phone-number-input';
-import { parsePhoneNumber } from '@/utils/phoneFormatter';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -36,9 +34,6 @@ export default function ProfileScreen() {
 
   // Local form state for editing (synced with Redux on load)
   const [phone, setPhone] = useState('');
-  const [phoneFormatted, setPhoneFormatted] = useState('');
-  const [phoneCountryCode, setPhoneCountryCode] = useState<string>('US');
-  const phoneInputRef = useRef<PhoneInput>(null);
   const [contractorAddress, setContractorAddress] = useState('');
   const [contractorLatitude, setContractorLatitude] = useState<number | null>(null);
   const [contractorLongitude, setContractorLongitude] = useState<number | null>(null);
@@ -55,14 +50,11 @@ export default function ProfileScreen() {
   // Sync local form state with Redux state when settings are loaded/updated
   useEffect(() => {
     if (profileSettings) {
-      // Parse phone number to extract country code and number
+      // Set phone number directly
       if (profileSettings.phone) {
-        const parsed = parsePhoneNumber(profileSettings.phone);
-        setPhoneCountryCode(parsed.countryCode);
-        setPhone(parsed.number);
+        setPhone(profileSettings.phone);
       } else {
         setPhone('');
-        setPhoneCountryCode('US');
       }
       setNotificationEnabled(profileSettings.notificationEnabled);
       if (isContractor) {
@@ -97,13 +89,19 @@ export default function ProfileScreen() {
     }
 
     try {
-      // Get formatted phone number (E.164 format) from state
-      const phoneValue = phoneFormatted || phone || null;
-      
       const updateData: any = {
-        phone: phoneValue || null,
         notificationEnabled,
       };
+      
+      // Only update phone if we're editing the profile (phone input is visible)
+      // This prevents breaking the phone when saving from "Save Settings" button
+      if (isEditingProfile) {
+        // Use phone value directly from text input
+        // Trim whitespace and set to null if empty
+        const phoneValue = phone.trim() || null;
+        updateData.phone = phoneValue;
+      }
+      // If not editing profile, don't include phone in update - backend will preserve existing value
       
       if (isContractor) {
         updateData.contractorAddress = {
@@ -117,7 +115,16 @@ export default function ProfileScreen() {
         updateData.notificationRadius = notificationRadius;
       }
       
-      await dispatch(updateProfileSettings(updateData)).unwrap();
+      const updatedSettings = await dispatch(updateProfileSettings(updateData)).unwrap();
+      
+      // Update user object in auth state with new phone number if it was updated
+      if (updateData.phone !== undefined && user) {
+        dispatch(setUser({
+          ...user,
+          phone: updateData.phone,
+        }));
+      }
+      
       notification.success('Success', 'Profile updated successfully');
       setIsEditingProfile(false);
     } catch (error: any) {
@@ -171,8 +178,10 @@ export default function ProfileScreen() {
             {user?.firstName} {user?.lastName}
           </Text>
           <Text style={[styles.email, { color: colors.icon }]}>{user?.email}</Text>
-          {user?.phone && (
-            <Text style={[styles.phone, { color: colors.icon }]}>{user.phone}</Text>
+          {(profileSettings?.phone || user?.phone) && (
+            <Text style={[styles.phone, { color: colors.icon }]}>
+              {profileSettings?.phone || user?.phone}
+            </Text>
           )}
           <View style={[styles.roleBadge, { backgroundColor: colors.tint + '20' }]}>
             <Text style={[styles.roleText, { color: colors.tint }]}>
@@ -205,46 +214,20 @@ export default function ProfileScreen() {
             <View style={[styles.editProfileCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: colors.text }]}>Phone Number</Text>
-                <PhoneInput
-                  ref={phoneInputRef}
-                  defaultValue={phone}
-                  defaultCode={phoneCountryCode as any}
-                  layout="first"
-                  onChangeText={(text) => setPhone(text)}
-                  onChangeFormattedText={(text) => setPhoneFormatted(text)}
-                  onChangeCountry={(country) => setPhoneCountryCode(country.cca2)}
-                  containerStyle={[
-                    styles.phoneInputContainer,
+                <TextInput
+                  style={[
+                    styles.editInput,
                     {
                       backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
-                    },
-                  ]}
-                  textContainerStyle={[
-                    styles.phoneInputTextContainer,
-                    {
-                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
-                    },
-                  ]}
-                  textInputStyle={[
-                    styles.phoneInputText,
-                    {
                       color: colors.text,
                     },
                   ]}
-                  codeTextStyle={[
-                    styles.phoneInputCodeText,
-                    {
-                      color: colors.text,
-                    },
-                  ]}
-                  flagButtonStyle={[
-                    styles.phoneInputFlagButton,
-                    {
-                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
-                    },
-                  ]}
-                  disabled={isSaving}
-                  placeholder="Enter phone number"
+                  placeholder="Enter phone number (e.g., +1234567890)"
+                  placeholderTextColor={colors.icon}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  editable={!isSaving}
                 />
               </View>
 
@@ -665,26 +648,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-  },
-  phoneInputContainer: {
-    borderRadius: 12,
-    width: '100%',
-    height: 48,
-  },
-  phoneInputTextContainer: {
-    borderRadius: 12,
-    paddingVertical: 0,
-  },
-  phoneInputText: {
-    fontSize: 16,
-    height: 48,
-  },
-  phoneInputCodeText: {
-    fontSize: 16,
-  },
-  phoneInputFlagButton: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
   },
   categoriesGrid: {
     flexDirection: 'row',

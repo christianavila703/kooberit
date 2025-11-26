@@ -134,6 +134,7 @@ export interface IJobPostAttributes {
   };
   status: JobPostStatus;
   contractorContactsCount: number;
+  notificationsChecked?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

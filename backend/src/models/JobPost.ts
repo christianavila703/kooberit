@@ -72,6 +72,11 @@ const jobPostSchema = new Schema<IJobPostDocument>(
       type: Number,
       default: 0,
     },
+    notificationsChecked: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

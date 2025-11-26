@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import logger from '@/utils/logger';
 import { CORS_ALLOWED_ORIGINS, SERVER_PORT } from '@/config/constants';
 import { connectDatabase } from '@/config/database';
+import { initializeAgenda } from '@/config/agenda';
 import routes from '@/routes';
 import socketService from '@/socket/socket';
 
@@ -52,6 +53,10 @@ async function initializeServer() {
         // Initialize Socket.io
         socketService.initialize(httpServer);
         logger.info('Socket.io initialized');
+        
+        // Initialize Agenda scheduler
+        await initializeAgenda();
+        logger.info('Agenda scheduler initialized');
         
         // Start server
         httpServer.listen(SERVER_PORT, () => {

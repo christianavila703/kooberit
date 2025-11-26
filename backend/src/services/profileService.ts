@@ -3,6 +3,7 @@ import logger from '@/utils/logger';
 import CustomError from '@/utils/customError';
 
 export interface IProfileSettings {
+  phone?: string;
   contractorAddress?: {
     address: string;
     coordinates: {
@@ -10,6 +11,7 @@ export interface IProfileSettings {
       longitude: number;
     };
   } | null;
+  constructionCategories?: string[];
   notificationEnabled: boolean;
   notificationRadius?: number;
 }
@@ -30,7 +32,9 @@ class ProfileService {
     }
 
     return {
+      phone: user.phone || undefined,
       contractorAddress: user.contractorAddress || null,
+      constructionCategories: user.constructionCategories || [],
       notificationEnabled: user.notificationEnabled ?? true,
       notificationRadius: user.notificationRadius ?? 50,
     };
@@ -48,10 +52,18 @@ class ProfileService {
 
     const updateData: any = {};
 
+    // Phone is available for all users
+    if (settings.phone !== undefined) {
+      updateData.phone = settings.phone?.trim() || null;
+    }
+
     // Only allow contractor-specific fields if user is a contractor
     if (user.role === 'contractor') {
       if (settings.contractorAddress !== undefined) {
         updateData.contractorAddress = settings.contractorAddress;
+      }
+      if (settings.constructionCategories !== undefined) {
+        updateData.constructionCategories = settings.constructionCategories;
       }
       if (settings.notificationRadius !== undefined) {
         if (settings.notificationRadius < 1 || settings.notificationRadius > 500) {
@@ -59,7 +71,7 @@ class ProfileService {
         }
         updateData.notificationRadius = settings.notificationRadius;
       }
-    } else if (settings.contractorAddress !== undefined || settings.notificationRadius !== undefined) {
+    } else if (settings.contractorAddress !== undefined || settings.notificationRadius !== undefined || settings.constructionCategories !== undefined) {
       throw new CustomError('Contractor-specific settings can only be updated by contractors', 403);
     }
 
@@ -77,7 +89,9 @@ class ProfileService {
     logger.info(`Profile settings updated for user: ${userId}`);
 
     return {
+      phone: updatedUser.phone || undefined,
       contractorAddress: updatedUser.contractorAddress || null,
+      constructionCategories: updatedUser.constructionCategories || [],
       notificationEnabled: updatedUser.notificationEnabled ?? true,
       notificationRadius: updatedUser.notificationRadius ?? 50,
     };

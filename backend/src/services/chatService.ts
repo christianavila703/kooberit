@@ -46,8 +46,8 @@ class ChatService {
       return null;
     }
     return Chat.findById(id)
-      .populate('homeowner', 'firstName lastName email')
-      .populate('contractor', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email phone')
+      .populate('contractor', 'firstName lastName email phone')
       .populate('jobPost', 'description categories status')
       .exec();
   }
@@ -61,8 +61,8 @@ class ChatService {
       : { contractorId: new Types.ObjectId(userId) };
 
     return Chat.find(filter)
-      .populate('homeowner', 'firstName lastName email')
-      .populate('contractor', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email phone')
+      .populate('contractor', 'firstName lastName email phone')
       .populate('jobPost', 'description categories status')
       .sort({ lastMessageAt: -1 })
       .exec();
@@ -81,8 +81,8 @@ class ChatService {
       homeownerId: new Types.ObjectId(homeownerId),
       contractorId: new Types.ObjectId(contractorId),
     })
-      .populate('homeowner', 'firstName lastName email')
-      .populate('contractor', 'firstName lastName email')
+      .populate('homeowner', 'firstName lastName email phone')
+      .populate('contractor', 'firstName lastName email phone')
       .populate('jobPost', 'description categories status')
       .exec();
   }
@@ -99,7 +99,7 @@ class ChatService {
     });
 
     // Populate sender before returning
-    await message.populate('sender', 'firstName lastName email');
+    await message.populate('sender', 'firstName lastName email phone');
 
     // Update chat's last message
     const chat = await Chat.findById(messageData.chatId).exec();
@@ -131,7 +131,7 @@ class ChatService {
     }
 
     return Message.find(filter)
-      .populate('sender', 'firstName lastName email')
+      .populate('sender', 'firstName lastName email phone')
       .sort({ createdAt: -1 })
       .limit(limit)
       .exec();

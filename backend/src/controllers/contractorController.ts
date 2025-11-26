@@ -42,6 +42,7 @@ export const getJobBoard = async (req: Request, res: Response) => {
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
 
+    // Use categories sent from frontend (frontend is responsible for including contractor's profile categories)
     const { data, pagination } = await jobPostService.findJobPostsWithinRadius(
       latitude,
       longitude,

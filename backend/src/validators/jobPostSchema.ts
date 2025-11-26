@@ -29,6 +29,23 @@ const CONSTRUCTION_CATEGORIES = [
  * Validation schema for creating a job post
  */
 export const createJobPostSchema = Joi.object({
+  projectTitle: Joi.string()
+    .min(1)
+    .max(200)
+    .required()
+    .trim()
+    .messages({
+      'string.min': 'Project title must be at least 1 character long',
+      'string.max': 'Project title must not exceed 200 characters',
+      'any.required': 'Project title is required',
+    }),
+  jobSize: Joi.string()
+    .valid('micro', 'small', 'big', 'very_big')
+    .required()
+    .messages({
+      'any.only': 'Job size must be one of: micro, small, big, very_big',
+      'any.required': 'Job size is required',
+    }),
   description: Joi.string()
     .min(10)
     .max(5000)
@@ -99,6 +116,21 @@ export const createJobPostSchema = Joi.object({
  * Validation schema for updating a job post
  */
 export const updateJobPostSchema = Joi.object({
+  projectTitle: Joi.string()
+    .min(1)
+    .max(200)
+    .optional()
+    .trim()
+    .messages({
+      'string.min': 'Project title must be at least 1 character long',
+      'string.max': 'Project title must not exceed 200 characters',
+    }),
+  jobSize: Joi.string()
+    .valid('micro', 'small', 'big', 'very_big')
+    .optional()
+    .messages({
+      'any.only': 'Job size must be one of: micro, small, big, very_big',
+    }),
   description: Joi.string()
     .min(10)
     .max(5000)

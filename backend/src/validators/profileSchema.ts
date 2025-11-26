@@ -1,9 +1,43 @@
 import Joi from 'joi';
 
+const CONSTRUCTION_CATEGORIES = [
+  'roof',
+  'eavestrough',
+  'sofit',
+  'siding',
+  'brickwork',
+  'windows',
+  'doors',
+  'foundation',
+  'exterior stairs',
+  'attic',
+  'ceiling',
+  'interior stairs',
+  'interior walls',
+  'bedroom',
+  'living room',
+  'kitchen',
+  'washroom',
+  'basement',
+  'plumbing',
+  'heating',
+  'cooling',
+  'electrical',
+];
+
 /**
  * Validation schema for updating profile settings
  */
 export const updateProfileSettingsSchema = Joi.object({
+  phone: Joi.string()
+    .trim()
+    .max(20)
+    .allow(null, '')
+    .optional()
+    .messages({
+      'string.max': 'Phone number must not exceed 20 characters',
+    }),
+
   contractorAddress: Joi.object({
     address: Joi.string().trim().required().messages({
       'string.empty': 'Address is required',
@@ -48,6 +82,13 @@ export const updateProfileSettingsSchema = Joi.object({
       'number.integer': 'Notification radius must be an integer',
       'number.min': 'Notification radius must be at least 1 km',
       'number.max': 'Notification radius must not exceed 500 km',
+    }),
+
+  constructionCategories: Joi.array()
+    .items(Joi.string().valid(...CONSTRUCTION_CATEGORIES))
+    .optional()
+    .messages({
+      'array.base': 'Construction categories must be an array',
     }),
 }).min(1).messages({
   'object.min': 'At least one field must be provided for update',

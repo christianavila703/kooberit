@@ -10,6 +10,23 @@ const jobPostSchema = new Schema<IJobPostDocument>(
       required: true,
       index: true,
     },
+    projectTitle: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
+    projectNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    jobSize: {
+      type: String,
+      enum: ['micro', 'small', 'big', 'very_big'],
+      required: true,
+    },
     description: {
       type: String,
       required: true,

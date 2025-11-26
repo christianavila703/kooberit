@@ -78,6 +78,15 @@ const userSchema = new Schema<IUserDocument>(
       min: 1,
       max: 500,
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+    },
+    constructionCategories: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

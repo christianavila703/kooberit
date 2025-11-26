@@ -13,6 +13,13 @@ import {
  */
 class JobPostService {
   /**
+   * Generate a random 6-digit project number
+   */
+  private generateProjectNumber(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  /**
    * Create a new job post
    */
   async createJobPost(jobPostData: IJobPostCreationAttributes): Promise<IJobPostDocument> {
@@ -32,8 +39,28 @@ class JobPostService {
       throw new Error('Invalid coordinates format');
     }
 
+    // Generate unique project number
+    let projectNumber: string;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isUnique && attempts < maxAttempts) {
+      projectNumber = this.generateProjectNumber();
+      const existing = await JobPost.findOne({ projectNumber }).exec();
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    if (!isUnique) {
+      throw new Error('Failed to generate unique project number');
+    }
+
     const jobPost = await JobPost.create({
       ...jobPostData,
+      projectNumber: projectNumber!,
       homeownerId: new Types.ObjectId(jobPostData.homeownerId),
       contractorContactsCount: 0,
       status: 'active',
@@ -171,7 +198,10 @@ class JobPostService {
       };
     }
 
+    // Filter by categories - use categories sent from frontend
+    // Frontend is responsible for sending contractor's profile categories
     if (categories && categories.length > 0) {
+      // Only show jobs where at least one category matches the provided categories
       filters.categories = { $in: categories };
     }
 

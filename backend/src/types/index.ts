@@ -63,6 +63,7 @@ export interface IAuthResponse {
     email: string;
     firstName: string;
     lastName: string;
+    phone: string;
     role: UserRole;
     status: UserAllowStatus;
   };
@@ -91,6 +92,8 @@ export interface IUserAttributes {
   };
   notificationEnabled?: boolean;
   notificationRadius?: number;
+  phone?: string;
+  constructionCategories?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -110,10 +113,15 @@ export type { UserRole, UserAllowStatus } from '@enums';
  */
 export type JobPostStatus = 'active' | 'closed';
 
+export type JobSize = 'micro' | 'small' | 'big' | 'very_big';
+
 export interface IJobPostAttributes {
   id?: string;
   _id?: Types.ObjectId;
   homeownerId: Types.ObjectId;
+  projectTitle: string;
+  projectNumber: string;
+  jobSize: JobSize;
   description: string;
   categories: string[];
   contractorLimit: number;

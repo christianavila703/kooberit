@@ -203,8 +203,12 @@ class NotificationService {
       await emailService.sendNewJobPostNotification(
         contractor.email,
         contractorName,
+        job.projectTitle,
+        job.projectNumber,
         job.description,
         job.categories || [],
+        job.jobSize,
+        job.location?.address || 'Location not specified',
         distance
       );
       logger.info(`Email notification sent to contractor ${contractor._id}`);

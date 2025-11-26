@@ -52,11 +52,25 @@ class EmailService {
   async sendNewJobPostNotification(
     contractorEmail: string,
     contractorName: string,
+    projectTitle: string,
+    projectNumber: string,
     jobDescription: string,
     categories: string[],
+    jobSize: string,
+    location: string,
     distance: number
   ): Promise<void> {
     const subject = 'New Job Post Available Near You';
+    
+    // Format job size for display
+    const jobSizeLabels: Record<string, string> = {
+      micro: 'Micro',
+      small: 'Small',
+      big: 'Big',
+      very_big: 'Very Big'
+    };
+    const formattedJobSize = jobSizeLabels[jobSize] || jobSize;
+    
     const html = `
       <!DOCTYPE html>
       <html>
@@ -68,6 +82,10 @@ class EmailService {
             .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
             .content { padding: 20px; background-color: #f9f9f9; }
             .job-details { background-color: white; padding: 15px; margin: 15px 0; border-radius: 5px; }
+            .job-header { border-bottom: 2px solid #0a7ea4; padding-bottom: 10px; margin-bottom: 15px; }
+            .job-title { font-size: 20px; font-weight: bold; color: #0a7ea4; margin: 0 0 5px 0; }
+            .job-meta { color: #666; font-size: 14px; margin: 5px 0; }
+            .job-meta strong { color: #333; }
             .categories { margin-top: 10px; }
             .category-tag { display: inline-block; background-color: #e0e0e0; padding: 5px 10px; margin: 5px 5px 5px 0; border-radius: 3px; font-size: 12px; }
             .button { display: inline-block; padding: 12px 24px; background-color: #0a7ea4; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
@@ -83,6 +101,15 @@ class EmailService {
               <p>Hi ${contractorName},</p>
               <p>A new job post has been posted within ${distance.toFixed(1)} km of your location!</p>
               <div class="job-details">
+                <div class="job-header">
+                  <h3 class="job-title">${projectTitle}</h3>
+                  <div class="job-meta">
+                    <strong>Project Number:</strong> ${projectNumber}<br>
+                    <strong>Job Size:</strong> ${formattedJobSize}<br>
+                    <strong>Location:</strong> ${location}<br>
+                    <strong>Distance:</strong> ${distance.toFixed(1)} km away
+                  </div>
+                </div>
                 <h3>Job Description:</h3>
                 <p>${jobDescription}</p>
                 <div class="categories">
@@ -110,6 +137,8 @@ class EmailService {
     homeownerEmail: string,
     homeownerName: string,
     contractorName: string,
+    projectTitle: string,
+    projectNumber: string,
     jobDescription: string
   ): Promise<void> {
     const subject = 'New Contractor Contacted You';
@@ -123,6 +152,9 @@ class EmailService {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
             .content { padding: 20px; background-color: #f9f9f9; }
+            .job-info { background-color: white; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #0a7ea4; }
+            .job-title { font-size: 18px; font-weight: bold; color: #0a7ea4; margin: 0 0 10px 0; }
+            .job-meta { color: #666; font-size: 14px; margin: 5px 0; }
             .button { display: inline-block; padding: 12px 24px; background-color: #0a7ea4; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
           </style>
@@ -135,7 +167,13 @@ class EmailService {
             <div class="content">
               <p>Hi ${homeownerName},</p>
               <p><strong>${contractorName}</strong> has contacted you about your job post:</p>
-              <p><em>"${jobDescription.substring(0, 100)}${jobDescription.length > 100 ? '...' : ''}"</em></p>
+              <div class="job-info">
+                <div class="job-title">${projectTitle}</div>
+                <div class="job-meta">
+                  <strong>Project Number:</strong> ${projectNumber}
+                </div>
+                <p style="margin-top: 10px; color: #555;"><em>"${jobDescription.substring(0, 150)}${jobDescription.length > 150 ? '...' : ''}"</em></p>
+              </div>
               <p>You can now chat with them through the Kooberit app.</p>
             </div>
             <div class="footer">

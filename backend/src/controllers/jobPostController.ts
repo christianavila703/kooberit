@@ -79,8 +79,12 @@ export const createJobPost = async (req: Request, res: Response) => {
             await emailService.sendNewJobPostNotification(
               contractor.email,
               `${contractor.firstName} ${contractor.lastName}`,
+              jobPost.projectTitle,
+              jobPost.projectNumber,
               jobPost.description,
               jobPost.categories,
+              jobPost.jobSize,
+              jobPost.location?.address || 'Location not specified',
               distance
             );
           } catch (emailError) {

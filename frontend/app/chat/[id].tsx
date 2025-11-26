@@ -280,9 +280,78 @@ export default function ChatScreen() {
     return currentChat.homeowner;
   };
 
+  // Format date for display (Today, Yesterday, or full date)
+  const formatDateSeparator = (date: Date): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const messageDate = new Date(date);
+    messageDate.setHours(0, 0, 0, 0);
+    
+    if (messageDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday';
+    } else {
+      // Format as "Month Day" (e.g., "November 26")
+      return messageDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+  };
+
+  // Check if two dates are on different days
+  const isDifferentDay = (date1: Date, date2: Date): boolean => {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    return d1.getTime() !== d2.getTime();
+  };
+
+  // Prepare messages with date separators
+  const prepareMessagesWithDates = () => {
+    const chatId = Array.isArray(id) ? id[0] : id;
+    const chatMessages = (chatId && typeof chatId === 'string') ? messages[chatId] || [] : [];
+    
+    if (chatMessages.length === 0) return [];
+    
+    const items: Array<{ type: 'message' | 'date'; data: any }> = [];
+    
+    chatMessages.forEach((message, index) => {
+      // Add date separator before first message or when date changes
+      const prevMessage = index > 0 ? chatMessages[index - 1] : null;
+      const shouldShowDate = index === 0 || 
+        (message.createdAt && prevMessage?.createdAt && 
+          isDifferentDay(new Date(message.createdAt), new Date(prevMessage.createdAt)));
+      
+      if (shouldShowDate) {
+        items.push({
+          type: 'date',
+          data: {
+            date: message.createdAt ? new Date(message.createdAt) : new Date(),
+            id: `date-${message.id}-${index}`,
+          },
+        });
+      }
+      
+      items.push({
+        type: 'message',
+        data: message,
+      });
+    });
+    
+    return items;
+  };
+
   // Ensure id is a string (handle array case from useLocalSearchParams)
   const chatId = Array.isArray(id) ? id[0] : id;
   const chatMessages = (chatId && typeof chatId === 'string') ? messages[chatId] || [] : [];
+  const messagesWithDates = prepareMessagesWithDates();
   const partner = getChatPartner();
   const isDark = colorScheme === 'dark';
 
@@ -346,8 +415,8 @@ export default function ChatScreen() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={chatMessages}
-          keyExtractor={(item) => item.id}
+          data={messagesWithDates}
+          keyExtractor={(item) => item.data.id || item.data.date?.toString()}
           onScrollToIndexFailed={() => {}}
           onScroll={(event) => {
             // Mark messages as read when user scrolls near the bottom
@@ -375,7 +444,22 @@ export default function ChatScreen() {
           }}
           scrollEventThrottle={400}
           renderItem={({ item }) => {
-            const isOwnMessage = item.senderId === user?.id;
+            // Render date separator
+            if (item.type === 'date') {
+              return (
+                <View style={styles.dateSeparatorContainer}>
+                  <View style={[styles.dateSeparator, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
+                    <Text style={[styles.dateSeparatorText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
+                      {formatDateSeparator(item.data.date)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            }
+            
+            // Render message
+            const message = item.data;
+            const isOwnMessage = message.senderId === user?.id;
             return (
               <View
                 style={[
@@ -390,13 +474,13 @@ export default function ChatScreen() {
                       alignSelf: isOwnMessage ? 'flex-end' : 'flex-start',
                     },
                   ]}>
-                  {item.type === 'image' && item.fileUrl ? (
+                  {message.type === 'image' && message.fileUrl ? (
                     <View style={styles.imageContainer}>
                       <Text style={[styles.imageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }]}>
                         📷 Image
                       </Text>
                       <Text style={[styles.imageUrl, { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.icon }]} numberOfLines={1}>
-                        {item.fileUrl}
+                        {message.fileUrl}
                       </Text>
                     </View>
                   ) : (
@@ -405,17 +489,17 @@ export default function ChatScreen() {
                         styles.messageText,
                         { color: isOwnMessage ? '#FFFFFF' : colors.text },
                       ]}>
-                      {item.content}
+                      {message.content}
                     </Text>
                   )}
                   <View style={styles.messageFooter}>
-                    {item.createdAt && (
+                    {message.createdAt && (
                       <Text
                         style={[
                           styles.messageTime,
                           { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.icon },
                         ]}>
-                        {new Date(item.createdAt).toLocaleTimeString([], {
+                        {new Date(message.createdAt).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
@@ -425,9 +509,9 @@ export default function ChatScreen() {
                       <Text
                         style={[
                           styles.readIndicator,
-                          { color: item.isRead ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)' },
+                          { color: message.isRead ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)' },
                         ]}>
-                        {item.isRead ? '✓✓' : '✓'}
+                        {message.isRead ? '✓✓' : '✓'}
                       </Text>
                     )}
                   </View>
@@ -630,6 +714,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  dateSeparatorContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  dateSeparator: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'center',
+  },
+  dateSeparatorText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
 

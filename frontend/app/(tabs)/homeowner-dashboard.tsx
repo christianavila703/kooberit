@@ -146,14 +146,14 @@ function HomeownerDashboard() {
                   <Text
                     style={[styles.jobCardTitle, { color: colors.text }]}
                     numberOfLines={2}>
-                    {jobPost.projectTitle || jobPost.description
-                      ? (jobPost.projectTitle || jobPost.description).substring(0, 60)
+                    {jobPost.jobTitle || jobPost.description
+                      ? (jobPost.jobTitle || jobPost.description).substring(0, 60)
                       : 'No title'}
-                    {(jobPost.projectTitle || jobPost.description || '').length > 60 ? '...' : ''}
+                    {(jobPost.jobTitle || jobPost.description || '').length > 60 ? '...' : ''}
                   </Text>
-                  {jobPost.projectNumber && (
-                    <Text style={[styles.projectNumber, { color: colors.icon }]}>
-                      Project #{jobPost.projectNumber}
+                  {jobPost.jobNumber && (
+                    <Text style={[styles.jobNumber, { color: colors.icon }]}>
+                      Job #{jobPost.jobNumber}
                     </Text>
                   )}
                   {jobPost.jobSize && (
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 22,
   },
-  projectNumber: {
+  jobNumber: {
     fontSize: 12,
     fontWeight: '500',
   },

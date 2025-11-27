@@ -85,8 +85,8 @@ export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 export interface IJobPost {
   id: string;
   homeownerId: string;
-  projectTitle: string;
-  projectNumber: string;
+  jobTitle: string;
+  jobNumber: string;
   jobSize: IJobSize;
   description: string;
   categories: string[];
@@ -112,7 +112,7 @@ export interface IJobPost {
 }
 
 export interface ICreateJobPostRequest {
-  projectTitle: string;
+  jobTitle: string;
   jobSize: IJobSize;
   description: string;
   categories: string[];
@@ -127,7 +127,7 @@ export interface ICreateJobPostRequest {
 }
 
 export interface IUpdateJobPostRequest {
-  projectTitle?: string;
+  jobTitle?: string;
   jobSize?: IJobSize;
   description?: string;
   categories?: string[];

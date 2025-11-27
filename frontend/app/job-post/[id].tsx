@@ -176,19 +176,19 @@ export default function JobPostDetailsScreen() {
         {/* Project Title */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Project Title</Text>
-          <Text style={[styles.projectTitle, { color: colors.text }]}>
-            {currentJobPost.projectTitle || 'No title'}
+          <Text style={[styles.jobTitle, { color: colors.text }]}>
+            {currentJobPost.jobTitle || 'No title'}
           </Text>
         </View>
 
         {/* Project Number & Job Size */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={styles.infoRow}>
-            {currentJobPost.projectNumber && (
+            {currentJobPost.jobNumber && (
               <View style={styles.infoItem}>
                 <Text style={[styles.infoLabel, { color: colors.icon }]}>Project Number</Text>
                 <Text style={[styles.infoValue, { color: colors.tint }]}>
-                  #{currentJobPost.projectNumber}
+                  #{currentJobPost.jobNumber}
                 </Text>
               </View>
             )}
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  projectTitle: {
+  jobTitle: {
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 26,

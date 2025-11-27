@@ -71,13 +71,6 @@ export default function ContractorDashboard() {
     dispatch(fetchProfileSettings());
   }, [dispatch]);
 
-  // Refetch profile settings when screen comes into focus (in case profile was updated)
-  useFocusEffect(
-    React.useCallback(() => {
-      dispatch(fetchProfileSettings());
-    }, [dispatch])
-  );
-
   // Sync filters with contractor's profile categories whenever they change
   useEffect(() => {
     // Don't sync if filters were manually applied by user
@@ -122,12 +115,14 @@ export default function ContractorDashboard() {
 
   // Load job posts when applied filters change (after initialization)
   useEffect(() => {
+    console.log("categoriesInitialized")
     if (categoriesInitialized) {
       loadJobPosts(true);
     }
   }, [appliedRadius, appliedCategories, categoriesInitialized]);
 
   useEffect(() => {
+    console.log("searchQuery");
     const timer = setTimeout(() => {
       // Reset filters when search is performed
       if (searchQuery) {
@@ -139,6 +134,7 @@ export default function ContractorDashboard() {
   }, [searchQuery, dispatch]);
 
   const loadJobPosts = async (reset: boolean = false) => {
+    console.log("loadJobPosts")
     if (reset) {
       setPage(1);
       setHasMore(true);
@@ -210,8 +206,7 @@ export default function ContractorDashboard() {
     // Update ref to prevent auto-sync until profile changes again
     prevProfileCategoriesRef.current = selectedCategories.length > 0 ? [...selectedCategories] : [];
     setShowFilters(false);
-    // Use current values directly instead of waiting for Redux update
-    loadJobPostsWithFilters(true, radius, selectedCategories);
+
   };
 
   const handleResetFilters = () => {
@@ -223,59 +218,6 @@ export default function ContractorDashboard() {
     dispatch(setAppliedFilters({ radius: defaultRadius, categories: contractorCategories }));
     // Update ref to match current state
     prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
-    loadJobPostsWithFilters(true, defaultRadius, contractorCategories);
-  };
-
-  const loadJobPostsWithFilters = async (
-    reset: boolean,
-    filterRadius: number | null,
-    filterCategories: string[]
-  ) => {
-    if (reset) {
-      setPage(1);
-      setHasMore(true);
-      setIsLoading(true);
-    } else {
-      if (!hasMore || loadingMore) return;
-      setLoadingMore(true);
-    }
-
-    try {
-      const currentPage = reset ? 1 : page;
-      
-      // Use provided filter categories, or fall back to contractor's profile categories
-      const contractorCategories = profileSettings.constructionCategories || [];
-      const categoriesToUse = filterCategories.length > 0 
-        ? filterCategories 
-        : (contractorCategories.length > 0 ? contractorCategories : undefined);
-
-      const result = await contractorService.getJobBoard({
-        radius: filterRadius,
-        categories: categoriesToUse,
-        search: searchQuery || undefined,
-        page: currentPage,
-        limit: 20,
-      });
-      if (reset) {
-        setJobPosts(result.data);
-      } else {
-        // Deduplicate items by ID to prevent duplicate keys
-        setJobPosts((prev) => {
-          const existingIds = new Set(prev.map((post) => post.id));
-          const newItems = result.data.filter((post) => post.id && !existingIds.has(post.id));
-          return [...prev, ...newItems];
-        });
-      }
-
-      setPagination(result.pagination);
-      setHasMore(result.pagination.hasNextPage);
-      setPage(result.pagination.currentPage + 1);
-    } catch (error: any) {
-      notification.error('Error', error || 'Failed to load job posts');
-    } finally {
-      setIsLoading(false);
-      setLoadingMore(false);
-    }
   };
 
   const handleCloseModal = () => {
@@ -493,10 +435,10 @@ export default function ContractorDashboard() {
               <View style={styles.jobCardTitleContainer}>
                 <View style={styles.jobCardTitleRow}>
                   <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
-                    {jobPost.projectTitle || jobPost.description
-                      ? (jobPost.projectTitle || jobPost.description).length > 60
-                        ? (jobPost.projectTitle || jobPost.description).substring(0, 60) + '...'
-                        : (jobPost.projectTitle || jobPost.description)
+                    {jobPost.jobTitle || jobPost.description
+                      ? (jobPost.jobTitle || jobPost.description).length > 60
+                        ? (jobPost.jobTitle || jobPost.description).substring(0, 60) + '...'
+                        : (jobPost.jobTitle || jobPost.description)
                       : 'No title'}
                   </Text>
                   {jobPost.hasContacted && (
@@ -510,9 +452,9 @@ export default function ContractorDashboard() {
                     </View>
                   )}
                 </View>
-                {jobPost.projectNumber && (
-                  <Text style={[styles.projectNumber, { color: colors.icon }]}>
-                    Project #{jobPost.projectNumber}
+                {jobPost.jobNumber && (
+                  <Text style={[styles.jobNumber, { color: colors.icon }]}>
+                    Job #{jobPost.jobNumber}
                   </Text>
                 )}
                 {jobPost.jobSize && (
@@ -815,7 +757,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     flex: 1,
   },
-  projectNumber: {
+  jobNumber: {
     fontSize: 12,
     fontWeight: '500',
   },

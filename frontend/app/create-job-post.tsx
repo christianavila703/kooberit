@@ -29,7 +29,7 @@ export default function CreateJobPostScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const [projectTitle, setProjectTitle] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [jobSize, setJobSize] = useState<'micro' | 'small' | 'big' | 'very_big' | ''>('');
   const [description, setDescription] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -52,8 +52,8 @@ export default function CreateJobPostScreen() {
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!projectTitle.trim()) {
-      newErrors.projectTitle = 'Project title is required';
+    if (!jobTitle.trim()) {
+      newErrors.jobTitle = 'Project title is required';
     }
 
     if (!jobSize) {
@@ -93,7 +93,7 @@ export default function CreateJobPostScreen() {
     try {
       const jobPost = await dispatch(
         createJobPost({
-          projectTitle: projectTitle.trim(),
+          jobTitle: jobTitle.trim(),
           jobSize: jobSize as 'micro' | 'small' | 'big' | 'very_big',
           description: description.trim(),
           categories: selectedCategories,
@@ -136,31 +136,31 @@ export default function CreateJobPostScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled">
-        {/* Project Title */}
+        {/* Title */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Project Title</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Title</Text>
           <TextInput
             style={[
               styles.input,
               {
                 backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
                 color: colors.text,
-                borderColor: errors.projectTitle ? '#FF3B30' : 'transparent',
+                borderColor: errors.jobTitle ? '#FF3B30' : 'transparent',
               },
             ]}
-            placeholder="Enter project title"
+            placeholder="Enter job title"
             placeholderTextColor={colors.icon}
-            value={projectTitle}
+            value={jobTitle}
             onChangeText={(text) => {
-              setProjectTitle(text);
-              if (errors.projectTitle) {
-                setErrors({ ...errors, projectTitle: '' });
+              setJobTitle(text);
+              if (errors.jobTitle) {
+                setErrors({ ...errors, jobTitle: '' });
               }
             }}
             editable={!isLoading}
           />
-          {errors.projectTitle && (
-            <Text style={styles.errorText}>{errors.projectTitle}</Text>
+          {errors.jobTitle && (
+            <Text style={styles.errorText}>{errors.jobTitle}</Text>
           )}
         </View>
 
@@ -425,11 +425,11 @@ export default function CreateJobPostScreen() {
             <Text style={[styles.popupMessage, { color: colors.text }]}>
               Please note we are in initial stages of app deployment, it may take a few days for contractors to contact you. At full app deployment we expect instantaneous responses.
             </Text>
-            {currentJobPost?.projectNumber && (
-              <View style={[styles.projectNumberContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
-                <Text style={[styles.projectNumberLabel, { color: colors.icon }]}>Project Number</Text>
-                <Text style={[styles.projectNumber, { color: colors.tint }]}>
-                  {currentJobPost.projectNumber}
+            {currentJobPost?.jobNumber && (
+              <View style={[styles.jobNumberContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
+                <Text style={[styles.jobNumberLabel, { color: colors.icon }]}>Job Number</Text>
+                <Text style={[styles.jobNumber, { color: colors.tint }]}>
+                  {currentJobPost.jobNumber}
                 </Text>
               </View>
             )}
@@ -587,16 +587,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-  projectNumberContainer: {
+  jobNumberContainer: {
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
-  projectNumberLabel: {
+  jobNumberLabel: {
     fontSize: 12,
     marginBottom: 8,
   },
-  projectNumber: {
+  jobNumber: {
     fontSize: 24,
     fontWeight: '700',
   },

@@ -3,7 +3,7 @@ import authReducer from './slices/authSlice';
 import jobPostReducer from './slices/jobPostSlice';
 import chatReducer from './slices/chatSlice';
 import contractorContactReducer from './slices/contractorContactSlice';
-import contractorFilterReducer from './slices/contractorFilterSlice';
+import contractorReducer from './slices/contractorSlice';
 import profileReducer from './slices/profileSlice';
 
 export const store = configureStore({
@@ -12,7 +12,7 @@ export const store = configureStore({
     jobPost: jobPostReducer,
     chat: chatReducer,
     contractorContact: contractorContactReducer,
-    contractorFilter: contractorFilterReducer,
+    contractor: contractorReducer,
     profile: profileReducer,
   },
 });

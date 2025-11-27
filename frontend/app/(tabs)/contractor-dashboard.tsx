@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Switch,
   ActivityIndicator,
   TextInput,
   ScrollView,
@@ -14,26 +13,22 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
+  fetchJobPosts,
   setRadius,
-  toggleCategory,
+  setCategories,
+  setSearchQuery,
   resetFilters,
-  resetToApplied,
-  setAppliedFilters,
-} from '@/store/slices/contractorFilterSlice';
+  setRefreshing,
+} from '@/store/slices/contractorSlice';
 import {
   fetchProfileSettings,
-  updateProfileSettings,
 } from '@/store/slices/profileSlice';
-import contractorService from '@/services/contractor';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
-
-let isJobPostsLoading = false;
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -42,212 +37,126 @@ export default function ContractorDashboard() {
   const colors = Colors[colorScheme ?? 'light'];
 
   const dispatch = useAppDispatch();
-  const { radius, selectedCategories, appliedRadius, appliedCategories } = useAppSelector(
-    (state: IRootState) => state.contractorFilter
+  const {
+    jobPosts,
+    radius,
+    categories,
+    searchQuery,
+    isLoading,
+    isLoadingMore,
+    isRefreshing,
+    pagination,
+  } = useAppSelector((state: IRootState) => state.contractor);
+  const { settings: profileSettings, isSaving } = useAppSelector(
+    (state: IRootState) => state.profile
   );
-  const { settings: profileSettings, isSaving, lastFetched } = useAppSelector((state: IRootState) => state.profile);
 
-  const [jobPosts, setJobPosts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [pagination, setPagination] = useState<{
-    currentPage: number;
-    totalPages: number;
-    totalCount: number;
-    itemsPerPage: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  } | null>(null);
+  const [tempRadius, setTempRadius] = useState<number | null>(null);
+  const [tempCategories, setTempCategories] = useState<string[]>([]);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [categoriesInitialized, setCategoriesInitialized] = useState(false);
-  const prevProfileCategoriesRef = useRef<string[] | undefined>(undefined);
-  const filtersManuallyAppliedRef = useRef(false);
-
+  // fetch profile on mount
   useEffect(() => {
-    // Load profile settings from Redux
     dispatch(fetchProfileSettings());
   }, [dispatch]);
 
-  // Sync filters with contractor's profile categories whenever they change
+  // When profile is loaded, set categories and fetch job posts
   useEffect(() => {
-    // Don't sync if filters were manually applied by user
-    if (filtersManuallyAppliedRef.current) {
-      return;
+    if (profileSettings.constructionCategories === undefined) return;
+
+    const profileCategories = profileSettings.constructionCategories || [];
+    dispatch(setCategories(profileCategories));
+  }, [profileSettings.constructionCategories, dispatch]);
+
+  // Handle search changes with debounce
+  useEffect(() => {
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
 
-    const contractorCategories = profileSettings.constructionCategories || [];
-    const prevCategories = prevProfileCategoriesRef.current;
-    
-    // Normalize categories for comparison (sort and create new array)
-    const normalizedContractorCategories = [...contractorCategories].sort();
-    const normalizedPrevCategories = prevCategories ? [...prevCategories].sort() : [];
-    
-    // Check if profile categories have changed
-    const categoriesChanged = prevCategories !== undefined && 
-      JSON.stringify(normalizedContractorCategories) !== JSON.stringify(normalizedPrevCategories);
-    
-    if (!categoriesInitialized) {
-      // Initial load - set categories if available
-      if (contractorCategories.length > 0 && appliedCategories.length === 0) {
-        dispatch(setAppliedFilters({ 
-          radius: null, 
-          categories: contractorCategories 
-        }));
-      }
-      prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
-      setCategoriesInitialized(true);
-    } else if (categoriesChanged) {
-      // Profile categories changed - sync filters with new profile categories
-      // Reset the manual flag since we're syncing with profile changes
-      filtersManuallyAppliedRef.current = false;
-      // Use current applied radius to preserve it
-      const currentAppliedRadius = appliedRadius;
-      dispatch(setAppliedFilters({ 
-        radius: currentAppliedRadius, 
-        categories: contractorCategories 
-      }));
-      prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
-    }
-  }, [profileSettings.constructionCategories, lastFetched, categoriesInitialized, dispatch]);
-
-  // Load job posts when applied filters change (after initialization)
-  useEffect(() => {
-    console.log("categoriesInitialized")
-    if (categoriesInitialized) {
-      loadJobPosts(true);
-    }
-  }, [appliedRadius, appliedCategories, categoriesInitialized]);
-
-  useEffect(() => {
-    console.log("searchQuery");
-    const timer = setTimeout(() => {
-      // Reset filters when search is performed
-      if (searchQuery) {
-        dispatch(resetFilters());
-      }
-      loadJobPosts(true);
+    searchTimeoutRef.current = setTimeout(() => {
+      const profileCategories = profileSettings.constructionCategories || [];
+      const categoriesToUse = categories.length > 0 ? categories : profileCategories;
+      dispatch(
+        fetchJobPosts({
+          reset: true,
+          page: 1,
+          search: searchQuery || undefined,
+          radius: radius,
+          categories: categoriesToUse,
+        })
+      );
     }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, dispatch]);
 
-  const loadJobPosts = async (reset: boolean = false) => {
-    console.log("loadJobPosts")
-
-    console.log(isJobPostsLoading, '--------')
-
-    if (isJobPostsLoading) return;
-
-    if (reset) {
-      setPage(1);
-      setHasMore(true);
-      setIsLoading(true);
-    } else {
-      if (!hasMore || loadingMore) return;
-      setLoadingMore(true);
-    }
-
-    isJobPostsLoading = true;
-
-    try {
-      const currentPage = reset ? 1 : page;
-      
-      // Always use contractor's profile categories as base, merge with manual filter selections
-      const contractorCategories = profileSettings.constructionCategories || [];
-      const categoriesToUse = appliedCategories.length > 0 
-        ? appliedCategories 
-        : (contractorCategories.length > 0 ? contractorCategories : undefined);
-
-      const result = await contractorService.getJobBoard({
-        radius: appliedRadius ?? undefined,
-        categories: categoriesToUse,
-        search: searchQuery || undefined,
-        page: currentPage,
-        limit: 20,
-      });
-      if (reset) {
-        setJobPosts(result.data);
-      } else {
-        // Deduplicate items by ID to prevent duplicate keys
-        setJobPosts((prev) => {
-          const existingIds = new Set(prev.map((post) => post.id));
-          const newItems = result.data.filter((post) => post.id && !existingIds.has(post.id));
-          return [...prev, ...newItems];
-        });
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
+    };
+  }, [searchQuery, radius, categories, dispatch]);
 
-      setPagination(result.pagination);
-      setHasMore(result.pagination.hasNextPage);
-      setPage(result.pagination.currentPage + 1);
-    } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to load job posts');
-    } finally {
-      setIsLoading(false);
-      setLoadingMore(false);
+  // Sync temp filters when modal opens
+  useEffect(() => {
+    if (showFilters) {
+      setTempRadius(radius);
+      setTempCategories([...categories]);
     }
-
-    isJobPostsLoading = false;
-  };
+  }, [showFilters, radius, categories]);
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadJobPosts(true);
-    setRefreshing(false);
+    dispatch(setRefreshing(true));
+    const profileCategories = profileSettings.constructionCategories || [];
+    await dispatch(
+      fetchJobPosts({
+        reset: true,
+        page: 1,
+        search: searchQuery || undefined,
+        radius: radius,
+        categories: categories.length > 0 ? categories : profileCategories,
+      })
+    );
   };
 
   const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore && !isLoading) {
-      loadJobPosts(false);
+    if (!isLoadingMore && pagination?.hasNextPage && !isLoading) {
+      const profileCategories = profileSettings.constructionCategories || [];
+      dispatch(
+        fetchJobPosts({
+          reset: false,
+          page: (pagination.currentPage || 0) + 1,
+          search: searchQuery || undefined,
+          radius: radius,
+          categories: categories.length > 0 ? categories : profileCategories,
+        })
+      );
     }
-  }, [loadingMore, hasMore, isLoading]);
+  }, [isLoadingMore, pagination, isLoading, searchQuery, radius, categories, dispatch]);
 
   const handleToggleCategory = (category: string) => {
-    dispatch(toggleCategory(category));
+    if (tempCategories.includes(category)) {
+      setTempCategories(tempCategories.filter((c) => c !== category));
+    } else {
+      setTempCategories([...tempCategories, category]);
+    }
   };
 
   const handleApplyFilters = () => {
-    // Mark that filters were manually applied to prevent auto-sync from overriding
-    filtersManuallyAppliedRef.current = true;
-    // Apply filters immediately using current values
-    dispatch(setAppliedFilters({ radius, categories: selectedCategories }));
-    // Update ref to prevent auto-sync until profile changes again
-    prevProfileCategoriesRef.current = selectedCategories.length > 0 ? [...selectedCategories] : [];
+    dispatch(setRadius(tempRadius));
+    dispatch(setCategories(tempCategories));
     setShowFilters(false);
-
   };
 
   const handleResetFilters = () => {
-    // Reset to contractor's profile categories (or empty if none set)
-    const defaultRadius: number | null = null; // "All"
-    const contractorCategories = profileSettings.constructionCategories || [];
-    // Reset the manual flag since we're resetting to profile defaults
-    filtersManuallyAppliedRef.current = false;
-    dispatch(setAppliedFilters({ radius: defaultRadius, categories: contractorCategories }));
-    // Update ref to match current state
-    prevProfileCategoriesRef.current = contractorCategories.length > 0 ? [...contractorCategories] : [];
+    const profileCategories = profileSettings.constructionCategories || [];
+    setTempRadius(null);
+    setTempCategories([...profileCategories]);
+    dispatch(resetFilters({ profileCategories }));
   };
 
   const handleCloseModal = () => {
-    dispatch(resetToApplied());
     setShowFilters(false);
-  };
-
-  const handleNotificationToggle = async (value: boolean) => {
-    // Prevent multiple simultaneous toggles
-    if (isSaving) return;
-
-    try {
-      await dispatch(updateProfileSettings({ notificationEnabled: value })).unwrap();
-      notification.success('Success', `Notifications ${value ? 'enabled' : 'disabled'}`);
-    } catch (error: any) {
-      notification.error('Error', error || 'Failed to update notification settings');
-      // Refetch settings to revert to correct state on error
-      dispatch(fetchProfileSettings());
-    }
   };
 
   const handleJobPostPress = (jobPostId: string) => {
@@ -273,25 +182,6 @@ export default function ContractorDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Notification Toggle */}
-      <View style={[styles.notificationCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-        <View style={styles.notificationRow}>
-          <View style={styles.notificationInfo}>
-            <IconSymbol name="bell.fill" size={20} color={colors.tint} />
-            <Text style={[styles.notificationText, { color: colors.text }]}>
-              Job Notifications
-            </Text>
-          </View>
-          <Switch
-            value={profileSettings.notificationEnabled}
-            onValueChange={handleNotificationToggle}
-            trackColor={{ false: '#767577', true: colors.tint }}
-            thumbColor="#FFFFFF"
-            disabled={isSaving}
-          />
-        </View>
-      </View>
-
       {/* Search */}
       <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
         <IconSymbol name="magnifyingglass" size={20} color={colors.icon} />
@@ -300,10 +190,10 @@ export default function ContractorDashboard() {
           placeholder="Search jobs..."
           placeholderTextColor={colors.icon}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={(text) => dispatch(setSearchQuery(text))}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => dispatch(setSearchQuery(''))}>
             <IconSymbol name="xmark.circle.fill" size={20} color={colors.icon} />
           </TouchableOpacity>
         )}
@@ -325,14 +215,14 @@ export default function ContractorDashboard() {
               <TouchableOpacity
                 style={[
                   styles.radiusButton,
-                  radius === null && { backgroundColor: colors.tint },
+                  tempRadius === null && { backgroundColor: colors.tint },
                   { borderColor: colors.tint },
                 ]}
-                onPress={() => dispatch(setRadius(null))}>
+                onPress={() => setTempRadius(null)}>
                 <Text
                   style={[
                     styles.radiusButtonText,
-                    { color: radius === null ? '#FFFFFF' : colors.text },
+                    { color: tempRadius === null ? '#FFFFFF' : colors.text },
                   ]}>
                   All
                 </Text>
@@ -340,14 +230,14 @@ export default function ContractorDashboard() {
               <TouchableOpacity
                 style={[
                   styles.radiusButton,
-                  radius === 25 && { backgroundColor: colors.tint },
+                  tempRadius === 25 && { backgroundColor: colors.tint },
                   { borderColor: colors.tint },
                 ]}
-                onPress={() => dispatch(setRadius(25))}>
+                onPress={() => setTempRadius(25)}>
                 <Text
                   style={[
                     styles.radiusButtonText,
-                    { color: radius === 25 ? '#FFFFFF' : colors.text },
+                    { color: tempRadius === 25 ? '#FFFFFF' : colors.text },
                   ]}>
                   25 km
                 </Text>
@@ -355,14 +245,14 @@ export default function ContractorDashboard() {
               <TouchableOpacity
                 style={[
                   styles.radiusButton,
-                  radius === 50 && { backgroundColor: colors.tint },
+                  tempRadius === 50 && { backgroundColor: colors.tint },
                   { borderColor: colors.tint },
                 ]}
-                onPress={() => dispatch(setRadius(50))}>
+                onPress={() => setTempRadius(50)}>
                 <Text
                   style={[
                     styles.radiusButtonText,
-                    { color: radius === 50 ? '#FFFFFF' : colors.text },
+                    { color: tempRadius === 50 ? '#FFFFFF' : colors.text },
                   ]}>
                   50 km
                 </Text>
@@ -370,14 +260,14 @@ export default function ContractorDashboard() {
               <TouchableOpacity
                 style={[
                   styles.radiusButton,
-                  radius === 100 && { backgroundColor: colors.tint },
+                  tempRadius === 100 && { backgroundColor: colors.tint },
                   { borderColor: colors.tint },
                 ]}
-                onPress={() => dispatch(setRadius(100))}>
+                onPress={() => setTempRadius(100)}>
                 <Text
                   style={[
                     styles.radiusButtonText,
-                    { color: radius === 100 ? '#FFFFFF' : colors.text },
+                    { color: tempRadius === 100 ? '#FFFFFF' : colors.text },
                   ]}>
                   100 km
                 </Text>
@@ -394,7 +284,7 @@ export default function ContractorDashboard() {
                   style={[
                     styles.categoryChip,
                     {
-                      backgroundColor: selectedCategories.includes(category)
+                      backgroundColor: tempCategories.includes(category)
                         ? colors.tint
                         : isDark
                         ? '#2E2E2E'
@@ -406,7 +296,7 @@ export default function ContractorDashboard() {
                     style={[
                       styles.categoryText,
                       {
-                        color: selectedCategories.includes(category) ? '#FFFFFF' : colors.text,
+                        color: tempCategories.includes(category) ? '#FFFFFF' : colors.text,
                       },
                     ]}>
                     {category}
@@ -537,7 +427,7 @@ export default function ContractorDashboard() {
           )
         }
         ListFooterComponent={
-          loadingMore ? (
+          isLoadingMore ? (
             <View style={styles.loadingMoreContainer}>
               <ActivityIndicator size="small" color={colors.tint} />
             </View>
@@ -546,7 +436,7 @@ export default function ContractorDashboard() {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.tint} />
         }
       />
     </View>
@@ -828,4 +718,3 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-

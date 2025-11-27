@@ -152,7 +152,6 @@ export default function ProfileScreen() {
   };
 
   const isDark = colorScheme === 'dark';
-  console.log(user)
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

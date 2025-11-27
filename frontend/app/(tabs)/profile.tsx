@@ -22,12 +22,13 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import notification from '@/services/notification';
 import LocationPicker from '@/components/LocationPicker';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
+import { IRootState } from '@/store';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.auth);
-  const { settings: profileSettings, isSaving } = useAppSelector((state) => state.profile);
+  const { user } = useAppSelector((state: IRootState) => state.auth);
+  const { settings: profileSettings, isSaving } = useAppSelector((state: IRootState) => state.profile);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor';

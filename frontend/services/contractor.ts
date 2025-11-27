@@ -35,50 +35,6 @@ class ContractorService {
       },
     };
   }
-
-  /**
-   * Get contractor settings
-   */
-  async getSettings(): Promise<{
-    contractorAddress?: {
-      address: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-    notificationEnabled: boolean;
-    notificationRadius: number;
-  }> {
-    const response = await api.get<IApiResponse<any>>(
-      endpoints.contractor.getSettings
-    );
-    return response.data.data || {
-      notificationEnabled: true,
-      notificationRadius: 50,
-    };
-  }
-
-  /**
-   * Update contractor settings
-   */
-  async updateSettings(data: {
-    contractorAddress?: {
-      address: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-    notificationEnabled?: boolean;
-    notificationRadius?: number;
-  }): Promise<any> {
-    const response = await api.put<IApiResponse<any>>(
-      endpoints.contractor.updateSettings,
-      data
-    );
-    return response.data.data;
-  }
 }
 
 export default new ContractorService();

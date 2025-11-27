@@ -12,7 +12,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setRadius,
@@ -32,18 +31,21 @@ import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
+import { IRootState } from '@/store';
+
+let isJobPostsLoading = false;
 
 export default function ContractorDashboard() {
   const router = useRouter();
-  const { user } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state: IRootState) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   const dispatch = useAppDispatch();
   const { radius, selectedCategories, appliedRadius, appliedCategories } = useAppSelector(
-    (state) => state.contractorFilter
+    (state: IRootState) => state.contractorFilter
   );
-  const { settings: profileSettings, isSaving, lastFetched } = useAppSelector((state) => state.profile);
+  const { settings: profileSettings, isSaving, lastFetched } = useAppSelector((state: IRootState) => state.profile);
 
   const [jobPosts, setJobPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,6 +137,11 @@ export default function ContractorDashboard() {
 
   const loadJobPosts = async (reset: boolean = false) => {
     console.log("loadJobPosts")
+
+    console.log(isJobPostsLoading, '--------')
+
+    if (isJobPostsLoading) return;
+
     if (reset) {
       setPage(1);
       setHasMore(true);
@@ -143,6 +150,8 @@ export default function ContractorDashboard() {
       if (!hasMore || loadingMore) return;
       setLoadingMore(true);
     }
+
+    isJobPostsLoading = true;
 
     try {
       const currentPage = reset ? 1 : page;
@@ -180,6 +189,8 @@ export default function ContractorDashboard() {
       setIsLoading(false);
       setLoadingMore(false);
     }
+
+    isJobPostsLoading = false;
   };
 
   const onRefresh = async () => {

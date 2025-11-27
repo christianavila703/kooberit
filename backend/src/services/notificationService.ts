@@ -160,7 +160,7 @@ class NotificationService {
     }
 
     logger.info(
-      `Sent ${notificationCount} notification(s) for job ${job._id} (${job.projectTitle})`
+      `Sent ${notificationCount} notification(s) for job ${job._id} (${job.jobTitle})`
     );
 
     // Mark job as checked
@@ -185,8 +185,8 @@ class NotificationService {
     try {
       socketService.emitToUser(contractor._id.toString(), 'new_job_notification', {
         jobId: job._id.toString(),
-        projectTitle: job.projectTitle,
-        projectNumber: job.projectNumber,
+        jobTitle: job.jobTitle,
+        jobNumber: job.jobNumber,
         description: job.description,
         categories: job.categories,
         distance: Math.round(distance * 10) / 10, // Round to 1 decimal place
@@ -203,8 +203,8 @@ class NotificationService {
       await emailService.sendNewJobPostNotification(
         contractor.email,
         contractorName,
-        job.projectTitle,
-        job.projectNumber,
+        job.jobTitle,
+        job.jobNumber,
         job.description,
         job.categories || [],
         job.jobSize,

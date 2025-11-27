@@ -15,7 +15,7 @@ class JobPostService {
   /**
    * Generate a random 6-digit project number
    */
-  private generateProjectNumber(): string {
+  private generatejobNumber(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
@@ -40,14 +40,14 @@ class JobPostService {
     }
 
     // Generate unique project number
-    let projectNumber: string;
+    let jobNumber: string;
     let isUnique = false;
     let attempts = 0;
     const maxAttempts = 10;
 
     while (!isUnique && attempts < maxAttempts) {
-      projectNumber = this.generateProjectNumber();
-      const existing = await JobPost.findOne({ projectNumber }).exec();
+      jobNumber = this.generatejobNumber();
+      const existing = await JobPost.findOne({ jobNumber }).exec();
       if (!existing) {
         isUnique = true;
       }
@@ -60,7 +60,7 @@ class JobPostService {
 
     const jobPost = await JobPost.create({
       ...jobPostData,
-      projectNumber: projectNumber!,
+      jobNumber: jobNumber!,
       homeownerId: new Types.ObjectId(jobPostData.homeownerId),
       contractorContactsCount: 0,
       status: 'active',

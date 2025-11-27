@@ -161,8 +161,8 @@ export const createContractorContact = async (req: Request, res: Response) => {
         homeowner.email,
         `${homeowner.firstName} ${homeowner.lastName}`,
         `${user.firstName} ${user.lastName}`,
-        jobPost.projectTitle,
-        jobPost.projectNumber,
+        jobPost.jobTitle,
+        jobPost.jobNumber,
         jobPost.description
       );
     } catch (emailError) {

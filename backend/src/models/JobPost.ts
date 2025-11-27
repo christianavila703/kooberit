@@ -10,13 +10,13 @@ const jobPostSchema = new Schema<IJobPostDocument>(
       required: true,
       index: true,
     },
-    projectTitle: {
+    jobTitle: {
       type: String,
       required: true,
       trim: true,
       maxlength: 200,
     },
-    projectNumber: {
+    jobNumber: {
       type: String,
       required: true,
       unique: true,

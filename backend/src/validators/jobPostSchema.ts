@@ -29,7 +29,7 @@ const CONSTRUCTION_CATEGORIES = [
  * Validation schema for creating a job post
  */
 export const createJobPostSchema = Joi.object({
-  projectTitle: Joi.string()
+  jobTitle: Joi.string()
     .min(1)
     .max(200)
     .required()
@@ -116,7 +116,7 @@ export const createJobPostSchema = Joi.object({
  * Validation schema for updating a job post
  */
 export const updateJobPostSchema = Joi.object({
-  projectTitle: Joi.string()
+  jobTitle: Joi.string()
     .min(1)
     .max(200)
     .optional()

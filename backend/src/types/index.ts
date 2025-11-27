@@ -119,8 +119,8 @@ export interface IJobPostAttributes {
   id?: string;
   _id?: Types.ObjectId;
   homeownerId: Types.ObjectId;
-  projectTitle: string;
-  projectNumber: string;
+  jobTitle: string;
+  jobNumber: string;
   jobSize: JobSize;
   description: string;
   categories: string[];

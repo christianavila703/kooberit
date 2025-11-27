@@ -49,6 +49,7 @@ export default function RootLayout() {
             <Stack.Screen name="job-post" options={{ headerShown: true, title: 'Job Details' }} />
             <Stack.Screen name="chat" options={{ headerShown: true, title: 'Chat' }} />
             <Stack.Screen name="payment" options={{ headerShown: false }} />
+            <Stack.Screen name="change-password" options={{ headerShown: true, title: 'Change Password' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
           <StatusBarWrapper />

@@ -389,7 +389,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.settingItem, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
             onPress={() => {
-              Alert.alert('Coming Soon', 'Change password feature will be available soon');
+              router.push('/change-password' as any);
             }}>
             <View style={styles.settingLeft}>
               <IconSymbol name="lock.fill" size={20} color={colors.icon} />

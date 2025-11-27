@@ -88,6 +88,20 @@ class AuthService {
   async logout(): Promise<void> {
     await this.removeToken();
   }
+
+  /**
+   * Change password
+   */
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    const response = await api.post<IApiResponse<void>>(
+      endpoints.auth.changePassword,
+      { oldPassword, newPassword }
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to change password');
+    }
+  }
 }
 
 export default new AuthService();

@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 16,
-    top: 16,
+    top: 10,
     padding: 4,
   },
   eyeIconText: {

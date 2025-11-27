@@ -39,7 +39,7 @@ export default function SplashScreen() {
     // Initialize auth state
     dispatch(initializeAuth());
 
-    // Start animations - no fade in needed since native splash already shows the image
+    // Start animations
     Animated.parallel([
       // Show loading text
       Animated.timing(loadingTextOpacity, {

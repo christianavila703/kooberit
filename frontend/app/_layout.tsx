@@ -39,8 +39,7 @@ export default function RootLayout() {
   return (
     <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
       <Provider store={store}>
-        <AuthProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
             <Stack.Screen name="splash" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -121,8 +120,7 @@ export default function RootLayout() {
             }}
           />
         </ThemeProvider>
-      </AuthProvider>
-    </Provider>
+      </Provider>
     </StripeProvider>
   );
 }

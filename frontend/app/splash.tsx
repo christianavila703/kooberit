@@ -98,9 +98,9 @@ export default function SplashScreen() {
     // Wait for animations to complete, then navigate
     const timer = setTimeout(() => {
     if (isAuthenticated) {
-        router.replace('/(tabs)');
+      router.replace('/(tabs)');
     } else {
-        router.replace('/(auth)');
+      router.replace('/(auth)' as any);
     }
     }, 2800); // Slightly longer than animation duration
 

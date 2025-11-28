@@ -104,7 +104,7 @@ class EmailService {
                 <div class="job-header">
                   <h3 class="job-title">${jobTitle}</h3>
                   <div class="job-meta">
-                    <strong>Project Number:</strong> ${jobNumber}<br>
+                    <strong>Job Number:</strong> ${jobNumber}<br>
                     <strong>Job Size:</strong> ${formattedJobSize}<br>
                     <strong>Location:</strong> ${location}<br>
                     <strong>Distance:</strong> ${distance.toFixed(1)} km away
@@ -170,7 +170,7 @@ class EmailService {
               <div class="job-info">
                 <div class="job-title">${jobTitle}</div>
                 <div class="job-meta">
-                  <strong>Project Number:</strong> ${jobNumber}
+                  <strong>Job Number:</strong> ${jobNumber}
                 </div>
                 <p style="margin-top: 10px; color: #555;"><em>"${jobDescription.substring(0, 150)}${jobDescription.length > 150 ? '...' : ''}"</em></p>
               </div>

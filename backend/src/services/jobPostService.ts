@@ -13,7 +13,7 @@ import {
  */
 class JobPostService {
   /**
-   * Generate a random 6-digit project number
+   * Generate a random 6-digit job number
    */
   private generatejobNumber(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -39,7 +39,7 @@ class JobPostService {
       throw new Error('Invalid coordinates format');
     }
 
-    // Generate unique project number
+    // Generate unique job number
     let jobNumber: string;
     let isUnique = false;
     let attempts = 0;
@@ -55,7 +55,7 @@ class JobPostService {
     }
 
     if (!isUnique) {
-      throw new Error('Failed to generate unique project number');
+      throw new Error('Failed to generate unique job number');
     }
 
     const jobPost = await JobPost.create({

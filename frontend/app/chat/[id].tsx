@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -44,6 +45,7 @@ export default function ChatScreen() {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const isNavigatingToMessagesRef = useRef(false);
 
   useEffect(() => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
@@ -370,6 +372,50 @@ export default function ChatScreen() {
       });
     }
   }, [partner, navigation]);
+
+  // Handle default back button (header and Android) to navigate to messages tab
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Skip if we're already navigating to messages to prevent infinite loops
+      if (isNavigatingToMessagesRef.current) {
+        return;
+      }
+
+      // Only intercept back actions
+      const action = e.data.action;
+      if (action.type === 'GO_BACK' || action.type === 'POP') {
+        isNavigatingToMessagesRef.current = true;
+        e.preventDefault();
+        
+        // Navigate to messages tab
+        router.push('/(tabs)/messages' as any);
+        
+        // Reset flag after navigation completes
+        setTimeout(() => {
+          isNavigatingToMessagesRef.current = false;
+        }, 1000);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, router]);
+
+  // Handle Android back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!isNavigatingToMessagesRef.current) {
+        isNavigatingToMessagesRef.current = true;
+        router.push('/(tabs)/messages' as any);
+        setTimeout(() => {
+          isNavigatingToMessagesRef.current = false;
+        }, 1000);
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [router]);
 
   return (
     <KeyboardAvoidingView

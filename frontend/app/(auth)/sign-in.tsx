@@ -75,6 +75,7 @@ export default function SignInScreen() {
     try {
       await dispatch(loginUser({ email, password })).unwrap();
       notification.success('Welcome back!', 'You have successfully signed in');
+      router.replace('/(tabs)' as any);
       // Navigation will be handled by AuthProvider
     } catch (err: any) {
       // Error is handled by the useEffect above

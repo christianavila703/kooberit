@@ -133,6 +133,7 @@ export default function SignUpScreen() {
         'Account Created!',
         `Welcome ${firstName}! Your account has been created successfully.`
       );
+      router.replace('/(tabs)' as any);
       // Navigation will be handled by AuthProvider
     } catch (err: any) {
       // Error is handled by the useEffect above

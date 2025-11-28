@@ -79,6 +79,7 @@ export default function JobPostDetailsScreen() {
 
   const checkIfContacted = async () => {
     if (!id || !user) return;
+    setLoadingContacts(true);
     try {
       const result = await contractorContactService.checkContractorContact(id);
       setHasContacted(result.hasContacted);
@@ -87,6 +88,8 @@ export default function JobPostDetailsScreen() {
       // Silently fail - if error, assume not contacted
       setHasContacted(false);
       setContactData(null);
+    } finally {
+      setLoadingContacts(false);
     }
   };
 
@@ -173,20 +176,20 @@ export default function JobPostDetailsScreen() {
           </View>
         </View>
 
-        {/* Project Title */}
+        {/* Job Title */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Project Title</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Job Title</Text>
           <Text style={[styles.jobTitle, { color: colors.text }]}>
             {currentJobPost.jobTitle || 'No title'}
           </Text>
         </View>
 
-        {/* Project Number & Job Size */}
+        {/* Job Number & Job Size */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={styles.infoRow}>
             {currentJobPost.jobNumber && (
               <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.icon }]}>Project Number</Text>
+                <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Number</Text>
                 <Text style={[styles.infoValue, { color: colors.tint }]}>
                   #{currentJobPost.jobNumber}
                 </Text>
@@ -254,7 +257,9 @@ export default function JobPostDetailsScreen() {
         {/* Contractor View - Contact Button */}
         {isContractor && currentJobPost.status === 'active' && (
           <View style={styles.section}>
-            {hasContacted ? (
+            {loadingContacts ? (
+              <ActivityIndicator color={colors.tint} />
+            ) : hasContacted ? (
               <View>
                 <View style={[styles.contactedCard, { backgroundColor: '#4CAF50' + '20' }]}>
                   <IconSymbol name="checkmark.circle.fill" size={24} color="#4CAF50" />

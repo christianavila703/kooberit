@@ -1,29 +1,5 @@
 import Joi from 'joi';
-
-const CONSTRUCTION_CATEGORIES = [
-  'roof',
-  'eavestrough',
-  'sofit',
-  'siding',
-  'brickwork',
-  'windows',
-  'doors',
-  'foundation',
-  'exterior stairs',
-  'attic',
-  'ceiling',
-  'interior stairs',
-  'interior walls',
-  'bedroom',
-  'living room',
-  'kitchen',
-  'washroom',
-  'basement',
-  'plumbing',
-  'heating',
-  'cooling',
-  'electrical',
-];
+import { CONSTRUCTION_CATEGORIES } from '@/config/constants';
 
 /**
  * Validation schema for updating profile settings

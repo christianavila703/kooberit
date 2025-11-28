@@ -29,3 +29,31 @@ export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@k
 export const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 export const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
 export const PAYMENT_AMOUNT = 1999; // $19.99 in cents
+
+export const CONSTRUCTION_CATEGORIES = [
+  'roof',
+  'eavestrough',
+  'sofit',
+  'siding',
+  'brickwork',
+  'windows',
+  'doors',
+  'foundation',
+  'exterior stairs',
+  'attic',
+  'ceiling',
+  'interior stairs',
+  'interior walls',
+  'floor',
+  'bedroom',
+  'living room',
+  'kitchen',
+  'washroom',
+  'basement',
+  'driveway',
+  'painting',
+  'plumbing',
+  'heating',
+  'cooling',
+  'electrical',
+];

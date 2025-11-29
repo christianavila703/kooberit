@@ -6,6 +6,7 @@ import { AnimatedTabIcon } from '@/components/animated-tab-icon';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppSelector } from '@/store/hooks';
+import { useExitConfirmation } from '@/hooks/use-exit-confirmation';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -15,6 +16,9 @@ export default function TabLayout() {
   // Role-based tab configuration
   const isHomeowner = role === 'homeowner';
   const isContractor = role === 'contractor';
+
+  // Handle exit confirmation on back button press
+  useExitConfirmation();
 
   return (
     <Tabs
@@ -83,10 +87,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'index',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
-          ),
           href: null,
         }}
       />

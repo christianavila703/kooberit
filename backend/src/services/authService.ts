@@ -37,6 +37,7 @@ class AuthService {
       password: hashedPassword,
       firstName: registerData.firstName,
       lastName: registerData.lastName,
+      companyName: registerData.companyName,
       role,
       status,
     });
@@ -54,6 +55,7 @@ class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone || '',
+        companyName: user.companyName,
         role: user.role,
         status: user.status,
       },
@@ -101,6 +103,7 @@ class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone || '',
+        companyName: user.companyName,
         role: user.role,
         status: user.status,
       },

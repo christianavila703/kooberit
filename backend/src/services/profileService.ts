@@ -3,6 +3,9 @@ import logger from '@/utils/logger';
 import CustomError from '@/utils/customError';
 
 export interface IProfileSettings {
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
   phone?: string;
   contractorAddress?: {
     address: string;
@@ -32,6 +35,9 @@ class ProfileService {
     }
 
     return {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      companyName: user.companyName || undefined,
       phone: user.phone || undefined,
       contractorAddress: user.contractorAddress || null,
       constructionCategories: user.constructionCategories || [],
@@ -51,6 +57,17 @@ class ProfileService {
     }
 
     const updateData: any = {};
+
+    // Name fields are available for all users
+    if (settings.firstName !== undefined) {
+      updateData.firstName = settings.firstName.trim();
+    }
+    if (settings.lastName !== undefined) {
+      updateData.lastName = settings.lastName.trim();
+    }
+    if (settings.companyName !== undefined) {
+      updateData.companyName = settings.companyName?.trim() || null;
+    }
 
     // Phone is available for all users
     if (settings.phone !== undefined) {
@@ -89,6 +106,9 @@ class ProfileService {
     logger.info(`Profile settings updated for user: ${userId}`);
 
     return {
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      companyName: updatedUser.companyName || undefined,
       phone: updatedUser.phone || undefined,
       contractorAddress: updatedUser.contractorAddress || null,
       constructionCategories: updatedUser.constructionCategories || [],

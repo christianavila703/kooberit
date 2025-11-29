@@ -53,6 +53,7 @@ export interface IRegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  companyName?: string;
   role?: UserRole;
   status?: UserAllowStatus;
 }
@@ -64,6 +65,7 @@ export interface IAuthResponse {
     firstName: string;
     lastName: string;
     phone: string;
+    companyName?: string;
     role: UserRole;
     status: UserAllowStatus;
   };
@@ -93,6 +95,7 @@ export interface IUserAttributes {
   notificationEnabled?: boolean;
   notificationRadius?: number;
   phone?: string;
+  companyName?: string;
   constructionCategories?: string[];
   createdAt?: Date;
   updatedAt?: Date;

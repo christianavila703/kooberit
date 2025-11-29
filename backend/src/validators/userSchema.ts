@@ -104,6 +104,15 @@ export const updateUserSchema = Joi.object({
       'string.max': 'Last name must not exceed 100 characters',
     }),
   
+  companyName: Joi.string()
+    .max(200)
+    .optional()
+    .allow('')
+    .trim()
+    .messages({
+      'string.max': 'Company name must not exceed 200 characters',
+    }),
+
   role: Joi.string()
     .valid(...USER_ROLE_VALUES)
     .optional()

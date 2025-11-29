@@ -83,6 +83,11 @@ const userSchema = new Schema<IUserDocument>(
       trim: true,
       maxlength: 20,
     },
+    companyName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
     constructionCategories: {
       type: [String],
       default: [],

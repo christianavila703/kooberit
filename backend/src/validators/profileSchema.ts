@@ -5,6 +5,35 @@ import { CONSTRUCTION_CATEGORIES } from '@/config/constants';
  * Validation schema for updating profile settings
  */
 export const updateProfileSettingsSchema = Joi.object({
+  firstName: Joi.string()
+    .min(2)
+    .max(100)
+    .optional()
+    .trim()
+    .messages({
+      'string.min': 'First name must be at least 2 characters long',
+      'string.max': 'First name must not exceed 100 characters',
+    }),
+
+  lastName: Joi.string()
+    .min(2)
+    .max(100)
+    .optional()
+    .trim()
+    .messages({
+      'string.min': 'Last name must be at least 2 characters long',
+      'string.max': 'Last name must not exceed 100 characters',
+    }),
+
+  companyName: Joi.string()
+    .max(200)
+    .optional()
+    .allow('')
+    .trim()
+    .messages({
+      'string.max': 'Company name must not exceed 200 characters',
+    }),
+
   phone: Joi.string()
     .trim()
     .max(20)

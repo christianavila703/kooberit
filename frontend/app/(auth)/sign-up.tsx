@@ -21,6 +21,7 @@ import notificationService from '@/services/notification';
 export default function SignUpScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -101,6 +102,13 @@ export default function SignUpScreen() {
           delete newErrors.confirmPassword;
         }
         break;
+      case 'companyName':
+        if (value.trim().length > 200) {
+          newErrors.companyName = 'Company name must not exceed 200 characters';
+        } else {
+          delete newErrors.companyName;
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -124,6 +132,7 @@ export default function SignUpScreen() {
         registerUser({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          companyName: companyName.trim() || undefined,
           email: email.trim(),
           password,
           role,
@@ -157,7 +166,7 @@ export default function SignUpScreen() {
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: colors.icon }]}>
-              Join Kooberit to connect with contractors
+              Join Kooberit to connect with contractors and homeowners
             </Text>
           </View>
 
@@ -283,6 +292,35 @@ export default function SignUpScreen() {
               />
               {errors.lastName ? (
                 <Text style={styles.errorText}>{errors.lastName}</Text>
+              ) : null}
+            </View>
+
+            {/* Company Name Input */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>Company Name (Optional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                    color: colors.text,
+                    borderColor: errors.companyName ? '#FF3B30' : 'transparent',
+                    borderWidth: errors.companyName ? 1 : 0,
+                  },
+                ]}
+                placeholder="Enter your company name"
+                placeholderTextColor={colors.icon}
+                value={companyName}
+                onChangeText={(text) => {
+                  setCompanyName(text);
+                  if (errors.companyName) validateField('companyName', text);
+                }}
+                onBlur={() => validateField('companyName', companyName)}
+                autoCapitalize="words"
+                editable={!isLoading}
+              />
+              {errors.companyName ? (
+                <Text style={styles.errorText}>{errors.companyName}</Text>
               ) : null}
             </View>
 

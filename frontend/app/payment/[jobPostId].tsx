@@ -221,7 +221,7 @@ export default function PaymentScreen() {
           </View>
           <View style={styles.popupContent}>
             <Text style={[styles.popupMessage, { color: colors.text }]}>
-              Please note that the Homeowner has indicated that they would like {jobPost?.contractorLimit || 'X'} number of contractors to contact them. We cannot guarantee their response as their circumstances might have changed since posting the job.
+              Please note that the Homeowner has indicated that they would like {jobPost?.contractorLimit || 'X'} contractors to contact them. We cannot guarantee their response as their circumstances might have changed since posting the job.
             </Text>
           </View>
           <View style={styles.popupButtons}>

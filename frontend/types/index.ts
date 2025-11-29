@@ -22,6 +22,7 @@ export interface IRegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  companyName?: string;
   role?: IUserRole;
 }
 
@@ -33,6 +34,7 @@ export interface IUser {
   role: string;
   status: string;
   phone?: string;
+  companyName?: string;
   contractorAddress?: {
     address: string;
     coordinates: {

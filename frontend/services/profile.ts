@@ -12,6 +12,9 @@ export interface IProfileAddress {
 
 export interface IProfileSettings {
   // Shared
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
   phone?: string;
   notificationEnabled: boolean;
   // Contractor-specific

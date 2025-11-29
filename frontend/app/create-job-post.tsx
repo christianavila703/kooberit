@@ -258,7 +258,7 @@ export default function CreateJobPostScreen() {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Construction Categories</Text>
           <Text style={[styles.subLabel, { color: colors.icon }]}>
-            Select all that apply
+            Please select all that apply
           </Text>
           <View style={styles.categoriesGrid}>
             {CONSTRUCTION_CATEGORIES.map((category) => (
@@ -304,7 +304,7 @@ export default function CreateJobPostScreen() {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Contractor Limit</Text>
           <Text style={[styles.subLabel, { color: colors.icon }]}>
-            Minimum: 3 (suggested)
+            Please specify how many Contractors you would like to reach out to you.  We recommend three(3)
           </Text>
           <View style={styles.limitContainer}>
             <TouchableOpacity

@@ -34,6 +34,9 @@ export default function ProfileScreen() {
   const isContractor = user?.role === 'contractor';
 
   // Local form state for editing (synced with Redux on load)
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [contractorAddress, setContractorAddress] = useState('');
   const [contractorLatitude, setContractorLatitude] = useState<number | null>(null);
@@ -50,6 +53,25 @@ export default function ProfileScreen() {
 
   // Sync local form state with Redux state when settings are loaded/updated
   useEffect(() => {
+    // Sync name fields from user or profileSettings (profileSettings takes precedence if available)
+    if (profileSettings?.firstName !== undefined) {
+      setFirstName(profileSettings.firstName || '');
+    } else if (user?.firstName) {
+      setFirstName(user.firstName);
+    }
+    
+    if (profileSettings?.lastName !== undefined) {
+      setLastName(profileSettings.lastName || '');
+    } else if (user?.lastName) {
+      setLastName(user.lastName);
+    }
+    
+    if (profileSettings?.companyName !== undefined) {
+      setCompanyName(profileSettings.companyName || '');
+    } else if (user?.companyName) {
+      setCompanyName(user.companyName);
+    }
+    
     if (profileSettings) {
       // Set phone number directly
       if (profileSettings.phone) {
@@ -73,7 +95,7 @@ export default function ProfileScreen() {
         }
       }
     }
-  }, [profileSettings, isContractor]);
+  }, [profileSettings, isContractor, user]);
 
   const toggleCategory = (category: string) => {
     setConstructionCategories((prev) =>
@@ -94,15 +116,24 @@ export default function ProfileScreen() {
         notificationEnabled,
       };
       
-      // Only update phone if we're editing the profile (phone input is visible)
-      // This prevents breaking the phone when saving from "Save Settings" button
+      // Only update name and phone if we're editing the profile (inputs are visible)
+      // This prevents breaking the data when saving from "Save Settings" button
       if (isEditingProfile) {
+        // Update name fields
+        if (firstName.trim()) {
+          updateData.firstName = firstName.trim();
+        }
+        if (lastName.trim()) {
+          updateData.lastName = lastName.trim();
+        }
+        // Company name can be empty, so we always include it
+        updateData.companyName = companyName.trim() || null;
         // Use phone value directly from text input
         // Trim whitespace and set to null if empty
         const phoneValue = phone.trim() || null;
         updateData.phone = phoneValue;
       }
-      // If not editing profile, don't include phone in update - backend will preserve existing value
+      // If not editing profile, don't include name/phone in update - backend will preserve existing value
       
       if (isContractor) {
         updateData.contractorAddress = {
@@ -118,11 +149,14 @@ export default function ProfileScreen() {
       
       const updatedSettings = await dispatch(updateProfileSettings(updateData)).unwrap();
       
-      // Update user object in auth state with new phone number if it was updated
-      if (updateData.phone !== undefined && user) {
+      // Update user object in auth state with new data if it was updated
+      if (isEditingProfile && user) {
         dispatch(setUser({
           ...user,
-          phone: updateData.phone,
+          firstName: updateData.firstName !== undefined ? updateData.firstName : user.firstName,
+          lastName: updateData.lastName !== undefined ? updateData.lastName : user.lastName,
+          companyName: updateData.companyName !== undefined ? updateData.companyName : user.companyName,
+          phone: updateData.phone !== undefined ? updateData.phone : user.phone,
         }));
       }
       
@@ -178,6 +212,11 @@ export default function ProfileScreen() {
             {user?.firstName} {user?.lastName}
           </Text>
           <Text style={[styles.email, { color: colors.icon }]}>{user?.email}</Text>
+          {user?.companyName && (
+            <Text style={[styles.phone, { color: colors.icon }]}>
+              {user.companyName}
+            </Text>
+          )}
           {(profileSettings?.phone || user?.phone) && (
             <Text style={[styles.phone, { color: colors.icon }]}>
               {profileSettings?.phone || user?.phone}
@@ -212,6 +251,63 @@ export default function ProfileScreen() {
 
           {isEditingProfile && (
             <View style={[styles.editProfileCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: colors.text }]}>First Name</Text>
+                <TextInput
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="Enter your first name"
+                  placeholderTextColor={colors.icon}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  autoCapitalize="words"
+                  editable={!isSaving}
+                />
+              </View>
+
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: colors.text }]}>Last Name</Text>
+                <TextInput
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="Enter your last name"
+                  placeholderTextColor={colors.icon}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  autoCapitalize="words"
+                  editable={!isSaving}
+                />
+              </View>
+
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: colors.text }]}>Company Name (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="Enter your company name"
+                  placeholderTextColor={colors.icon}
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                  autoCapitalize="words"
+                  editable={!isSaving}
+                />
+              </View>
+
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: colors.text }]}>Phone Number</Text>
                 <TextInput

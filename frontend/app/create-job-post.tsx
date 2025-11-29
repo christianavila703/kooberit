@@ -168,7 +168,7 @@ export default function CreateJobPostScreen() {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Job Size</Text>
           <Text style={[styles.subLabel, { color: colors.icon }]}>
-            Select the estimated job size
+            Please select the estimated job size
           </Text>
           <View style={styles.jobSizeContainer}>
             {[

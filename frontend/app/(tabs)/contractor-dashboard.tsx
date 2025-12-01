@@ -29,6 +29,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
+import { arraysEqual } from '@/utils/helper';
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -66,12 +67,13 @@ export default function ContractorDashboard() {
     if (profileSettings.constructionCategories === undefined) return;
 
     const profileCategories = profileSettings.constructionCategories || [];
-    dispatch(setCategories(profileCategories));
+    if (!arraysEqual(profileCategories, categories)) {
+      dispatch(setCategories(profileCategories));
+    }
   }, [profileSettings.constructionCategories, dispatch]);
 
   // Handle search changes with debounce
   useEffect(() => {
-
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }

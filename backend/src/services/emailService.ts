@@ -32,7 +32,7 @@ class EmailService {
 
       const msg = {
         to,
-        from: SENDGRID_FROM_EMAIL,
+        from: `Kooberit <${SENDGRID_FROM_EMAIL}>`,
         subject,
         text: text || subject,
         html,

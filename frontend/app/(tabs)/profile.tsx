@@ -127,10 +127,10 @@ export default function ProfileScreen() {
           updateData.lastName = lastName.trim();
         }
         // Company name can be empty, so we always include it
-        updateData.companyName = companyName.trim() || null;
+        updateData.companyName = companyName.trim() || '';
         // Use phone value directly from text input
         // Trim whitespace and set to null if empty
-        const phoneValue = phone.trim() || null;
+        const phoneValue = phone.trim() || '';
         updateData.phone = phoneValue;
       }
       // If not editing profile, don't include name/phone in update - backend will preserve existing value

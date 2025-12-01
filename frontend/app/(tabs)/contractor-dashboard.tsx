@@ -399,7 +399,11 @@ export default function ContractorDashboard() {
                 <View style={styles.locationInfo}>
                   <IconSymbol name="location.fill" size={14} color={colors.icon} />
                   <Text style={[styles.locationText, { color: colors.icon }]}>
-                    {jobPost.location?.address || 'Location not specified'}
+                    {jobPost.hasContacted
+                      ? jobPost.location?.address || 'Location not specified'
+                      :( radius
+                      ? `Within ${radius} km radius`
+                      : 'Location hidden - contact to view')}
                   </Text>
                 </View>
                 <Text style={[styles.dateText, { color: colors.icon }]}>

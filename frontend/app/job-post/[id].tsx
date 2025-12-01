@@ -240,7 +240,9 @@ export default function JobPostDetailsScreen() {
           <View style={styles.locationRow}>
             <IconSymbol name="location.fill" size={20} color={colors.icon} />
             <Text style={[styles.locationText, { color: colors.text }]}>
-              {currentJobPost.location.address}
+              {isContractor && !hasContacted
+                ? 'Location hidden - contact homeowner to view full address'
+                : currentJobPost.location.address}
             </Text>
           </View>
         </View>

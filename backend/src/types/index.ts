@@ -209,3 +209,40 @@ export interface IMessageAttributes {
 
 export type IMessageCreationAttributes = Omit<IMessageAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'isRead'>;
 export type IMessageDocument = IMessageAttributes & Document<Types.ObjectId>;
+
+/**
+ * Payment Log types
+ */
+export interface IPaymentLogAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  contractorContactId?: Types.ObjectId;
+  jobPostId: Types.ObjectId;
+  contractorId: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  paymentAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentTransactionId?: string;
+  stripePaymentIntentId?: string;
+  stripePaymentMethodId?: string;
+  errorMessage?: string;
+  metadata?: Record<string, any>;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IPaymentLogCreationAttributes {
+  contractorContactId?: string | Types.ObjectId;
+  jobPostId: string | Types.ObjectId;
+  contractorId: string | Types.ObjectId;
+  homeownerId: string | Types.ObjectId;
+  paymentAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentTransactionId?: string;
+  stripePaymentIntentId?: string;
+  stripePaymentMethodId?: string;
+  errorMessage?: string;
+  metadata?: Record<string, any>;
+}
+
+export type IPaymentLogDocument = IPaymentLogAttributes & Document<Types.ObjectId>;

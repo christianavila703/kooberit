@@ -4,6 +4,7 @@ import logger from '@/utils/logger';
 import CustomError from '@/utils/customError';
 import contractorContactService from './contractorContactService';
 import chatService from './chatService';
+import paymentLogService from './paymentLogService';
 
 class PaymentService {
   private stripe: Stripe | null = null;
@@ -71,6 +72,7 @@ class PaymentService {
       let confirmedPayment: Stripe.PaymentIntent;
 
       // Try method 1: Create payment method first, then confirm
+      let paymentLogId: string | undefined;
       try {
         // Create payment intent first
         const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
@@ -78,6 +80,21 @@ class PaymentService {
           contractorId,
           homeownerId,
         });
+
+        // Create payment log entry (pending status)
+        const paymentLog = await paymentLogService.createPaymentLog({
+          jobPostId,
+          contractorId,
+          homeownerId,
+          paymentAmount: PAYMENT_AMOUNT / 100, // Convert cents to dollars
+          paymentStatus: 'pending',
+          stripePaymentIntentId: paymentIntent.id,
+          metadata: {
+            cardholderName,
+            paymentMethod: 'card',
+          },
+        });
+        paymentLogId = paymentLog._id.toString();
 
         // Create payment method
         const paymentMethod = await this.stripe.paymentMethods.create({
@@ -93,11 +110,32 @@ class PaymentService {
           },
         });
 
+        // Update payment log with payment method ID
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'pending', {
+            stripePaymentMethodId: paymentMethod.id,
+            metadata: {
+              cardholderName,
+              paymentMethod: 'card',
+            },
+          });
+        }
+
         // Confirm payment with the payment method
         confirmedPayment = await this.stripe.paymentIntents.confirm(paymentIntent.id, {
           payment_method: paymentMethod.id,
         });
       } catch (cardError: any) {
+        // Log payment failure
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'failed', {
+            errorMessage: cardError.message || 'Payment processing failed',
+            metadata: {
+              errorType: cardError.type,
+              errorCode: cardError.code,
+            },
+          });
+        }
         throw cardError;
       }
 
@@ -123,6 +161,17 @@ class PaymentService {
           paymentDate: new Date(),
         });
 
+        // Update payment log with success status and contact ID
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'completed', {
+            paymentTransactionId: confirmedPayment.id,
+            contractorContactId: contact._id.toString(),
+            metadata: {
+              chatRoomId: chat._id.toString(),
+            },
+          });
+        }
+
         logger.info(`Payment successful: ${confirmedPayment.id} for job post: ${jobPostId}`);
 
         return {
@@ -130,6 +179,13 @@ class PaymentService {
           paymentIntentId: confirmedPayment.id,
         };
       } else {
+        // Log payment failure
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'failed', {
+            errorMessage: 'Payment was not successful',
+            paymentTransactionId: confirmedPayment.id,
+          });
+        }
         throw new CustomError('Payment was not successful', 400);
       }
     } catch (error: any) {
@@ -157,6 +213,7 @@ class PaymentService {
       throw new CustomError('Stripe is not configured', 500);
     }
 
+    let paymentLogId: string | undefined;
     try {
       // Create payment intent
       const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
@@ -164,6 +221,22 @@ class PaymentService {
         contractorId,
         homeownerId,
       });
+
+      // Create payment log entry (pending status)
+      const paymentLog = await paymentLogService.createPaymentLog({
+        jobPostId,
+        contractorId,
+        homeownerId,
+        paymentAmount: PAYMENT_AMOUNT / 100, // Convert cents to dollars
+        paymentStatus: 'pending',
+        stripePaymentIntentId: paymentIntent.id,
+        stripePaymentMethodId: paymentMethodId,
+        metadata: {
+          cardholderName,
+          paymentMethod: 'tokenized',
+        },
+      });
+      paymentLogId = paymentLog._id.toString();
 
       // Confirm payment with the payment method ID (tokenized on frontend)
       const confirmedPayment = await this.stripe.paymentIntents.confirm(paymentIntent.id, {
@@ -192,6 +265,17 @@ class PaymentService {
           paymentDate: new Date(),
         });
 
+        // Update payment log with success status and contact ID
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'completed', {
+            paymentTransactionId: confirmedPayment.id,
+            contractorContactId: contact._id.toString(),
+            metadata: {
+              chatRoomId: chat._id.toString(),
+            },
+          });
+        }
+
         logger.info(`Payment successful: ${confirmedPayment.id} for job post: ${jobPostId}`);
 
         return {
@@ -199,9 +283,28 @@ class PaymentService {
           paymentIntentId: confirmedPayment.id,
         };
       } else {
+        // Log payment failure
+        if (paymentLogId) {
+          await paymentLogService.updatePaymentLogStatus(paymentLogId, 'failed', {
+            errorMessage: 'Payment was not successful',
+            paymentTransactionId: confirmedPayment.id,
+          });
+        }
         throw new CustomError('Payment was not successful', 400);
       }
     } catch (error: any) {
+      // Log payment failure
+      if (paymentLogId) {
+        await paymentLogService.updatePaymentLogStatus(paymentLogId, 'failed', {
+          errorMessage: error.message || 'Payment processing failed',
+          metadata: {
+            errorType: error.type,
+            errorCode: error.code,
+          },
+        }).catch((logError) => {
+          logger.error('Error updating payment log on failure:', logError);
+        });
+      }
       logger.error('Payment processing error:', error);
       return {
         success: false,

@@ -33,6 +33,7 @@ export interface IUser {
   lastName: string;
   role: string;
   status: string;
+  uniqueId?: number;
   phone?: string;
   companyName?: string;
   contractorAddress?: {

@@ -212,6 +212,11 @@ export default function ProfileScreen() {
             {user?.firstName} {user?.lastName}
           </Text>
           <Text style={[styles.email, { color: colors.icon }]}>{user?.email}</Text>
+          {user?.uniqueId && (
+            <Text style={[styles.uniqueId, { color: colors.icon }]}>
+              ID: {user.uniqueId}
+            </Text>
+          )}
           {user?.companyName && (
             <Text style={[styles.phone, { color: colors.icon }]}>
               {user.companyName}
@@ -400,6 +405,7 @@ export default function ProfileScreen() {
                     color: colors.text,
                   },
                 ]}
+                readOnly={true}
                 placeholder="Enter your business address"
                 placeholderTextColor={colors.icon}
                 value={contractorAddress}
@@ -589,6 +595,11 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 14,
+    marginBottom: 4,
+  },
+  uniqueId: {
+    fontSize: 14,
+    fontWeight: '600',
     marginBottom: 4,
   },
   phone: {

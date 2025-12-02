@@ -40,85 +40,87 @@ export default function RootLayout() {
     <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
       <Provider store={store}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="splash" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="create-job-post" options={{ headerShown: true, title: 'Create Job' }} />
-            <Stack.Screen name="job-post" options={{ headerShown: true, title: 'Job Details' }} />
-            <Stack.Screen name="chat" options={{ headerShown: true, title: 'Chat' }} />
-            <Stack.Screen name="payment" options={{ headerShown: false }} />
-            <Stack.Screen name="change-password" options={{ headerShown: true, title: 'Change Password' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBarWrapper />
-          <Toast
-            config={{
-              success: (props) => (
-                <BaseToast
-                  {...props}
-                  style={[
-                    styles.toastBase,
-                    {
-                      borderLeftColor: '#4CAF50',
-                      backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                    },
-                  ]}
-                  contentContainerStyle={styles.toastContent}
-                  text1Style={[
-                    styles.toastText1,
-                    { color: colors.text },
-                  ]}
-                  text2Style={[
-                    styles.toastText2,
-                    { color: colors.icon },
-                  ]}
-                />
-              ),
-              error: (props) => (
-                <ErrorToast
-                  {...props}
-                  style={[
-                    styles.toastBase,
-                    {
-                      borderLeftColor: '#FF3B30',
-                      backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                    },
-                  ]}
-                  contentContainerStyle={styles.toastContent}
-                  text1Style={[
-                    styles.toastText1,
-                    { color: colors.text },
-                  ]}
-                  text2Style={[
-                    styles.toastText2,
-                    { color: colors.icon },
-                  ]}
-                />
-              ),
-              info: (props) => (
-                <BaseToast
-                  {...props}
-                  style={[
-                    styles.toastBase,
-                    {
-                      borderLeftColor: colors.tint,
-                      backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                    },
-                  ]}
-                  contentContainerStyle={styles.toastContent}
-                  text1Style={[
-                    styles.toastText1,
-                    { color: colors.text },
-                  ]}
-                  text2Style={[
-                    styles.toastText2,
-                    { color: colors.icon },
-                  ]}
-                />
-              ),
-            }}
-          />
+          <AuthProvider>
+            <Stack>
+              <Stack.Screen name="splash" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="create-job-post" options={{ headerShown: true, title: 'Create Job' }} />
+              <Stack.Screen name="job-post/[id]" options={{ headerShown: true, title: 'Job Details' }} />
+              <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
+              <Stack.Screen name="payment/[jobPostId]" options={{ headerShown: true, title: 'Payment' }} />
+              <Stack.Screen name="change-password" options={{ headerShown: true, title: 'Change Password' }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
+            <StatusBarWrapper />
+            <Toast
+              config={{
+                success: (props) => (
+                  <BaseToast
+                    {...props}
+                    style={[
+                      styles.toastBase,
+                      {
+                        borderLeftColor: '#4CAF50',
+                        backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                      },
+                    ]}
+                    contentContainerStyle={styles.toastContent}
+                    text1Style={[
+                      styles.toastText1,
+                      { color: colors.text },
+                    ]}
+                    text2Style={[
+                      styles.toastText2,
+                      { color: colors.icon },
+                    ]}
+                  />
+                ),
+                error: (props) => (
+                  <ErrorToast
+                    {...props}
+                    style={[
+                      styles.toastBase,
+                      {
+                        borderLeftColor: '#FF3B30',
+                        backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                      },
+                    ]}
+                    contentContainerStyle={styles.toastContent}
+                    text1Style={[
+                      styles.toastText1,
+                      { color: colors.text },
+                    ]}
+                    text2Style={[
+                      styles.toastText2,
+                      { color: colors.icon },
+                    ]}
+                  />
+                ),
+                info: (props) => (
+                  <BaseToast
+                    {...props}
+                    style={[
+                      styles.toastBase,
+                      {
+                        borderLeftColor: colors.tint,
+                        backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                      },
+                    ]}
+                    contentContainerStyle={styles.toastContent}
+                    text1Style={[
+                      styles.toastText1,
+                      { color: colors.text },
+                    ]}
+                    text2Style={[
+                      styles.toastText2,
+                      { color: colors.icon },
+                    ]}
+                  />
+                ),
+              }}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </Provider>
     </StripeProvider>

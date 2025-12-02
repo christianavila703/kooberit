@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
 import contractorContactService from '@/services/contractorContact';
 import { useAppSelector } from '@/store/hooks';
@@ -21,7 +21,6 @@ import jobPostService from '@/services/jobPost';
 
 export default function PaymentScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { jobPostId } = useLocalSearchParams<{ jobPostId: string }>();
   const { user } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
@@ -34,13 +33,6 @@ export default function PaymentScreen() {
   const [cardDetails, setCardDetails] = useState<any>(null);
   const [showContractorLimitPopup, setShowContractorLimitPopup] = useState(false);
   const [jobPost, setJobPost] = useState<any>(null);
-
-  // Set header title
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: 'Payment',
-    });
-  }, [navigation]);
 
   // Load job post to get contractor limit
   useEffect(() => {

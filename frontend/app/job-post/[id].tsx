@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchJobPostById,
@@ -24,7 +24,6 @@ import { IRootState } from '@/store';
 
 export default function JobPostDetailsScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const { currentJobPost, isLoading } = useAppSelector((state) => state.jobPost);
@@ -36,13 +35,6 @@ export default function JobPostDetailsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor';
-
-  // Set header title
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: 'Job Details',
-    });
-  }, [navigation]);
 
   useEffect(() => {
     if (id) {

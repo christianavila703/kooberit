@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const firstSegment = segments[0] as string;
     const inAuthGroup = firstSegment === '(auth)' || firstSegment === 'sign-in' || firstSegment === 'sign-up';
-    const isSplash = firstSegment === 'splash';
+    const isSplash = firstSegment === 'splash' || firstSegment === undefined;
 
     // Don't redirect if on splash screen - let splash handle navigation
     if (isSplash) return;

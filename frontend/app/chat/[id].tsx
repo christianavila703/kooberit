@@ -441,11 +441,36 @@ export default function ChatScreen() {
                 {currentChat.homeowner.phone}
               </Text>
             )}
+            {/* Job Status Indicator */}
+            {currentChat.jobPostId && (
+              <View style={styles.jobStatusContainer}>
+                {!currentChat.jobPost ? (
+                  <View style={[styles.jobStatusBadge, { backgroundColor: '#F44336' }]}>
+                    <IconSymbol name="exclamationmark.triangle.fill" size={12} color="#FFFFFF" />
+                    <Text style={styles.jobStatusText}>Job Deleted</Text>
+                  </View>
+                ) : currentChat.jobPost.status === 'closed' ? (
+                  <View style={[styles.jobStatusBadge, { backgroundColor: '#9E9E9E' }]}>
+                    <IconSymbol name="lock.fill" size={12} color="#FFFFFF" />
+                    <Text style={styles.jobStatusText}>Job Closed</Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
           {currentChat.jobPostId && (
             <TouchableOpacity
-              style={[styles.jobButton, { backgroundColor: colors.tint }]}
-              onPress={() => router.push(`/job-post/${currentChat.jobPostId}` as any)}>
+              style={[
+                styles.jobButton,
+                { backgroundColor: colors.tint },
+                !currentChat.jobPost && styles.jobButtonDisabled,
+              ]}
+              onPress={() => {
+                if (currentChat.jobPost) {
+                  router.push(`/job-post/${currentChat.jobPostId}` as any);
+                }
+              }}
+              disabled={!currentChat.jobPost}>
               <IconSymbol name="briefcase.fill" size={16} color="#FFFFFF" />
               <Text style={styles.jobButtonText}>View Job</Text>
             </TouchableOpacity>
@@ -756,9 +781,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  jobButtonDisabled: {
+    opacity: 0.5,
+  },
   jobButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  jobStatusContainer: {
+    marginTop: 8,
+  },
+  jobStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  jobStatusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
   dateSeparatorContainer: {

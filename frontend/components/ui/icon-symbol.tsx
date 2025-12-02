@@ -57,6 +57,7 @@ const MAPPING = {
   'map': 'map',
   'map.fill': 'map',
   'briefcase.fill': 'work',
+  'exclamationmark.triangle.fill': 'warning',
 } as IconMapping;
 
 /**

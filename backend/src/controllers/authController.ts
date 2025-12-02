@@ -77,6 +77,7 @@ export const refreshToken = async (req: Request, res: Response) => {
                     lastName: user.lastName,
                     role: user.role,
                     status: user.status,
+                    uniqueId: user.uniqueId,
                     lastLogin: user.lastLogin,
                     createdAt: user.createdAt,
                 },

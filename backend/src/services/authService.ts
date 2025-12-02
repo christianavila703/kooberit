@@ -58,6 +58,7 @@ class AuthService {
         companyName: user.companyName,
         role: user.role,
         status: user.status,
+        uniqueId: user.uniqueId,
       },
       token: token,
     };
@@ -106,6 +107,7 @@ class AuthService {
         companyName: user.companyName,
         role: user.role,
         status: user.status,
+        uniqueId: user.uniqueId,
       },
       token: token,
     };

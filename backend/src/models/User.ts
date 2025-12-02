@@ -7,6 +7,33 @@ import {
 } from '@enums';
 import { IUserDocument } from '@/types';
 
+/**
+ * Generate a unique 7-digit ID
+ * Retries if the ID already exists in the database
+ */
+async function generateUniqueId(UserModel: any): Promise<number> {
+  let uniqueId: number;
+  let exists = true;
+  const maxRetries = 10;
+  let retries = 0;
+
+  while (exists && retries < maxRetries) {
+    // Generate a random 7-digit number (1000000 to 9999999)
+    uniqueId = Math.floor(1000000 + Math.random() * 9000000);
+    
+    // Check if this ID already exists
+    const existingUser = await UserModel.findOne({ uniqueId }).exec();
+    exists = !!existingUser;
+    retries++;
+  }
+
+  if (exists) {
+    throw new Error('Failed to generate unique ID after maximum retries');
+  }
+
+  return uniqueId!;
+}
+
 const userSchema = new Schema<IUserDocument>(
   {
     email: {
@@ -16,6 +43,11 @@ const userSchema = new Schema<IUserDocument>(
       lowercase: true,
       trim: true,
       maxlength: 255,
+    },
+    uniqueId: {
+      type: Number,
+      unique: true,
+      sparse: true, // Allow null values but ensure uniqueness when present
     },
     password: {
       type: String,
@@ -99,6 +131,22 @@ const userSchema = new Schema<IUserDocument>(
     toObject: { virtuals: true }
   }
 );
+
+// Pre-save hook to generate unique ID if it doesn't exist
+// Must be defined BEFORE model creation
+userSchema.pre('save', async function (next) {
+  // Only generate uniqueId if it doesn't exist
+  if (!this.uniqueId) {
+    try {
+      // Get the model from the connection at runtime
+      const UserModel = this.db.model('User');
+      this.uniqueId = await generateUniqueId(UserModel);
+    } catch (error) {
+      return next(error as Error);
+    }
+  }
+  next();
+});
 
 // Email index is already created by unique: true, no need for duplicate
 

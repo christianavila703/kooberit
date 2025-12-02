@@ -68,6 +68,7 @@ export interface IAuthResponse {
     companyName?: string;
     role: UserRole;
     status: UserAllowStatus;
+    uniqueId?: number;
   };
   token: string;
 }
@@ -84,6 +85,7 @@ export interface IUserAttributes {
   lastName: string;
   role: UserRole;
   status: UserAllowStatus;
+  uniqueId?: number;
   lastLogin?: Date;
   contractorAddress?: {
     address: string;

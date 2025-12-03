@@ -22,7 +22,7 @@ export const unstable_settings = {
 
 function StatusBarWrapper() {
   const segments = useSegments();
-  const isSplash = segments[0] === 'splash';
+  const isSplash = segments[0] === 'splash' || segments[0] === undefined;
   
   // Don't render StatusBar on splash screen - it's handled by the splash screen itself
   if (isSplash) {

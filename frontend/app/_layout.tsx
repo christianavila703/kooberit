@@ -1,10 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useSegments } from 'expo-router';
+import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { StyleSheet } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -13,12 +12,9 @@ import { AuthProvider } from '@/components/auth-provider';
 import { Colors } from '@/constants/theme';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { STRIPE_PUBLISHABLE_KEY } from '@/constants/config';
+import * as Splash from "expo-splash-screen";
 
-SplashScreen.hide();
-
-export const unstable_settings = {
-  initialRouteName: 'splash',
-};
+Splash.preventAutoHideAsync().catch(() => {});
 
 function StatusBarWrapper() {
   const segments = useSegments();
@@ -42,6 +38,7 @@ export default function RootLayout() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthProvider>
             <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="splash" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

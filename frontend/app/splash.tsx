@@ -6,25 +6,20 @@ import {
   Dimensions,
   Animated,
   Easing,
-  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppSelector } from '@/store/hooks';
-import { useAppDispatch } from '@/store/hooks';
-import { initializeAuth } from '@/store/slices/authSlice';
-import { IRootState } from '@/store';
 import { images } from '@/constants/resources';
+import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
+import * as Splash from "expo-splash-screen";
 
 const { width, height } = Dimensions.get('window');
 
 const splashImage = images.splash;
 
 export default function SplashScreen() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, token } = useAppSelector((state: IRootState) => state.auth);
+
   const insets = useSafeAreaInsets();
   
   const progress = useRef(new Animated.Value(0)).current;
@@ -36,8 +31,6 @@ export default function SplashScreen() {
   const dot3Opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Initialize auth state
-    dispatch(initializeAuth());
 
     // Start animations
     Animated.parallel([
@@ -92,20 +85,24 @@ export default function SplashScreen() {
         }),
       ])
     ).start();
-  }, [dispatch, fadeAnim, loadingTextOpacity, progress, shimmerAnim, dot1Opacity, dot2Opacity, dot3Opacity]);
+  }, [fadeAnim, loadingTextOpacity, progress, shimmerAnim, dot1Opacity, dot2Opacity, dot3Opacity]);
 
   useEffect(() => {
-    // Wait for animations to complete, then navigate
-    const timer = setTimeout(() => {
-    if (isAuthenticated) {
-      router.replace('/(tabs)');
-    } else {
-      router.replace('/(auth)' as any);
-    }
-    }, 2800); // Slightly longer than animation duration
+    const prepare = async () => {
+      try {
+        await Splash.hideAsync();
+      } catch (e) {
+        // Handle error
+      }
+    };
+    prepare();
+
+    const timer = setTimeout(async () => {
+      router.replace('/(auth)');
+    }, 2800);
 
     return () => clearTimeout(timer);
-  }, [token, isAuthenticated, router]);
+  }, [router]);
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 100],
@@ -118,115 +115,118 @@ export default function SplashScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        {/* Splash Image - extends behind status bar */}
-        <Image
-          source={splashImage}
-          style={[
-            styles.splashImage,
-            {
-              top: -insets.top,
-              height: height + insets.top + insets.bottom + 50,
-            },
-          ]}
-          contentFit="cover"
-          transition={200}
-        />
-
-        {/* Title Section */}
+    <>
+      <StatusBar style="light" translucent />
+      <View style={styles.container}>
         <Animated.View
           style={[
-            styles.titleContainer,
+            styles.content,
             {
               opacity: fadeAnim,
-              paddingTop: insets.top + 120,
-              paddingRight: 32,
             },
           ]}
         >
-          <Text style={styles.mainTitle}>BuildConnect</Text>
-          <Text style={styles.tagline}>Find Work. Find Contractors.</Text>
-        </Animated.View>
+          {/* Splash Image - extends behind status bar */}
+          <Image
+            source={splashImage}
+            style={[
+              styles.splashImage,
+              {
+                top: -insets.top,
+                height: height + insets.top + insets.bottom + 50,
+              },
+            ]}
+            contentFit="cover"
+            transition={200}
+          />
 
-        {/* Loading Section */}
-        <View style={[styles.loadingContainer, { bottom: Math.max(insets.bottom, 60) }]}>
-          {/* Progress Bar Container */}
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: progressWidth,
-                  },
-                ]}
-              >
-                <Animated.View
-                  style={[
-                    styles.shimmer,
-                    {
-                      transform: [{ translateX: shimmerTranslateX }],
-                    },
-                  ]}
-                />
-              </Animated.View>
-            </View>
-          </View>
-
-          {/* Loading Text */}
+          {/* Title Section */}
           <Animated.View
             style={[
-              styles.loadingTextContainer,
+              styles.titleContainer,
               {
-                opacity: loadingTextOpacity,
+                opacity: fadeAnim,
+                paddingTop: insets.top + 120,
+                paddingRight: 32,
               },
             ]}
           >
-            <Text style={styles.loadingText}>Loading</Text>
-            <View style={styles.dotsContainer}>
-              <Animated.Text
-                style={[
-                  styles.dot,
-                  {
-                    opacity: dot1Opacity,
-                  },
-                ]}
-              >
-                .
-              </Animated.Text>
-              <Animated.Text
-                style={[
-                  styles.dot,
-                  {
-                    opacity: dot2Opacity,
-                  },
-                ]}
-              >
-                .
-              </Animated.Text>
-              <Animated.Text
-                style={[
-                  styles.dot,
-                  {
-                    opacity: dot3Opacity,
-                  },
-                ]}
-              >
-                .
-              </Animated.Text>
-            </View>
+            <Text style={styles.mainTitle}>BuildConnect</Text>
+            <Text style={styles.tagline}>Find Work. Find Contractors.</Text>
           </Animated.View>
-        </View>
-      </Animated.View>
-    </View>
+
+          {/* Loading Section */}
+          <View style={[styles.loadingContainer, { bottom: Math.max(insets.bottom, 60) }]}>
+            {/* Progress Bar Container */}
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <Animated.View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: progressWidth,
+                    },
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.shimmer,
+                      {
+                        transform: [{ translateX: shimmerTranslateX }],
+                      },
+                    ]}
+                  />
+                </Animated.View>
+              </View>
+            </View>
+
+            {/* Loading Text */}
+            <Animated.View
+              style={[
+                styles.loadingTextContainer,
+                {
+                  opacity: loadingTextOpacity,
+                },
+              ]}
+            >
+              <Text style={styles.loadingText}>Loading</Text>
+              <View style={styles.dotsContainer}>
+                <Animated.Text
+                  style={[
+                    styles.dot,
+                    {
+                      opacity: dot1Opacity,
+                    },
+                  ]}
+                >
+                  .
+                </Animated.Text>
+                <Animated.Text
+                  style={[
+                    styles.dot,
+                    {
+                      opacity: dot2Opacity,
+                    },
+                  ]}
+                >
+                  .
+                </Animated.Text>
+                <Animated.Text
+                  style={[
+                    styles.dot,
+                    {
+                      opacity: dot3Opacity,
+                    },
+                  ]}
+                >
+                  .
+                </Animated.Text>
+              </View>
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </View>
+    </>
   );
 }
 

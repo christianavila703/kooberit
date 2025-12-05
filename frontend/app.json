@@ -24,9 +24,7 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundImage": "./assets/images/icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -44,7 +42,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -69,7 +67,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a49c0cf5-7d50-408c-afb9-10e44834c089"
+        "projectId": "9bbeb960-bd9e-4f5a-9afe-e23815f85d5f"
       }
     }
   }

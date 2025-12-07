@@ -322,11 +322,24 @@ export default function ChatScreen() {
     
     if (chatMessages.length === 0) return [];
     
-    const items: Array<{ type: 'message' | 'date'; data: any }> = [];
+    // Separate system messages from regular messages
+    const systemMessages = chatMessages.filter((msg): msg is typeof msg & { type: 'system' } => msg.type === 'system');
+    const regularMessages = chatMessages.filter(msg => msg.type !== 'system');
     
-    chatMessages.forEach((message, index) => {
+    const items: Array<{ type: 'message' | 'date' | 'system'; data: any }> = [];
+    
+    // Add system messages at the top
+    systemMessages.forEach((message) => {
+      items.push({
+        type: 'system',
+        data: message,
+      });
+    });
+    
+    // Add regular messages with date separators
+    regularMessages.forEach((message, index) => {
       // Add date separator before first message or when date changes
-      const prevMessage = index > 0 ? chatMessages[index - 1] : null;
+      const prevMessage = index > 0 ? regularMessages[index - 1] : null;
       const shouldShowDate = index === 0 || 
         (message.createdAt && prevMessage?.createdAt && 
           isDifferentDay(new Date(message.createdAt), new Date(prevMessage.createdAt)));
@@ -515,6 +528,20 @@ export default function ChatScreen() {
           }}
           scrollEventThrottle={400}
           renderItem={({ item }) => {
+            // Render system message
+            if (item.type === 'system') {
+              const message = item.data;
+              return (
+                <View style={styles.systemMessageContainer}>
+                  <View style={[styles.systemMessageBubble, { backgroundColor: isDark ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.1)' }]}>
+                    <Text style={[styles.systemMessageText, { color: isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)' }]}>
+                      {message.content}
+                    </Text>
+                  </View>
+                </View>
+              );
+            }
+            
             // Render date separator
             if (item.type === 'date') {
               return (
@@ -819,6 +846,24 @@ const styles = StyleSheet.create({
   dateSeparatorText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  systemMessageContainer: {
+    alignItems: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 16,
+  },
+  systemMessageBubble: {
+    maxWidth: '90%',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 152, 0, 0.3)',
+  },
+  systemMessageText: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontWeight: '400',
   },
 });
 

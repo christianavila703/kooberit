@@ -213,7 +213,7 @@ export interface IChat {
 }
 
 // Message Types
-export type IMessageType = 'text' | 'image' | 'file';
+export type IMessageType = 'text' | 'image' | 'file' | 'system';
 
 export interface IMessage {
   id: string;

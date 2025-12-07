@@ -405,7 +405,6 @@ export default function ProfileScreen() {
                     color: colors.text,
                   },
                 ]}
-                readOnly={true}
                 placeholder="Enter your business address"
                 placeholderTextColor={colors.icon}
                 value={contractorAddress}

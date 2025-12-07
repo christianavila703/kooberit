@@ -103,7 +103,9 @@ export default function SignUpScreen() {
         }
         break;
       case 'companyName':
-        if (value.trim().length > 200) {
+        if (!value.trim()) {
+          newErrors.companyName = 'Company name is required';
+        } else if (value.trim().length > 200) {
           newErrors.companyName = 'Company name must not exceed 200 characters';
         } else {
           delete newErrors.companyName;
@@ -119,11 +121,12 @@ export default function SignUpScreen() {
     // Validate all fields
     const isFirstNameValid = validateField('firstName', firstName);
     const isLastNameValid = validateField('lastName', lastName);
+    const isCompanyNameValid = validateField('companyName', companyName);
     const isEmailValid = validateField('email', email);
     const isPasswordValid = validateField('password', password);
     const isConfirmPasswordValid = validateField('confirmPassword', confirmPassword);
 
-    if (!isFirstNameValid || !isLastNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
+    if (!isFirstNameValid || !isLastNameValid || !isCompanyNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
       return;
     }
 
@@ -132,7 +135,7 @@ export default function SignUpScreen() {
         registerUser({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          companyName: companyName.trim() || undefined,
+          companyName: companyName.trim(),
           email: email.trim(),
           password,
           role,
@@ -297,7 +300,7 @@ export default function SignUpScreen() {
 
             {/* Company Name Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: colors.text }]}>Company Name (Optional)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Company Name</Text>
               <TextInput
                 style={[
                   styles.input,

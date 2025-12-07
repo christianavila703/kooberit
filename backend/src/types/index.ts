@@ -53,7 +53,7 @@ export interface IRegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
-  companyName?: string;
+  companyName: string;
   role?: UserRole;
   status?: UserAllowStatus;
 }

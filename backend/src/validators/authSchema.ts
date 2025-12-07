@@ -45,12 +45,14 @@ export const registerSchema = Joi.object({
       'any.required': 'Last name is required',
     }),
   companyName: Joi.string()
+    .min(1)
     .max(200)
-    .optional()
-    .allow('')
+    .required()
     .trim()
     .messages({
+      'string.min': 'Company name must be at least 1 character long',
       'string.max': 'Company name must not exceed 200 characters',
+      'any.required': 'Company name is required',
     }),
   role: Joi.string()
     .valid(...USER_ROLE_VALUES)

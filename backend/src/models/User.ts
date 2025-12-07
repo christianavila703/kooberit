@@ -117,6 +117,7 @@ const userSchema = new Schema<IUserDocument>(
     },
     companyName: {
       type: String,
+      required: true,
       trim: true,
       maxlength: 200,
     },

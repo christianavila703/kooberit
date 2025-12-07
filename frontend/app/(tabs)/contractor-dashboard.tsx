@@ -29,7 +29,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
-import { arraysEqual } from '@/utils/helper';
+import { arraysEqual, calculateDistance, formatDistance } from '@/utils/helper';
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -165,6 +165,36 @@ export default function ContractorDashboard() {
     router.push(`/job-post/${jobPostId}` as any);
   };
 
+  const getLocationText = (jobPost: any): string => {
+    // If contractor has contacted, show full address
+    if (jobPost.hasContacted) {
+      return jobPost.location?.address || 'Location not specified';
+    }
+
+    // Calculate distance if we have both profile address and job location coordinates
+    if (
+      profileSettings.contractorAddress?.coordinates?.latitude &&
+      profileSettings.contractorAddress?.coordinates?.longitude &&
+      jobPost.location?.coordinates?.latitude &&
+      jobPost.location?.coordinates?.longitude
+    ) {
+      const distance = calculateDistance(
+        profileSettings.contractorAddress.coordinates.latitude,
+        profileSettings.contractorAddress.coordinates.longitude,
+        jobPost.location.coordinates.latitude,
+        jobPost.location.coordinates.longitude
+      );
+      return formatDistance(distance);
+    }
+
+    // Fallback to radius display if available
+    if (radius) {
+      return `Within ${radius} km radius`;
+    }
+
+    return 'Location hidden - contact to view';
+  };
+
   const isDark = colorScheme === 'dark';
 
   return (
@@ -189,7 +219,7 @@ export default function ContractorDashboard() {
         <IconSymbol name="magnifyingglass" size={20} color={colors.icon} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search jobs..."
+          placeholder="Search jobs market..."
           placeholderTextColor={colors.icon}
           value={searchQuery}
           onChangeText={(text) => dispatch(setSearchQuery(text))}
@@ -401,11 +431,7 @@ export default function ContractorDashboard() {
                 <View style={styles.locationInfo}>
                   <IconSymbol name="location.fill" size={14} color={colors.icon} />
                   <Text style={[styles.locationText, { color: colors.icon }]}>
-                    {jobPost.hasContacted
-                      ? jobPost.location?.address || 'Location not specified'
-                      :( radius
-                      ? `Within ${radius} km radius`
-                      : 'Location hidden - contact to view')}
+                    {getLocationText(jobPost)}
                   </Text>
                 </View>
                 <Text style={[styles.dateText, { color: colors.icon }]}>

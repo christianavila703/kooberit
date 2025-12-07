@@ -152,7 +152,7 @@ export default function SplashScreen() {
             ]}
           >
             <Text style={styles.mainTitle}>BuildConnect</Text>
-            <Text style={styles.tagline}>Find Work. Find Contractors.</Text>
+            <Text style={styles.tagline}>Find Work, Find Contractors</Text>
           </Animated.View>
 
           {/* Loading Section */}

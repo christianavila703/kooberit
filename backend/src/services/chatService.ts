@@ -28,7 +28,7 @@ class ChatService {
       return existing;
     }
 
-    return Chat.create({
+    const chat = await Chat.create({
       ...chatData,
       jobPostId: new Types.ObjectId(chatData.jobPostId),
       homeownerId: new Types.ObjectId(chatData.homeownerId),
@@ -36,6 +36,19 @@ class ChatService {
       homeownerUnreadCount: 0,
       contractorUnreadCount: 0,
     });
+
+    // Create system message with disclaimer
+    const systemMessageContent = "The purpose of this chat is to set up a site visit and communicate any other project details such as cost and deadline. It is recommended that all relevant project communication occur on the app. The communication creates a written record that can be used in cases of dispute.";
+    
+    await Message.create({
+      chatId: chat._id,
+      senderId: new Types.ObjectId(chatData.contractorId), // Use contractorId as sender for system messages
+      content: systemMessageContent,
+      type: 'system',
+      isRead: false,
+    });
+
+    return chat;
   }
 
   /**

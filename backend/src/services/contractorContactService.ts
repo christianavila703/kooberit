@@ -47,6 +47,18 @@ class ContractorContactService {
       contractorUnreadCount: 0,
     });
 
+    // Create system message with disclaimer
+    const { Message } = await import('@/models');
+    const systemMessageContent = "The purpose of this chat is to set up a site visit and communicate any other project details such as cost and deadline. It is recommended that all relevant project communication occur on the app. The communication creates a written record that can be used in cases of dispute.";
+    
+    await Message.create({
+      chatId: chat._id,
+      senderId: new Types.ObjectId(contactData.contractorId), // Use contractorId as sender for system messages
+      content: systemMessageContent,
+      type: 'system',
+      isRead: false,
+    });
+
     // Create contractor contact
     const contact = await ContractorContact.create({
       ...contactData,

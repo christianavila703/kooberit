@@ -193,7 +193,7 @@ export type IChatDocument = IChatAttributes & Document<Types.ObjectId>;
 /**
  * Message types
  */
-export type MessageType = 'text' | 'image' | 'file';
+export type MessageType = 'text' | 'image' | 'file' | 'system';
 
 export interface IMessageAttributes {
   id?: string;

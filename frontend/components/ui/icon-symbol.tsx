@@ -58,6 +58,8 @@ const MAPPING = {
   'map.fill': 'map',
   'briefcase.fill': 'work',
   'exclamationmark.triangle.fill': 'warning',
+  'paperclip': 'attach-file',
+  'doc': 'description',
 } as IconMapping;
 
 /**

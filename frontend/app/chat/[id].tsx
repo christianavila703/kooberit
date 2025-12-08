@@ -27,7 +27,9 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import chatService from '@/services/chat';
+import fileDownloadService from '@/services/fileDownload';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -43,6 +45,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
+  const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const isNavigatingToMessagesRef = useRef(false);
@@ -203,50 +206,101 @@ export default function ChatScreen() {
     }
   };
 
-  const handlePickImage = async () => {
+  const handlePickFile = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        notification.error('Permission Required', 'Please grant camera roll permissions to send images');
-        return;
-      }
+      // Ensure id is a string (handle array case from useLocalSearchParams)
+      const chatId = Array.isArray(id) ? id[0] : id;
+      if (!chatId || typeof chatId !== 'string') return;
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
+      // Show action sheet to choose between image and document
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        // Ensure id is a string (handle array case from useLocalSearchParams)
-        const chatId = Array.isArray(id) ? id[0] : id;
-        if (!chatId || typeof chatId !== 'string') return;
-        
-        // TODO: Upload image to server and get URL
-        // For now, use placeholder
-        const imageUrl = result.assets[0].uri;
+        const file = result.assets[0];
         setSending(true);
         
         try {
+          // Upload file to server
+          const uploadResult = await chatService.uploadFile(
+            file.uri,
+            file.name || 'file',
+            file.mimeType || 'application/octet-stream'
+          );
+
+          // Determine message type based on file mime type
+          const isImage = file.mimeType?.startsWith('image/') || false;
+          const isVideo = file.mimeType?.startsWith('video/') || false;
+          const messageType = isImage ? 'image' : 'file';
+          let content = '';
+          if (isImage) {
+            content = 'Image sent';
+          } else if (isVideo) {
+            content = `Video: ${file.name || 'video'}`;
+          } else {
+            content = `File: ${file.name || 'file'}`;
+          }
+
           // Send via API (API will broadcast to others via socket)
           await dispatch(
             sendMessage({
               chatId: chatId,
               data: {
-                content: 'Image sent',
-                type: 'image',
-                fileUrl: imageUrl,
+                content,
+                type: messageType,
+                fileUrl: uploadResult.url,
               },
             })
           ).unwrap();
         } catch (error: any) {
-          notification.error('Error', 'Failed to send image');
+          notification.error('Error', error.message || 'Failed to send file');
         } finally {
           setSending(false);
         }
       }
     } catch (error: any) {
-      notification.error('Error', 'Failed to pick image');
+      if (error.message !== 'User canceled document picker') {
+        notification.error('Error', 'Failed to pick file');
+      }
+    }
+  };
+
+  const handleFilePress = async (message: any) => {
+    // console.log(FileSystem.documentDirectory);
+    // return;
+    if (!message.fileUrl) return;
+
+    const messageId = message.id;
+    setDownloadingFiles(prev => new Set(prev).add(messageId));
+
+    try {
+      // Extract filename from URL or message content
+      const urlParts = message.fileUrl.split('/');
+      const urlFilename = urlParts[urlParts.length - 1];
+      const filename = message.content.includes(':') 
+        ? message.content.split(':')[1].trim() || urlFilename
+        : urlFilename;
+
+      // Check if file already exists in registry
+      const exists = await fileDownloadService.fileExists(filename);
+
+      if (!exists) {
+        // Download the file
+        await fileDownloadService.saveToDownloads(message.fileUrl, filename);
+        notification.success('Success', 'File downloaded to Kooberit registry');
+      }
+
+      await fileDownloadService.sharingFile(filename);
+    } catch (error: any) {
+      notification.error('Error', 'Failed to download file');
+    } finally {
+      setDownloadingFiles((prev: Set<string>) => {
+        const newSet = new Set(prev);
+        newSet.delete(messageId);
+        return newSet;
+      });
     }
   };
 
@@ -562,7 +616,7 @@ export default function ChatScreen() {
               <View
                 style={[
                   styles.messageContainer,
-                  isOwnMessage ? styles.ownMessage : styles.otherMessage,
+                  isOwnMessage ? styles.ownMessage : styles.otherMessage
                 ]}>
                 <View
                   style={[
@@ -571,16 +625,35 @@ export default function ChatScreen() {
                       backgroundColor: isOwnMessage ? colors.tint : isDark ? '#1E1E1E' : '#F5F5F5',
                       alignSelf: isOwnMessage ? 'flex-end' : 'flex-start',
                     },
+                    (message.type === 'file' || message.type === 'image') && styles.fileBubble,
                   ]}>
-                  {message.type === 'image' && message.fileUrl ? (
-                    <View style={styles.imageContainer}>
-                      <Text style={[styles.imageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }]}>
-                        📷 Image
-                      </Text>
-                      <Text style={[styles.imageUrl, { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.icon }]} numberOfLines={1}>
-                        {message.fileUrl}
-                      </Text>
-                    </View>
+                  {(message.type === 'image' || message.type === 'file') && message.fileUrl ? (
+                    <TouchableOpacity
+                      style={styles.fileContainer}
+                      onPress={() => handleFilePress(message)}
+                      disabled={downloadingFiles.has(message.id)}>
+                      <View style={styles.fileInfo}>
+                        {downloadingFiles.has(message.id) ? (
+                          <ActivityIndicator size="small" color={isOwnMessage ? '#FFFFFF' : colors.tint} />
+                        ) : (
+                          <IconSymbol 
+                            name={message.type === 'image' ? 'photo' : 'doc'} 
+                            size={20} 
+                            color={isOwnMessage ? '#FFFFFF' : colors.tint} 
+                          />
+                        )}
+                        <View style={styles.fileDetails}>
+                          <Text style={[styles.fileName, { color: isOwnMessage ? '#FFFFFF' : colors.text }]}>
+                            {message.type === 'image' 
+                              ? 'Image' 
+                              : message.content.replace('File: ', '').replace('Video: ', '')}
+                          </Text>
+                          <Text style={[styles.fileUrl, { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.icon }]} numberOfLines={1}>
+                            {downloadingFiles.has(message.id) ? 'Downloading...' : 'Tap to download'}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                   ) : (
                     <Text
                       style={[
@@ -633,28 +706,28 @@ export default function ChatScreen() {
 
       {/* Input */}
       <View style={[styles.inputContainer, { backgroundColor: colors.background }]}>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={handlePickFile}
+          disabled={sending}>
+          <IconSymbol name="paperclip" size={20} color={colors.icon} />
+        </TouchableOpacity>
         <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
-                  color: colors.text,
-                },
-              ]}
-              placeholder="Type a message..."
-              placeholderTextColor={colors.icon}
-              value={messageText}
-              onChangeText={handleTextChange}
-              multiline
-              maxLength={5000}
-              editable={!sending}
-            />
-            {/* <TouchableOpacity
-              style={styles.attachButton}
-              onPress={handlePickImage}
-              disabled={sending}>
-              <IconSymbol name="photo" size={20} color={colors.icon} />
-            </TouchableOpacity> */}
+          style={[
+            styles.input,
+            {
+              backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+              color: colors.text,
+            },
+          ]}
+          placeholder="Type a message..."
+          placeholderTextColor={colors.icon}
+          value={messageText}
+          onChangeText={handleTextChange}
+          multiline
+          maxLength={5000}
+          editable={!sending}
+        />
         <TouchableOpacity
           style={[
             styles.sendButton,
@@ -701,6 +774,9 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
   },
+  fileBubble: {
+    width: 200
+  },
   messageText: {
     fontSize: 15,
     lineHeight: 20,
@@ -718,15 +794,23 @@ const styles = StyleSheet.create({
   readIndicator: {
     fontSize: 12,
   },
-  imageContainer: {
+  fileContainer: {
     marginBottom: 4,
   },
-  imageText: {
+  fileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fileDetails: {
+    flex: 1,
+  },
+  fileName: {
     fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 4,
+    fontWeight: '500',
+    marginBottom: 2,
   },
-  imageUrl: {
+  fileUrl: {
     fontSize: 11,
   },
   typingContainer: {
@@ -764,7 +848,10 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   attachButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   infoSection: {
     paddingHorizontal: 16,

@@ -73,6 +73,30 @@ class ChatService {
     );
     return response.data.data?.count || 0;
   }
+
+  /**
+   * Upload a file for chat
+   */
+  async uploadFile(uri: string, filename: string, mimetype: string): Promise<{ url: string; filename: string; size: number; mimetype: string }> {
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      name: filename,
+      type: mimetype,
+    } as any);
+
+    const response = await api.post<IApiResponse<{ url: string; filename: string; size: number; mimetype: string }>>(
+      endpoints.upload.chatFile,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 120000, // 2 minutes timeout for large files (videos)
+      }
+    );
+    return response.data.data!;
+  }
 }
 
 export default new ChatService();

@@ -29,7 +29,9 @@ class FileDownloadService {
     // Save any file to downloads
     async saveToDownloads(url: string, fileName: string): Promise<string> {
         try {
-            const source = API_CONFIG.BASE_URL + "/" + url;
+            // Remove /api from BASE_URL to get the site URL
+            const baseUrl = API_CONFIG.BASE_URL.replace(/\/api\/?$/, '');
+            const source = baseUrl + url;
 
             const file = new File(this.destination.uri, fileName);
 
@@ -49,6 +51,8 @@ class FileDownloadService {
         try {
             
             const file = new File(this.destination.uri, filename);
+
+            console.log(file)
             
             if (!file.exists) {
                 throw new Error('File not found');

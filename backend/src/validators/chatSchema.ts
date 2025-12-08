@@ -20,10 +20,21 @@ export const sendMessageSchema = Joi.object({
       'any.only': 'Message type must be text, image, or file',
     }),
   fileUrl: Joi.string()
-    .uri()
     .optional()
+    .allow('')
+    .custom((value, helpers) => {
+      // Allow empty string, relative paths, or full URIs
+      if (!value || value === '') {
+        return value;
+      }
+      // Check if it's a relative path (starts with /) or a valid URI
+      if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) {
+        return value;
+      }
+      return helpers.error('string.invalid', { message: 'File URL must be a relative path (starting with /) or a valid URI' });
+    })
     .messages({
-      'string.uri': 'File URL must be a valid URI',
+      'string.invalid': 'File URL must be a relative path (starting with /) or a valid URI',
     }),
 });
 

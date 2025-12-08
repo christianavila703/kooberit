@@ -33,7 +33,7 @@ app.use(cors(corsOptions));
 app.use('/api', routes);
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, './uploads')));
 
 // Serve frontend
 app.use(express.static(path.join(__dirname, 'public')));

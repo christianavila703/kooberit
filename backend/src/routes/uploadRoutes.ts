@@ -1,15 +1,27 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import logger from '@/utils/logger';
 
 const router = Router();
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads/');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  logger.info('Created uploads directory');
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // In production, use cloud storage (AWS S3, Cloudinary, etc.)
-    cb(null, path.join(__dirname, '../../uploads/'));
+    // Ensure directory exists before saving
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -20,18 +32,20 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB limit (increased for videos)
   },
   fileFilter: (req, file, cb) => {
-    // Allow images and common file types
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    // Allow images, documents, and video files
+    const allowedExtensions = /jpeg|jpg|png|gif|pdf|doc|docx|mp4|mov|avi|mkv|webm|m4v|3gp/;
+    const allowedMimeTypes = /image|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument|video/;
+    
+    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedMimeTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images and documents are allowed.'));
+      cb(new Error('Invalid file type. Only images, documents, and videos are allowed.'));
     }
   },
 });

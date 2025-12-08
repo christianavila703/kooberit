@@ -30,6 +30,7 @@ import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
 import { arraysEqual, calculateDistance, formatDistance } from '@/utils/helper';
+import { statusBarHeight } from '@/constants/resources';
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },

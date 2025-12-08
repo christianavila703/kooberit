@@ -24,6 +24,8 @@ import LocationPicker from '@/components/LocationPicker';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
 
+import { statusBarHeight } from '@/constants/resources';
+
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },

@@ -17,6 +17,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { IUserRole } from '@/types';
 import notificationService from '@/services/notification';
+import { statusBarHeight } from '@/constants/resources';
 
 export default function SignUpScreen() {
   const [firstName, setFirstName] = useState('');
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingBottom: 40,
   },
   header: {

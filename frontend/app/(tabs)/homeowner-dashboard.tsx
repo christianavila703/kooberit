@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { statusBarHeight } from '@/constants/resources'
 
 export default function TabIndex() {
   const { user } = useAppSelector((state) => state.auth);
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

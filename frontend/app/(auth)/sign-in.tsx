@@ -17,6 +17,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IRootState } from '@/store';
+import { statusBarHeight } from '@/constants/resources';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingBottom: 40,
   },
   header: {

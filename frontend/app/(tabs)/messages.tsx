@@ -17,6 +17,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import socketService from '@/services/socket';
+import { statusBarHeight } from '@/constants/resources';
 
 export default function MessagesScreen() {
   const router = useRouter();
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: statusBarHeight,
     paddingHorizontal: 20,
     paddingBottom: 16,
     flexDirection: 'row',

@@ -60,6 +60,8 @@ const MAPPING = {
   'exclamationmark.triangle.fill': 'warning',
   'paperclip': 'attach-file',
   'doc': 'description',
+  'clock.fill': 'access-time',
+  'mappin': 'place',
 } as IconMapping;
 
 /**

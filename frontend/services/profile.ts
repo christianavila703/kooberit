@@ -8,6 +8,12 @@ export interface IProfileAddress {
     latitude: number;
     longitude: number;
   };
+  streetNumber?: string;
+  streetName?: string;
+  unitNumber?: string;
+  cityName?: string;
+  areaCode?: string;
+  province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
 }
 
 export interface IProfileSettings {

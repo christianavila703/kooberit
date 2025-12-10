@@ -15,6 +15,8 @@ class ContractorService {
   async getJobBoard(params?: {
     radius?: number | null;
     categories?: string[];
+    cities?: string[];
+    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
     search?: string;
     page?: number;
     limit?: number;

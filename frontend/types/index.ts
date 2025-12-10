@@ -42,6 +42,12 @@ export interface IUser {
       latitude: number;
       longitude: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName?: string;
+    areaCode?: string;
+    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
   constructionCategories?: string[];
   notificationEnabled?: boolean;
@@ -100,6 +106,12 @@ export interface IJobPost {
       latitude: number;
       longitude: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName: string;
+    areaCode?: string;
+    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
   status: IJobPostStatus;
   contractorContactsCount: number;
@@ -126,6 +138,12 @@ export interface ICreateJobPostRequest {
       latitude: number;
       longitude: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName: string;
+    areaCode?: string;
+    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
 }
 
@@ -141,6 +159,12 @@ export interface IUpdateJobPostRequest {
       latitude?: number;
       longitude?: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName?: string;
+    areaCode?: string;
+    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
 }
 

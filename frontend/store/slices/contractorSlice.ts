@@ -8,6 +8,8 @@ interface IContractorState {
   jobPosts: IJobPost[];
   radius: number | null; // null means "All"
   categories: string[];
+  cities: string[];
+  province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   searchQuery: string;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -27,6 +29,8 @@ const initialState: IContractorState = {
   jobPosts: [],
   radius: null,
   categories: [],
+  cities: [],
+  province: 'ON',
   searchQuery: '',
   isLoading: false,
   isLoadingMore: false,
@@ -48,6 +52,8 @@ export const fetchJobPosts = createAsyncThunk(
       search?: string;
       radius?: number | null;
       categories?: string[];
+      cities?: string[];
+      province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
     },
     { dispatch, getState, rejectWithValue }
   ) => {
@@ -67,10 +73,21 @@ export const fetchJobPosts = createAsyncThunk(
         ? params.categories
         : (profileCategories.length > 0 ? profileCategories : undefined);
 
+      // Get state for cities and province, or use params
+      const stateForFilters = getState() as IRootState;
+      const citiesToUse = params.cities !== undefined
+        ? params.cities
+        : (stateForFilters.contractor.cities.length > 0 
+          ? stateForFilters.contractor.cities 
+          : undefined);
+      const provinceToUse = params.province || stateForFilters.contractor.province || 'ON';
+
       // Fetch job posts
       const result = await contractorService.getJobBoard({
         radius: params.radius ?? undefined,
         categories: categoriesToUse,
+        cities: citiesToUse,
+        province: provinceToUse,
         search: params.search || undefined,
         page: params.page || 1,
         limit: 20,
@@ -108,9 +125,17 @@ const contractorSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
+    setCities: (state, action: PayloadAction<string[]>) => {
+      state.cities = action.payload;
+    },
+    setProvince: (state, action: PayloadAction<'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT'>) => {
+      state.province = action.payload;
+    },
     resetFilters: (state, action: PayloadAction<{ profileCategories: string[] }>) => {
       state.radius = null;
       state.categories = action.payload.profileCategories;
+      state.cities = [];
+      state.province = 'ON';
     },
     clearJobPosts: (state) => {
       state.jobPosts = [];
@@ -164,6 +189,8 @@ export const {
   toggleCategory,
   setCategories,
   setSearchQuery,
+  setCities,
+  setProvince,
   resetFilters,
   clearJobPosts,
   setRefreshing,

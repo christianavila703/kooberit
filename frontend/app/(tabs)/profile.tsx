@@ -8,6 +8,7 @@ import {
   Alert,
   Switch,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -20,8 +21,9 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import notification from '@/services/notification';
-import LocationPicker from '@/components/LocationPicker';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
+import { geocodeAddress, buildAddressString } from '@/utils/geocode';
+import ProvinceSelect from '@/components/ProvinceSelect';
 import { IRootState } from '@/store';
 
 import { statusBarHeight } from '@/constants/resources';
@@ -43,6 +45,14 @@ export default function ProfileScreen() {
   const [contractorAddress, setContractorAddress] = useState('');
   const [contractorLatitude, setContractorLatitude] = useState<number | null>(null);
   const [contractorLongitude, setContractorLongitude] = useState<number | null>(null);
+  const [streetNumber, setStreetNumber] = useState('');
+  const [streetName, setStreetName] = useState('');
+  const [unitNumber, setUnitNumber] = useState('');
+  const [cityName, setCityName] = useState('');
+  const [areaCode, setAreaCode] = useState('');
+  const [province, setProvince] = useState<'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT'>('ON');
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodedAddress, setGeocodedAddress] = useState('');
   const [constructionCategories, setConstructionCategories] = useState<string[]>([]);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [notificationRadius, setNotificationRadius] = useState(50);
@@ -89,15 +99,92 @@ export default function ProfileScreen() {
           setContractorAddress(profileSettings.contractorAddress.address);
           setContractorLatitude(profileSettings.contractorAddress.coordinates.latitude);
           setContractorLongitude(profileSettings.contractorAddress.coordinates.longitude);
+          // Set individual address fields if available
+          if (profileSettings.contractorAddress?.streetNumber) {
+            setStreetNumber(profileSettings.contractorAddress.streetNumber);
+          }
+          if (profileSettings.contractorAddress?.streetName) {
+            setStreetName(profileSettings.contractorAddress.streetName);
+          }
+          if (profileSettings.contractorAddress?.unitNumber) {
+            setUnitNumber(profileSettings.contractorAddress.unitNumber);
+          }
+          if (profileSettings.contractorAddress?.cityName) {
+            setCityName(profileSettings.contractorAddress.cityName);
+          }
+          if (profileSettings.contractorAddress?.areaCode) {
+            setAreaCode(profileSettings.contractorAddress.areaCode);
+          }
+          if (profileSettings.contractorAddress?.province) {
+            setProvince(profileSettings.contractorAddress.province);
+          }
         } else {
           // Reset if no address in settings
           setContractorAddress('');
           setContractorLatitude(null);
           setContractorLongitude(null);
+          setStreetNumber('');
+          setStreetName('');
+          setUnitNumber('');
+          setCityName('');
+          setAreaCode('');
+          setProvince('ON');
         }
       }
     }
   }, [profileSettings, isContractor, user]);
+
+  const handleGeocode = async () => {
+    if (!isContractor) return;
+
+    // Validate required fields
+    if (!cityName.trim() || !province) {
+      notification.error('Error', 'Please enter city name and select province');
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const result = await geocodeAddress({
+        streetNumber: streetNumber.trim(),
+        streetName: streetName.trim(),
+        unitNumber: unitNumber.trim(),
+        cityName: cityName.trim(),
+        areaCode: areaCode.trim(),
+        province: province,
+      });
+
+      if (result) {
+        setContractorLatitude(result.latitude);
+        setContractorLongitude(result.longitude);
+        setContractorAddress(result.address);
+        setGeocodedAddress(result.address);
+        notification.success('Success', 'Location found successfully');
+      } else {
+        setContractorLatitude(null);
+        setContractorLongitude(null);
+        setContractorAddress(buildAddressString({
+          streetNumber: streetNumber.trim(),
+          streetName: streetName.trim(),
+          unitNumber: unitNumber.trim(),
+          cityName: cityName.trim(),
+          areaCode: areaCode.trim(),
+          province: province,
+        }));
+        setGeocodedAddress('');
+        notification.error('Error', 'Could not find location. Please check your address fields.');
+      }
+    } catch (error: any) {
+      console.error('Geocoding error:', error);
+      setContractorLatitude(null);
+      setContractorLongitude(null);
+      setGeocodedAddress('');
+      const errorMessage = error?.message || 'Failed to get location. Please try again.';
+      notification.error('Geocoding Error', errorMessage);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   const toggleCategory = (category: string) => {
     setConstructionCategories((prev) =>
@@ -139,11 +226,24 @@ export default function ProfileScreen() {
       
       if (isContractor) {
         updateData.contractorAddress = {
-          address: contractorAddress,
+          address: geocodedAddress || contractorAddress || buildAddressString({
+            streetNumber: streetNumber.trim(),
+            streetName: streetName.trim(),
+            unitNumber: unitNumber.trim(),
+            cityName: cityName.trim(),
+            areaCode: areaCode.trim(),
+            province: province,
+          }),
           coordinates: {
-            latitude: contractorLatitude,
-            longitude: contractorLongitude,
+            latitude: contractorLatitude!,
+            longitude: contractorLongitude!,
           },
+          streetNumber: streetNumber.trim() || undefined,
+          streetName: streetName.trim() || undefined,
+          unitNumber: unitNumber.trim() || undefined,
+          cityName: cityName.trim(),
+          areaCode: areaCode.trim() || undefined,
+          province: province,
         };
         updateData.constructionCategories = constructionCategories;
         updateData.notificationRadius = notificationRadius;
@@ -399,30 +499,172 @@ export default function ProfileScreen() {
               <Text style={[styles.settingDescription, { color: colors.icon }]}>
                 Used for radius filtering of job posts
               </Text>
-              <TextInput
+
+              {/* Row 1: Street Number | Street Name */}
+              <View style={styles.addressRow}>
+                <View style={styles.addressFieldHalf}>
+                  <Text style={[styles.addressFieldLabel, { color: colors.text, marginTop: 12 }]}>Street Number</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="Enter street number"
+                    placeholderTextColor={colors.icon}
+                    value={streetNumber}
+                    onChangeText={setStreetNumber}
+                    editable={!isSaving}
+                  />
+                </View>
+                <View style={styles.addressFieldHalf}>
+                  <Text style={[styles.addressFieldLabel, { color: colors.text, marginTop: 12 }]}>Street Name</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="Enter street name"
+                    placeholderTextColor={colors.icon}
+                    value={streetName}
+                    onChangeText={setStreetName}
+                    editable={!isSaving}
+                  />
+                </View>
+              </View>
+
+              {/* Row 2: Unit Number | City Name */}
+              <View style={styles.addressRow}>
+                <View style={styles.addressFieldHalf}>
+                  <Text style={[styles.addressFieldLabel, { color: colors.text, marginTop: 12 }]}>Unit Number (Optional)</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="Enter unit number"
+                    placeholderTextColor={colors.icon}
+                    value={unitNumber}
+                    onChangeText={setUnitNumber}
+                    editable={!isSaving}
+                  />
+                </View>
+                <View style={styles.addressFieldHalf}>
+                  <Text style={[styles.addressFieldLabel, { color: colors.text, marginTop: 12 }]}>City Name</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="Enter city name"
+                    placeholderTextColor={colors.icon}
+                    value={cityName}
+                    onChangeText={setCityName}
+                    editable={!isSaving}
+                  />
+                </View>
+              </View>
+
+              {/* Row 3: Area Code */}
+              <View style={styles.addressRow}>
+                <View style={styles.addressFieldHalf}>
+                  <Text style={[styles.addressFieldLabel, { color: colors.text, marginTop: 12 }]}>Area Code (Optional)</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="Enter area code"
+                    placeholderTextColor={colors.icon}
+                    value={areaCode}
+                    onChangeText={setAreaCode}
+                    editable={!isSaving}
+                  />
+                </View>
+                <View style={styles.addressFieldHalf} />
+              </View>
+
+              {/* Province */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.addressFieldLabel, { color: colors.text }]}>Province</Text>
+                <ProvinceSelect
+                  value={province}
+                  onValueChange={setProvince}
+                  disabled={isSaving}
+                />
+              </View>
+
+              {/* Get Location Button */}
+              <TouchableOpacity
                 style={[
-                  styles.input,
+                  styles.geocodeButton,
                   {
-                    backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5',
-                    color: colors.text,
+                    backgroundColor: colors.tint,
+                    opacity: isGeocoding ? 0.6 : 1,
                   },
                 ]}
-                placeholder="Enter your business address"
-                placeholderTextColor={colors.icon}
-                value={contractorAddress}
-                onChangeText={setContractorAddress}
-                editable={!isSaving}
-              />
-              <LocationPicker
-                address={contractorAddress}
-                latitude={contractorLatitude}
-                longitude={contractorLongitude}
-                onLocationChange={(addr, lat, lng) => {
-                  setContractorAddress(addr);
-                  setContractorLatitude(lat);
-                  setContractorLongitude(lng);
-                }}
-              />
+                onPress={handleGeocode}
+                disabled={isGeocoding || isSaving}>
+                {isGeocoding ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={styles.geocodeButtonText}>Getting Location...</Text>
+                  </>
+                ) : (
+                  <>
+                    <IconSymbol name="location.fill" size={18} color="#FFFFFF" />
+                    <Text style={styles.geocodeButtonText}>Get Location</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Geocoded Location Display */}
+              {(isGeocoding || geocodedAddress || (contractorLatitude && contractorLongitude)) && (
+                <View style={[styles.locationDisplay, { backgroundColor: isDark ? '#2E2E2E' : '#F5F5F5', marginTop: 16 }]}>
+                  {isGeocoding ? (
+                    <View style={styles.locationLoading}>
+                      <ActivityIndicator size="small" color={colors.tint} />
+                      <Text style={[styles.locationText, { color: colors.icon }]}>
+                        Getting location...
+                      </Text>
+                    </View>
+                  ) : contractorLatitude && contractorLongitude ? (
+                    <View style={styles.locationInfo}>
+                      <IconSymbol name="checkmark.circle.fill" size={20} color={colors.tint} />
+                      <View style={styles.locationDetails}>
+                        <Text style={[styles.locationLabel, { color: colors.text }]}>Location Found</Text>
+                        <Text style={[styles.locationAddress, { color: colors.icon }]} numberOfLines={2}>
+                          {geocodedAddress || contractorAddress}
+                        </Text>
+                        <Text style={[styles.locationCoords, { color: colors.icon }]}>
+                          {contractorLatitude.toFixed(4)}, {contractorLongitude.toFixed(4)}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.locationError}>
+                      <IconSymbol name="exclamationmark.triangle.fill" size={20} color="#FF3B30" />
+                      <Text style={[styles.locationText, { color: '#FF3B30' }]}>
+                        Could not find location. Please check your address fields.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
 
             <View style={[styles.settingCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
@@ -779,6 +1021,72 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveProfileButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addressFieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  addressFieldHalf: {
+    flex: 1,
+  },
+  locationDisplay: {
+    borderRadius: 12,
+    padding: 16,
+  },
+  locationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  locationDetails: {
+    flex: 1,
+    gap: 4,
+  },
+  locationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  locationAddress: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  locationCoords: {
+    fontSize: 11,
+    marginTop: 4,
+    fontFamily: 'monospace',
+  },
+  locationError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 13,
+  },
+  geocodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  geocodeButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

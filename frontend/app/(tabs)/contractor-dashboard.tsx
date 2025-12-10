@@ -16,6 +16,8 @@ import {
   fetchJobPosts,
   setRadius,
   setCategories,
+  setCities,
+  setProvince,
   setSearchQuery,
   resetFilters,
   setRefreshing,
@@ -43,6 +45,8 @@ export default function ContractorDashboard() {
     jobPosts,
     radius,
     categories,
+    cities,
+    province,
     searchQuery,
     isLoading,
     isLoadingMore,
@@ -56,6 +60,9 @@ export default function ContractorDashboard() {
   const [showFilters, setShowFilters] = useState(false);
   const [tempRadius, setTempRadius] = useState<number | null>(null);
   const [tempCategories, setTempCategories] = useState<string[]>([]);
+  const [tempCities, setTempCities] = useState<string[]>([]);
+  const [tempProvince, setTempProvince] = useState<'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT'>('ON');
+  const [cityInput, setCityInput] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // fetch profile on mount
@@ -89,6 +96,8 @@ export default function ContractorDashboard() {
           search: searchQuery || undefined,
           radius: radius,
           categories: categoriesToUse,
+          cities: cities.length > 0 ? cities : undefined,
+          province: province,
         })
       );
     }, 500);
@@ -98,15 +107,17 @@ export default function ContractorDashboard() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, radius, categories, dispatch]);
+  }, [searchQuery, radius, categories, cities, province, dispatch]);
 
   // Sync temp filters when modal opens
   useEffect(() => {
     if (showFilters) {
       setTempRadius(radius);
       setTempCategories([...categories]);
+      setTempCities([...cities]);
+      setTempProvince(province);
     }
-  }, [showFilters, radius, categories]);
+  }, [showFilters, radius, categories, cities, province]);
 
   const onRefresh = async () => {
     dispatch(setRefreshing(true));
@@ -118,6 +129,8 @@ export default function ContractorDashboard() {
         search: searchQuery || undefined,
         radius: radius,
         categories: categories.length > 0 ? categories : profileCategories,
+        cities: cities.length > 0 ? cities : undefined,
+        province: province,
       })
     );
   };
@@ -132,10 +145,12 @@ export default function ContractorDashboard() {
           search: searchQuery || undefined,
           radius: radius,
           categories: categories.length > 0 ? categories : profileCategories,
+          cities: cities.length > 0 ? cities : undefined,
+          province: province,
         })
       );
     }
-  }, [isLoadingMore, pagination, isLoading, searchQuery, radius, categories, dispatch]);
+  }, [isLoadingMore, pagination, isLoading, searchQuery, radius, categories, cities, province, dispatch]);
 
   const handleToggleCategory = (category: string) => {
     if (tempCategories.includes(category)) {
@@ -145,9 +160,23 @@ export default function ContractorDashboard() {
     }
   };
 
+  const handleAddCity = () => {
+    const trimmedCity = cityInput.trim();
+    if (trimmedCity && !tempCities.includes(trimmedCity)) {
+      setTempCities([...tempCities, trimmedCity]);
+      setCityInput('');
+    }
+  };
+
+  const handleRemoveCity = (cityToRemove: string) => {
+    setTempCities(tempCities.filter((c) => c !== cityToRemove));
+  };
+
   const handleApplyFilters = () => {
     dispatch(setRadius(tempRadius));
     dispatch(setCategories(tempCategories));
+    dispatch(setCities(tempCities));
+    dispatch(setProvince(tempProvince));
     setShowFilters(false);
   };
 
@@ -155,6 +184,8 @@ export default function ContractorDashboard() {
     const profileCategories = profileSettings.constructionCategories || [];
     setTempRadius(null);
     setTempCategories([...profileCategories]);
+    setTempCities([]);
+    setTempProvince('ON');
     dispatch(resetFilters({ profileCategories }));
   };
 
@@ -337,6 +368,74 @@ export default function ContractorDashboard() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={[styles.filterTitle, { color: colors.text, marginTop: 24 }]}>
+              City Name
+            </Text>
+            <View style={styles.cityInputContainer}>
+              <TextInput
+                style={[
+                  styles.cityInput,
+                  {
+                    backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                    color: colors.text,
+                  },
+                ]}
+                placeholder="Enter city name"
+                placeholderTextColor={colors.icon}
+                value={cityInput}
+                onChangeText={setCityInput}
+                onSubmitEditing={handleAddCity}
+              />
+              <TouchableOpacity
+                style={[styles.addCityButton, { backgroundColor: colors.tint }]}
+                onPress={handleAddCity}>
+                <Text style={styles.addCityButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            {tempCities.length > 0 && (
+              <View style={styles.selectedCitiesContainer}>
+                {tempCities.map((city) => (
+                  <View
+                    key={city}
+                    style={[
+                      styles.cityChip,
+                      { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
+                    ]}>
+                    <Text style={[styles.cityChipText, { color: colors.text }]}>{city}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveCity(city)}>
+                      <IconSymbol name="xmark.circle.fill" size={16} color={colors.icon} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Text style={[styles.filterTitle, { color: colors.text, marginTop: 24 }]}>
+              Province
+            </Text>
+            <View style={styles.provinceContainer}>
+              {['ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT'].map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    styles.provinceButton,
+                    {
+                      backgroundColor: tempProvince === p ? colors.tint : isDark ? '#2E2E2E' : '#F5F5F5',
+                      borderColor: colors.tint,
+                    },
+                  ]}
+                  onPress={() => setTempProvince(p as any)}>
+                  <Text
+                    style={[
+                      styles.provinceButtonText,
+                      { color: tempProvince === p ? '#FFFFFF' : colors.text },
+                    ]}>
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </ScrollView>
 
           <View style={[styles.modalFooter, { borderTopColor: isDark ? '#2E2E2E' : '#E0E0E0' }]}>
@@ -431,9 +530,18 @@ export default function ContractorDashboard() {
               <View style={styles.jobCardFooter}>
                 <View style={styles.locationInfo}>
                   <IconSymbol name="location.fill" size={14} color={colors.icon} />
-                  <Text style={[styles.locationText, { color: colors.icon }]}>
-                    {getLocationText(jobPost)}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.locationText, { color: colors.icon }]}>
+                      {getLocationText(jobPost)} {'  '}
+
+                      {jobPost.location?.cityName && jobPost.location?.province && (
+                      <Text style={[styles.cityProvinceText, { color: colors.icon }]}>
+                        {jobPost.location.cityName}, {jobPost.location.province}
+                      </Text>
+                    )}
+                    </Text>
+                    
+                  </View>
                 </View>
                 <Text style={[styles.dateText, { color: colors.icon }]}>
                   {jobPost.createdAt
@@ -747,7 +855,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
   },
+  cityProvinceText: {
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: '600',
+  },
   dateText: {
     fontSize: 12,
+  },
+  cityInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cityInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  addCityButton: {
+    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addCityButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedCitiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  cityChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  provinceContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  provinceButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  provinceButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

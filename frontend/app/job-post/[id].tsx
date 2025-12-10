@@ -233,10 +233,22 @@ export default function JobPostDetailsScreen() {
             <IconSymbol name="location.fill" size={20} color={colors.icon} />
             <Text style={[styles.locationText, { color: colors.text }]}>
               {isContractor && !hasContacted
-                ? 'Location hidden - contact homeowner to view full address'
+                ? (
+                  <>
+                    {/* City and Province - Always visible */}
+                    {(currentJobPost.location.cityName || currentJobPost.location.province) && (
+                      <Text style={[styles.cityProvinceText, { color: colors.text }]}>
+                        {currentJobPost.location.cityName}
+                        {currentJobPost.location.cityName && currentJobPost.location.province && ', '}
+                        {currentJobPost.location.province}
+                      </Text>
+                    )}
+                  </>
+                )
                 : currentJobPost.location.address}
             </Text>
           </View>
+          
         </View>
 
         {/* Contractor Limit Info */}
@@ -454,6 +466,13 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 15,
     flex: 1,
+  },
+  cityProvinceRow: {
+    marginTop: 8,
+  },
+  cityProvinceText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   infoText: {
     fontSize: 14,

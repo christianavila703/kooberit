@@ -66,6 +66,27 @@ export const updateProfileSettingsSchema = Joi.object({
       .messages({
         'any.required': 'Coordinates are required',
       }),
+    streetNumber: Joi.string().trim().allow('').optional().messages({
+      'string.base': 'Street number must be a string',
+    }),
+    streetName: Joi.string().trim().allow('').optional().messages({
+      'string.base': 'Street name must be a string',
+    }),
+    unitNumber: Joi.string().trim().allow('').optional().messages({
+      'string.base': 'Unit number must be a string',
+    }),
+    cityName: Joi.string().trim().allow('').optional().messages({
+      'string.base': 'City name must be a string',
+    }),
+    areaCode: Joi.string().trim().allow('').optional().messages({
+      'string.base': 'Area code must be a string',
+    }),
+    province: Joi.string()
+      .valid('ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT')
+      .optional()
+      .messages({
+        'any.only': 'Province must be a valid Canadian province code',
+      }),
   })
     .allow(null)
     .optional()

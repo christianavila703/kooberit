@@ -70,6 +70,12 @@ class JobPostService {
           type: 'Point',
           coordinates: geoJsonCoordinates,
         },
+        streetNumber: jobPostData.location.streetNumber,
+        streetName: jobPostData.location.streetName,
+        unitNumber: jobPostData.location.unitNumber,
+        cityName: jobPostData.location.cityName,
+        areaCode: jobPostData.location.areaCode,
+        province: jobPostData.location.province,
       },
     });
     return jobPost;
@@ -175,7 +181,9 @@ class JobPostService {
     categories?: string[],
     excludeContractorId?: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    cities?: string[],
+    province?: string
   ): Promise<IPaginatedResponse<IJobPostAttributes>> {
     const filters: any = {
       status: 'active'
@@ -203,6 +211,16 @@ class JobPostService {
     if (categories && categories.length > 0) {
       // Only show jobs where at least one category matches the provided categories
       filters.categories = { $in: categories };
+    }
+
+    // Filter by cities (multiple selection)
+    if (cities && cities.length > 0) {
+      filters['location.cityName'] = { $in: cities };
+    }
+
+    // Filter by province
+    if (province) {
+      filters['location.province'] = province;
     }
 
     // Count total matching documents (before exclusion for pagination calculation)

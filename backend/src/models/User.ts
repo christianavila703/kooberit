@@ -99,6 +99,30 @@ const userSchema = new Schema<IUserDocument>(
           type: Number,
         },
       },
+      streetNumber: {
+        type: String,
+        trim: true,
+      },
+      streetName: {
+        type: String,
+        trim: true,
+      },
+      unitNumber: {
+        type: String,
+        trim: true,
+      },
+      cityName: {
+        type: String,
+        trim: true,
+      },
+      areaCode: {
+        type: String,
+        trim: true,
+      },
+      province: {
+        type: String,
+        enum: ['ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT'],
+      },
     },
     notificationEnabled: {
       type: Boolean,

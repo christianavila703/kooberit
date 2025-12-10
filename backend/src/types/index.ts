@@ -93,6 +93,12 @@ export interface IUserAttributes {
       latitude: number;
       longitude: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName?: string;
+    areaCode?: string;
+    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
   notificationEnabled?: boolean;
   notificationRadius?: number;
@@ -136,6 +142,12 @@ export interface IJobPostAttributes {
       latitude: number;
       longitude: number;
     };
+    streetNumber?: string;
+    streetName?: string;
+    unitNumber?: string;
+    cityName: string;
+    areaCode?: string;
+    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
   };
   status: JobPostStatus;
   contractorContactsCount: number;

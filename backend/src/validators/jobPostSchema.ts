@@ -81,6 +81,55 @@ export const createJobPostSchema = Joi.object({
       .messages({
         'any.required': 'Coordinates are required',
       }),
+    streetNumber: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(50)
+      .messages({
+        'string.max': 'Street number must not exceed 50 characters',
+      }),
+    streetName: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(200)
+      .messages({
+        'string.max': 'Street name must not exceed 200 characters',
+      }),
+    unitNumber: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(50)
+      .messages({
+        'string.max': 'Unit number must not exceed 50 characters',
+      }),
+    cityName: Joi.string()
+      .min(1)
+      .max(200)
+      .required()
+      .trim()
+      .messages({
+        'string.min': 'City name is required',
+        'string.max': 'City name must not exceed 200 characters',
+        'any.required': 'City name is required',
+      }),
+    areaCode: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(10)
+      .messages({
+        'string.max': 'Area code must not exceed 10 characters',
+      }),
+    province: Joi.string()
+      .valid('ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT')
+      .required()
+      .messages({
+        'any.only': 'Province must be one of: ON, AB, BC, MB, NB, NL, NS, PE, QC, SK, NT, NU, YT',
+        'any.required': 'Province is required',
+      }),
   })
     .required()
     .messages({
@@ -157,6 +206,53 @@ export const updateJobPostSchema = Joi.object({
           'number.max': 'Longitude must be between -180 and 180',
         }),
     }).optional(),
+    streetNumber: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(50)
+      .messages({
+        'string.max': 'Street number must not exceed 50 characters',
+      }),
+    streetName: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(200)
+      .messages({
+        'string.max': 'Street name must not exceed 200 characters',
+      }),
+    unitNumber: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(50)
+      .messages({
+        'string.max': 'Unit number must not exceed 50 characters',
+      }),
+    cityName: Joi.string()
+      .min(1)
+      .max(200)
+      .optional()
+      .trim()
+      .messages({
+        'string.min': 'City name must be at least 1 character long',
+        'string.max': 'City name must not exceed 200 characters',
+      }),
+    areaCode: Joi.string()
+      .allow('')
+      .optional()
+      .trim()
+      .max(10)
+      .messages({
+        'string.max': 'Area code must not exceed 10 characters',
+      }),
+    province: Joi.string()
+      .valid('ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT')
+      .optional()
+      .messages({
+        'any.only': 'Province must be one of: ON, AB, BC, MB, NB, NL, NS, PE, QC, SK, NT, NU, YT',
+      }),
   }).optional(),
 });
 
@@ -221,6 +317,22 @@ export const fetchJobBoardSchema = Joi.object({
     .optional()
     .messages({
       'any.only': 'Category must be one of the valid construction categories',
+    }),
+  'cities[]': Joi.alternatives()
+    .try(
+      Joi.array().items(Joi.string().trim().max(200)),
+      Joi.string().trim().max(200)
+    )
+    .optional()
+    .messages({
+      'string.max': 'City name must not exceed 200 characters',
+    }),
+  province: Joi.string()
+    .valid('ON', 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'PE', 'QC', 'SK', 'NT', 'NU', 'YT')
+    .optional()
+    .default('ON')
+    .messages({
+      'any.only': 'Province must be one of: ON, AB, BC, MB, NB, NL, NS, PE, QC, SK, NT, NU, YT',
     }),
   search: Joi.string()
     .allow('')

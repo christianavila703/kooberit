@@ -30,15 +30,23 @@ export const getJobBoard = async (req: Request, res: Response) => {
     const latitude = contractor.contractorAddress.coordinates.latitude || null;
     const longitude = contractor.contractorAddress.coordinates.longitude || null;
 
-    let { radius = 0, categories, search, page, limit } = req.query;
+    let { radius = 0, categories, search, page, limit, province } = req.query;
     if (!categories) {
       categories = req.query['categories[]'];
+    }
+    let cities = req.query['cities[]'];
+    if (!cities) {
+      cities = req.query.cities;
     }
 
     const radiusKm = Number(radius) || 0;
     const categoryFilters = categories
       ? (Array.isArray(categories) ? categories : [categories]).map((c) => String(c))
       : undefined;
+    const cityFilters = cities
+      ? (Array.isArray(cities) ? cities : [cities]).map((c) => String(c).trim()).filter((c) => c.length > 0)
+      : undefined;
+    const provinceFilter = province ? String(province) : 'ON'; // Default to ON
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
 
@@ -50,7 +58,9 @@ export const getJobBoard = async (req: Request, res: Response) => {
       categoryFilters,
       user.id,
       pageNum,
-      limitNum
+      limitNum,
+      cityFilters,
+      provinceFilter
     );
 
     // Filter by search keyword if provided

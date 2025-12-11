@@ -30,6 +30,10 @@ export const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 export const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
 export const PAYMENT_AMOUNT = 1999; // $19.99 in cents
 
+// Default admin user configuration
+export const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
+export const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'Password@123';
+
 export const CONSTRUCTION_CATEGORIES = [
   'roof',
   'eavestrough',

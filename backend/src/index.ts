@@ -9,6 +9,7 @@ import { connectDatabase } from '@/config/database';
 import { initializeAgenda } from '@/config/agenda';
 import routes from '@/routes';
 import socketService from '@/socket/socket';
+import User from '@/models/User';
 
 const app = express();
 const httpServer = createServer(app);
@@ -57,6 +58,10 @@ async function initializeServer() {
         // Initialize Agenda scheduler
         await initializeAgenda();
         logger.info('Agenda scheduler initialized');
+        
+        // Create default admin user
+        await User.createDefaultAdmin();
+        logger.info('Default admin user created successfully');
         
         // Start server
         httpServer.listen(SERVER_PORT, () => {

@@ -1,11 +1,19 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Model } from 'mongoose';
 import {
+  USER_ROLES,
   DEFAULT_USER_ALLOW_STATUS,
   DEFAULT_USER_ROLE,
   USER_ALLOW_STATUS_VALUES,
   USER_ROLE_VALUES,
+  USER_ALLOW_STATUS,
 } from '@enums';
 import { IUserDocument } from '@/types';
+import { DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD } from '@/config/constants';
+
+// Interface for User model static methods
+interface IUserModel extends Model<IUserDocument> {
+  createDefaultAdmin(): Promise<void>;
+}
 
 /**
  * Generate a unique 7-digit ID
@@ -173,9 +181,35 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Static method to create a default admin user
+userSchema.statics.createDefaultAdmin = async function() {
+  try {
+      const existingAdmin = await this.findOne({ email: DEFAULT_ADMIN_EMAIL });
+      if (existingAdmin) {
+          console.log('Default admin user already exists');
+          return;
+      }
+      
+      const defaultAdmin = new this({
+          firstName: 'Super',
+          lastName: 'Admin',
+          email: DEFAULT_ADMIN_EMAIL,
+          password: DEFAULT_ADMIN_PASSWORD,
+          role: USER_ROLES.ADMIN,
+          status: USER_ALLOW_STATUS.ALLOW,
+      });
+      
+      await defaultAdmin.save();
+
+      console.log('Default admin user created successfully');
+  } catch (error) {
+      console.error('Error creating default admin user:', error);
+  }
+}; 
+
 // Email index is already created by unique: true, no need for duplicate
 
-const User = model<IUserDocument>('User', userSchema);
+const User = model<IUserDocument, IUserModel>('User', userSchema);
 
 export default User;
 

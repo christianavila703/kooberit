@@ -106,8 +106,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
+    borderTopRightRadius: 20, 
     paddingBottom: 20,
     minHeight: MODAL_HEIGHT,
     overflow: 'hidden',

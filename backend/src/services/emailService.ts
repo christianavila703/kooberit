@@ -228,6 +228,141 @@ class EmailService {
 
     await this.sendEmail(email, subject, html);
   }
+
+  /**
+   * Send OTP verification email for signup
+   */
+  async sendOTPVerificationEmail(email: string, otpCode: string, firstName?: string): Promise<void> {
+    const subject = 'Verify Your Email - Kooberit';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .otp-code { 
+              font-size: 32px; 
+              font-weight: bold; 
+              text-align: center; 
+              letter-spacing: 8px; 
+              color: #0a7ea4; 
+              background-color: white; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0;
+              border: 2px dashed #0a7ea4;
+            }
+            .warning { 
+              background-color: #fff3cd; 
+              border-left: 4px solid #ffc107; 
+              padding: 12px; 
+              margin: 15px 0; 
+              border-radius: 4px; 
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Verify Your Email</h1>
+            </div>
+            <div class="content">
+              <p>Hi${firstName ? ` ${firstName}` : ''},</p>
+              <p>Thank you for signing up for Kooberit!</p>
+              <p>Please use the following verification code to complete your registration:</p>
+              <div class="otp-code">${otpCode}</div>
+              <div class="warning">
+                <strong>Important:</strong> This code will expire in 10 minutes and can only be used once.
+              </div>
+              <p>If you didn't request this code, please ignore this email.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(email, subject, html);
+  }
+
+  /**
+   * Send OTP for password reset
+   */
+  async sendPasswordResetOTP(email: string, otpCode: string, firstName?: string): Promise<void> {
+    const subject = 'Password Reset Code - Kooberit';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .otp-code { 
+              font-size: 32px; 
+              font-weight: bold; 
+              text-align: center; 
+              letter-spacing: 8px; 
+              color: #0a7ea4; 
+              background-color: white; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0;
+              border: 2px dashed #0a7ea4;
+            }
+            .warning { 
+              background-color: #fff3cd; 
+              border-left: 4px solid #ffc107; 
+              padding: 12px; 
+              margin: 15px 0; 
+              border-radius: 4px; 
+            }
+            .security-notice {
+              background-color: #f8d7da;
+              border-left: 4px solid #dc3545;
+              padding: 12px;
+              margin: 15px 0;
+              border-radius: 4px;
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Reset</h1>
+            </div>
+            <div class="content">
+              <p>Hi${firstName ? ` ${firstName}` : ''},</p>
+              <p>We received a request to reset your password for your Kooberit account.</p>
+              <p>Please use the following verification code to reset your password:</p>
+              <div class="otp-code">${otpCode}</div>
+              <div class="warning">
+                <strong>Important:</strong> This code will expire in 10 minutes and can only be used once.
+              </div>
+              <div class="security-notice">
+                <strong>Security Notice:</strong> If you didn't request this password reset, please ignore this email. Your account remains secure.
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(email, subject, html);
+  }
 }
 
 export default new EmailService();

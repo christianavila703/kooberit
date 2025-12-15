@@ -119,22 +119,19 @@ export const changePassword = async (req: Request, res: Response) => {
 };
 
 /**
- * Request password reset
+ * Request password reset (sends OTP)
  */
 export const requestPasswordReset = async (req: Request, res: Response) => {
     try {
         const { email } = req.body;
         
-        const resetToken = await authService.requestPasswordReset(email);
+        const result = await authService.requestPasswordReset(email);
         
-        // In production, send email with reset link
-        // For now, we'll just return success (email sending would be handled by email service)
-        
-        logger.info(`Password reset requested for: ${email}`);
+        logger.info(`Password reset OTP requested for: ${email}`);
 
         return res.status(200).json({ 
             success: true, 
-            message: 'If an account with that email exists, a password reset link has been sent.' 
+            message: result.message 
         });
     } catch (error: any) {
         logger.error('Request password reset error:', error);
@@ -146,15 +143,15 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 };
 
 /**
- * Reset password with token
+ * Reset password with OTP
  */
 export const resetPassword = async (req: Request, res: Response) => {
     try {
-        const { token, newPassword } = req.body;
+        const { email, otpCode, newPassword } = req.body;
         
-        await authService.resetPassword(token, newPassword);
+        await authService.resetPasswordWithOTP(email, otpCode, newPassword);
 
-        logger.info('Password reset successful');
+        logger.info(`Password reset successful for: ${email}`);
 
         return res.status(200).json({ 
             success: true, 
@@ -162,6 +159,55 @@ export const resetPassword = async (req: Request, res: Response) => {
         });
     } catch (error: any) {
         logger.error('Reset password error:', error);
+        res.status(error.statusCode || 500).json({ 
+            success: false,
+            message: error.message 
+        });
+    }
+};
+
+/**
+ * Verify email with OTP
+ */
+export const verifyEmailOTP = async (req: Request, res: Response) => {
+    try {
+        const { email, otpCode } = req.body;
+        
+        const result = await authService.verifyEmailOTP(email, otpCode);
+
+        logger.info(`Email verified successfully for: ${email}`);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Email verified successfully',
+            data: result
+        });
+    } catch (error: any) {
+        logger.error('Verify email OTP error:', error);
+        res.status(error.statusCode || 500).json({ 
+            success: false,
+            message: error.message 
+        });
+    }
+};
+
+/**
+ * Resend verification OTP
+ */
+export const resendVerificationOTP = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        
+        const result = await authService.resendVerificationOTP(email);
+
+        logger.info(`Verification OTP resent for: ${email}`);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: result.message 
+        });
+    } catch (error: any) {
+        logger.error('Resend verification OTP error:', error);
         res.status(error.statusCode || 500).json({ 
             success: false,
             message: error.message 

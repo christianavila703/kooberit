@@ -157,6 +157,10 @@ const userSchema = new Schema<IUserDocument>(
       type: [String],
       default: [],
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -105,6 +105,7 @@ export interface IUserAttributes {
   phone?: string;
   companyName?: string;
   constructionCategories?: string[];
+  emailVerified?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

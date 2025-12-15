@@ -50,9 +50,22 @@ router.post('/forgot-password', validate(forgotPasswordSchema, 'body'), authCont
  * @route   POST /api/auth/reset-password
  */
 const resetPasswordSchema = Joi.object({
-  token: Joi.string().required().messages({
-    'any.required': 'Reset token is required',
-  }),
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+  otpCode: Joi.string()
+    .length(6)
+    .pattern(/^[0-9]+$/)
+    .required()
+    .messages({
+      'string.length': 'OTP code must be 6 digits',
+      'string.pattern.base': 'OTP code must contain only numbers',
+      'any.required': 'OTP code is required',
+    }),
   newPassword: Joi.string()
     .min(8)
     .max(100)
@@ -64,6 +77,43 @@ const resetPasswordSchema = Joi.object({
     }),
 });
 router.post('/reset-password', validate(resetPasswordSchema, 'body'), authController.resetPassword);
+
+/**
+ * @route   POST /api/auth/verify-email-otp
+ */
+const verifyEmailOTPSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+  otpCode: Joi.string()
+    .length(6)
+    .pattern(/^[0-9]+$/)
+    .required()
+    .messages({
+      'string.length': 'OTP code must be 6 digits',
+      'string.pattern.base': 'OTP code must contain only numbers',
+      'any.required': 'OTP code is required',
+    }),
+});
+router.post('/verify-email-otp', validate(verifyEmailOTPSchema, 'body'), authController.verifyEmailOTP);
+
+/**
+ * @route   POST /api/auth/resend-verification-otp
+ */
+const resendVerificationOTPSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+});
+router.post('/resend-verification-otp', validate(resendVerificationOTPSchema, 'body'), authController.resendVerificationOTP);
 
 export default router;
 

@@ -11,6 +11,7 @@ export const USER_ROLE_VALUES = Object.values(USER_ROLES) as UserRole[];
 export const USER_ALLOW_STATUS = {
   ALLOW: 'allow',
   BLOCK: 'block',
+  PENDING_VERIFICATION: 'pending_verification',
 } as const;
 
 export type UserAllowStatus = (typeof USER_ALLOW_STATUS)[keyof typeof USER_ALLOW_STATUS];

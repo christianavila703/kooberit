@@ -132,7 +132,7 @@ export default function SignUpScreen() {
     }
 
     try {
-      await dispatch(
+      const result = await dispatch(
         registerUser({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
@@ -142,12 +142,17 @@ export default function SignUpScreen() {
           role,
         })
       ).unwrap();
+      
       notificationService.success(
-        'Account Created!',
-        `Welcome ${firstName}! Your account has been created successfully.`
+        'Verification Code Sent!',
+        'Please check your email for the verification code.'
       );
-      router.replace('/(tabs)' as any);
-      // Navigation will be handled by AuthProvider
+      
+      // Navigate to OTP verification screen
+      router.push({
+        pathname: '/verify-email' as any,
+        params: { email: email.trim() },
+      });
     } catch (err: any) {
       // Error is handled by the useEffect above
     }

@@ -6,6 +6,8 @@ const endpoints = {
         changePassword: '/auth/change-password',
         forgotPassword: '/auth/forgot-password',
         resetPassword: '/auth/reset-password',
+        verifyEmailOTP: '/auth/verify-email-otp',
+        resendVerificationOTP: '/auth/resend-verification-otp',
     },
     jobPosts: {
         create: '/job-posts',

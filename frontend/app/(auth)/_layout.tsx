@@ -15,6 +15,22 @@ export default function AuthLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="verify-email"
+        options={{ headerShown: true, title: 'Verify Email' }}
+        />
+      <Stack.Screen
+        name="resend-verification-otp"
+        options={{ headerShown: true, title: 'Resend Verification OTP' }}
+      />
+      <Stack.Screen
+        name="forgot-password"
+        options={{ headerShown: true, title: 'Forgot Password' }}
+      />
+      <Stack.Screen
+        name="reset-password"
+        options={{ headerShown: true, title: 'Reset Password' }}
+      />
     </Stack>
   );
 }

@@ -34,9 +34,9 @@ export default function SignInScreen() {
 
   // Navigation is handled by AuthProvider
 
-  // Show error notification
+  // Show error notification (but not for email verification required)
   React.useEffect(() => {
-    if (error) {
+    if (error && error !== 'EMAIL_VERIFICATION_REQUIRED' && !error.includes('verify your email')) {
       notification.error('Sign In Failed', error);
       dispatch(clearError());
     }
@@ -79,7 +79,19 @@ export default function SignInScreen() {
       router.replace('/(tabs)' as any);
       // Navigation will be handled by AuthProvider
     } catch (err: any) {
-      // Error is handled by the useEffect above
+      // Check if email verification is required
+      if (err === 'EMAIL_VERIFICATION_REQUIRED' || err?.includes('verify your email')) {
+        notification.info(
+          'Verification Required',
+          'A verification code has been sent to your email. Please verify your email to continue.'
+        );
+        router.push({
+          pathname: '/verify-email' as any,
+          params: { email: email.trim() },
+        });
+        return;
+      }
+      // Other errors are handled by the useEffect above
     }
   };
 
@@ -182,8 +194,8 @@ export default function SignInScreen() {
 
             {/* Forgot Password Link */}
             <TouchableOpacity
-              // onPress={() => router.push('/forgot-password' as any)}
-              onPress={() => notification.info('Forgot Password', 'This feature is not available yet')}
+              onPress={() => router.push('/forgot-password' as any)}
+              // onPress={() => notification.info('Forgot Password', 'This feature is not available yet')}
               disabled={isLoading}
               style={styles.forgotPasswordContainer}>
               <Text style={[styles.forgotPasswordText, { color: colors.tint }]}>

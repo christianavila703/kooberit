@@ -61,6 +61,36 @@ export const logoutUser = createAsyncThunk(
 );
 
 /**
+ * Verify email with OTP
+ */
+export const verifyEmailOTP = createAsyncThunk(
+  'auth/verifyEmailOTP',
+  async ({ email, otpCode }: { email: string; otpCode: string }, { rejectWithValue }) => {
+    try {
+      const response = await apiService.verifyEmailOTP(email, otpCode);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Email verification failed');
+    }
+  }
+);
+
+/**
+ * Resend verification OTP
+ */
+export const resendVerificationOTP = createAsyncThunk(
+  'auth/resendVerificationOTP',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const response = await apiService.resendVerificationOTP(email);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to resend verification code');
+    }
+  }
+);
+
+/**
  * Initialize auth state from storage
  */
 export const initializeAuth = createAsyncThunk(
@@ -90,6 +120,13 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
     },
+    setCredentials: (state, action: PayloadAction<{ user: IUser; token: string }>) => {
+      console.log('setCredentials', action.payload);
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     // Login
@@ -111,17 +148,15 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       });
 
-    // Register
+    // Register (now returns email for OTP verification)
     builder
       .addCase(registerUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerUser.fulfilled, (state) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.isAuthenticated = true;
+        // Don't set user/token here - wait for OTP verification
         state.error = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -147,6 +182,35 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
+    // Verify Email OTP
+    builder
+      .addCase(verifyEmailOTP.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(verifyEmailOTP.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(verifyEmailOTP.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.isAuthenticated = false;
+      });
+
+    // Resend Verification OTP
+    builder
+      .addCase(resendVerificationOTP.pending, (state) => {
+        // Don't set loading to true for resend to avoid blocking UI
+      })
+      .addCase(resendVerificationOTP.rejected, (state, action) => {
+        // Only set error if resend fails
+        state.error = action.payload as string;
+      });
+
     // Initialize
     builder
       .addCase(initializeAuth.fulfilled, (state, action) => {
@@ -162,6 +226,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, setCredentials } = authSlice.actions;
 export default authSlice.reducer;
 

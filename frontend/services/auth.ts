@@ -52,12 +52,50 @@ class AuthService {
    * Login user
    */
   async login(credentials: ILoginRequest): Promise<IAuthResponse> {
-    const response = await api.post<IApiResponse<IAuthResponse>>(
-      endpoints.auth.login,
-      credentials
+    try {
+      const response = await api.post<IApiResponse<IAuthResponse>>(
+        endpoints.auth.login,
+        credentials
+      );
+
+      // Backend returns { success: true, message: string, data: IAuthResponse }
+      if (response.data.data?.token) {
+        await this.saveToken(response.data.data.token);
+      }
+
+      return response.data.data!;
+    } catch (error: any) {
+      // Preserve the error message for email verification required
+      if (error.response?.data?.message === 'EMAIL_VERIFICATION_REQUIRED') {
+        const customError = new Error('EMAIL_VERIFICATION_REQUIRED');
+        (customError as any).response = error.response;
+        throw customError;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Register user (returns email for OTP verification)
+   */
+  async register(userData: IRegisterRequest): Promise<{ message: string; email: string }> {
+    const response = await api.post<IApiResponse<{ message: string; email: string }>>(
+      endpoints.auth.register,
+      userData
     );
 
-    // Backend returns { success: true, message: string, data: IAuthResponse }
+    return response.data.data!;
+  }
+
+  /**
+   * Verify email with OTP
+   */
+  async verifyEmailOTP(email: string, otpCode: string): Promise<IAuthResponse> {
+    const response = await api.post<IApiResponse<IAuthResponse>>(
+      endpoints.auth.verifyEmailOTP,
+      { email, otpCode }
+    );
+
     if (response.data.data?.token) {
       await this.saveToken(response.data.data.token);
     }
@@ -66,20 +104,29 @@ class AuthService {
   }
 
   /**
-   * Register user
+   * Resend verification OTP
    */
-  async register(userData: IRegisterRequest): Promise<IAuthResponse> {
-    const response = await api.post<IApiResponse<IAuthResponse>>(
-      endpoints.auth.register,
-      userData
+  async resendVerificationOTP(email: string): Promise<{ message: string }> {
+    const response = await api.post<IApiResponse<{ message: string }>>(
+      endpoints.auth.resendVerificationOTP,
+      { email }
     );
 
-    // Backend returns { success: true, message: string, data: IAuthResponse }
-    if (response.data.data?.token) {
-      await this.saveToken(response.data.data.token);
-    }
-
     return response.data.data!;
+  }
+
+  /**
+   * Reset password with OTP
+   */
+  async resetPasswordWithOTP(email: string, otpCode: string, newPassword: string): Promise<void> {
+    const response = await api.post<IApiResponse<void>>(
+      endpoints.auth.resetPassword,
+      { email, otpCode, newPassword }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to reset password');
+    }
   }
 
   /**

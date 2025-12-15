@@ -22,7 +22,6 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -51,51 +50,27 @@ export default function ForgotPasswordScreen() {
 
     setIsLoading(true);
     try {
-      await api.post(endpoints.auth.forgotPassword, { email });
-      setEmailSent(true);
-      notification.success(
-        'Email Sent',
-        'If an account with that email exists, a password reset link has been sent.'
-      );
+      const response = await api.post(endpoints.auth.forgotPassword, { email });
+      if (response.data.success) {
+        notification.success(
+          'Code Sent',
+          'A verification code has been sent to your email.'
+        );
+        // Navigate to reset password screen
+        router.push({
+          pathname: '/reset-password' as any,
+          params: { email: email.trim() },
+        });
+      }
     } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to send reset email');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send verification code';
+      notification.error('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   const isDark = colorScheme === 'dark';
-
-  if (emailSent) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled">
-          <View style={styles.content}>
-            <View style={styles.successContainer}>
-              <IconSymbol name="checkmark.circle.fill" size={64} color={colors.tint} />
-              <Text style={[styles.successTitle, { color: colors.text }]}>
-                Check Your Email
-              </Text>
-              <Text style={[styles.successText, { color: colors.icon }]}>
-                We've sent a password reset link to {email}
-              </Text>
-              <Text style={[styles.successSubtext, { color: colors.icon }]}>
-                Please check your inbox and follow the instructions to reset your password.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.tint }]}
-              onPress={() => router.back()}>
-              <Text style={styles.buttonText}>Back to Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -108,12 +83,8 @@ export default function ForgotPasswordScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <IconSymbol name="chevron.left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Forgot Password</Text>
             <Text style={[styles.subtitle, { color: colors.icon }]}>
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a verification code to reset your password.
             </Text>
           </View>
 
@@ -159,7 +130,7 @@ export default function ForgotPasswordScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
+                <Text style={styles.buttonText}>Send Verification Code</Text>
               )}
             </TouchableOpacity>
 
@@ -188,7 +159,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   backButton: {
@@ -264,26 +235,6 @@ const styles = StyleSheet.create({
   backToSignInText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  successContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  successText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  successSubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 

@@ -1,8 +1,7 @@
 import { Schema, model } from 'mongoose';
-import { Types } from 'mongoose';
-import { IContractorContactDocument } from '@/types';
+import { IContactDocument } from '@/types';
 
-const contractorContactSchema = new Schema<IContractorContactDocument>(
+const contactSchema = new Schema<IContactDocument>(
   {
     jobPostId: {
       type: Schema.Types.ObjectId,
@@ -53,39 +52,39 @@ const contractorContactSchema = new Schema<IContractorContactDocument>(
   }
 );
 
-contractorContactSchema.virtual('contractor', {
+contactSchema.virtual('contractor', {
   ref: 'User',
   localField: 'contractorId',
   foreignField: '_id',
   justOne: true
 });
 
-contractorContactSchema.virtual('homeowner', {
+contactSchema.virtual('homeowner', {
   ref: 'User',
   localField: 'homeownerId',
   foreignField: '_id',
   justOne: true
 });
 
-contractorContactSchema.virtual('jobPost', {
+contactSchema.virtual('jobPost', {
   ref: 'JobPost',
   localField: 'jobPostId',
   foreignField: '_id',
   justOne: true
 });
 
-contractorContactSchema.virtual('chatRoom', {
+contactSchema.virtual('chatRoom', {
   ref: 'Chat',
   localField: 'chatRoomId',
   foreignField: '_id',
   justOne: true
 });
 
-contractorContactSchema.index({ jobPostId: 1, contractorId: 1 }, { unique: true });
-contractorContactSchema.index({ contractorId: 1, createdAt: -1 });
-contractorContactSchema.index({ homeownerId: 1, createdAt: -1 });
+contactSchema.index({ jobPostId: 1, contractorId: 1 }, { unique: true });
+contactSchema.index({ contractorId: 1, createdAt: -1 });
+contactSchema.index({ homeownerId: 1, createdAt: -1 });
 
-const ContractorContact = model<IContractorContactDocument>('ContractorContact', contractorContactSchema);
+const Contact = model<IContactDocument>('Contact', contactSchema);
 
-export default ContractorContact;
+export default Contact;
 

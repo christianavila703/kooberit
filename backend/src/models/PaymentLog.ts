@@ -4,7 +4,7 @@ import { IPaymentLogDocument } from '@/types';
 
 const paymentLogSchema = new Schema<IPaymentLogDocument>(
   {
-    contractorContactId: {
+    contactId: {
       type: Schema.Types.ObjectId,
       ref: 'ContractorContact',
       index: true,
@@ -68,7 +68,7 @@ const paymentLogSchema = new Schema<IPaymentLogDocument>(
 
 paymentLogSchema.virtual('contractorContact', {
   ref: 'ContractorContact',
-  localField: 'contractorContactId',
+  localField: 'contactId',
   foreignField: '_id',
   justOne: true
 });

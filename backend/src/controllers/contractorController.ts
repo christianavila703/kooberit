@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import jobPostService from '@/services/jobPostService';
 import userService from '@/services/userService';
-import contractorContactService from '@/services/contractorContactService';
+import contactService from '@/services/contactService';
 import logger from '@/utils/logger';
 
 /**
@@ -78,7 +78,7 @@ export const getJobBoard = async (req: Request, res: Response) => {
     const jobPostsWithContactStatus = await Promise.all(
       filteredPosts.map(async (post) => {
         const postId = (post as any).id || (post as any)._id?.toString() || '';
-        const contact = await contractorContactService.findContractorContactByJobPostAndContractor(
+        const contact = await contactService.findContactByJobPostAndContractor(
           postId,
           user.id
         );

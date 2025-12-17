@@ -41,7 +41,7 @@ export const sendMessageSchema = Joi.object({
 /**
  * Validation schema for creating contractor contact
  */
-export const createContractorContactSchema = Joi.object({
+export const createContactSchema = Joi.object({
   jobPostId: Joi.string()
     .required()
     .messages({

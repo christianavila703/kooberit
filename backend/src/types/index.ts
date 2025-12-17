@@ -165,7 +165,7 @@ export type IJobPostDocument = IJobPostAttributes & Document<Types.ObjectId>;
  */
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
-export interface IContractorContactAttributes {
+export interface IContactAttributes {
   id?: string;
   _id?: Types.ObjectId;
   jobPostId: Types.ObjectId;
@@ -180,8 +180,8 @@ export interface IContractorContactAttributes {
   updatedAt?: Date;
 }
 
-export type IContractorContactCreationAttributes = Omit<IContractorContactAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contactInfoRevealed'>;
-export type IContractorContactDocument = IContractorContactAttributes & Document<Types.ObjectId>;
+export type IContactCreationAttributes = Omit<IContactAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contactInfoRevealed'>;
+export type IContactDocument = IContactAttributes & Document<Types.ObjectId>;
 
 /**
  * Chat types
@@ -231,7 +231,7 @@ export type IMessageDocument = IMessageAttributes & Document<Types.ObjectId>;
 export interface IPaymentLogAttributes {
   id?: string;
   _id?: Types.ObjectId;
-  contractorContactId?: Types.ObjectId;
+  contactId?: Types.ObjectId;
   jobPostId: Types.ObjectId;
   contractorId: Types.ObjectId;
   homeownerId: Types.ObjectId;
@@ -247,7 +247,7 @@ export interface IPaymentLogAttributes {
 }
 
 export interface IPaymentLogCreationAttributes {
-  contractorContactId?: string | Types.ObjectId;
+  contactId?: string | Types.ObjectId;
   jobPostId: string | Types.ObjectId;
   contractorId: string | Types.ObjectId;
   homeownerId: string | Types.ObjectId;

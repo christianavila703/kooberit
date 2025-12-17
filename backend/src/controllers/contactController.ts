@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import contractorContactService from '@/services/contractorContactService';
+import contactService from '@/services/contactService';
 import emailService from '@/services/emailService';
 import logger from '@/utils/logger';
+import { IContactDocument } from '@/types';
 
 /**
  * Get contractor contacts for a job post
  */
-export const getContractorContactsByJobPost = async (req: Request, res: Response) => {
+export const getContactsByJobPost = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const { jobPostId } = req.params;
@@ -19,11 +20,11 @@ export const getContractorContactsByJobPost = async (req: Request, res: Response
       });
     }
 
-    const contacts = await contractorContactService.findContractorContactsByJobPost(jobPostId);
+    const contacts = await contactService.findContactsByJobPost(jobPostId);
 
     // Mongoose automatically converts ObjectIds to strings in JSON
     // Serialize with virtuals included
-    const contactsData = contacts.map((contact) => contact.toObject({ virtuals: true }));
+    const contactsData = contacts.map((contact: IContactDocument) => contact.toObject({ virtuals: true }));
 
     return res.status(200).json({
       success: true,
@@ -53,11 +54,11 @@ export const getHomeownerContractorContacts = async (req: Request, res: Response
       });
     }
 
-    const contacts = await contractorContactService.findContractorContactsByHomeowner(user.id);
+    const contacts = await contactService.findContactsByHomeowner(user.id);
 
     // Mongoose automatically converts ObjectIds to strings in JSON
     // Serialize with virtuals included
-    const contactsData = contacts.map((contact) => contact.toObject({ virtuals: true }));
+    const contactsData = contacts.map((contact: IContactDocument) => contact.toObject({ virtuals: true }));
 
     return res.status(200).json({
       success: true,
@@ -88,7 +89,7 @@ export const checkContractorContact = async (req: Request, res: Response) => {
       });
     }
 
-    const contact = await contractorContactService.findContractorContactByJobPostAndContractor(
+    const contact = await contactService.findContactByJobPostAndContractor(
       jobPostId,
       user.id
     );
@@ -118,7 +119,7 @@ export const checkContractorContact = async (req: Request, res: Response) => {
 /**
  * Create contractor contact (when contractor pays to contact)
  */
-export const createContractorContact = async (req: Request, res: Response) => {
+export const createContact = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const { jobPostId, paymentTransactionId } = req.body;
@@ -152,7 +153,7 @@ export const createContractorContact = async (req: Request, res: Response) => {
       paymentStatus: 'completed' as const,
     };
 
-    const contact = await contractorContactService.createContractorContact(contactData);
+    const contact = await contactService.createContact(contactData);
 
     // Send email notification to homeowner
     try {

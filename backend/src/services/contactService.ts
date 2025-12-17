@@ -1,25 +1,24 @@
 import { Types } from 'mongoose';
 import CustomError from '@/utils/customError';
-import { ContractorContact, Chat } from '@/models';
+import { Contact, Chat } from '@/models';
 import {
-  IContractorContactAttributes,
-  IContractorContactCreationAttributes,
-  IContractorContactDocument,
+  IContactCreationAttributes,
+  IContactDocument,
 } from '@/types';
 import jobPostService from './jobPostService';
 
 /**
- * Contractor Contact Service
+ * Contact Service
  */
-class ContractorContactService {
+class ContactService {
   /**
-   * Create a new contractor contact
+   * Create a new contact
    */
-  async createContractorContact(
-    contactData: IContractorContactCreationAttributes
-  ): Promise<IContractorContactDocument> {
+  async createContact(  
+    contactData: IContactCreationAttributes
+  ): Promise<IContactDocument> {
     // Check if contact already exists
-    const existing = await ContractorContact.findOne({
+    const existing = await Contact.findOne({
       jobPostId: new Types.ObjectId(contactData.jobPostId),
       contractorId: new Types.ObjectId(contactData.contractorId),
     }).exec();
@@ -60,7 +59,7 @@ class ContractorContactService {
     });
 
     // Create contractor contact
-    const contact = await ContractorContact.create({
+    const contact = await Contact.create({
       ...contactData,
       jobPostId: new Types.ObjectId(contactData.jobPostId),
       contractorId: new Types.ObjectId(contactData.contractorId),
@@ -79,11 +78,11 @@ class ContractorContactService {
   /**
    * Find contractor contact by ID
    */
-  async findContractorContactById(id: string): Promise<IContractorContactDocument | null> {
+  async findContactById(id: string): Promise<IContactDocument | null> {
     if (!id) {
       return null;
     }
-    return ContractorContact.findById(id)
+    return Contact.findById(id)
       .populate('contractor', 'firstName lastName email')
       .populate('homeowner', 'firstName lastName email')
       .populate('jobPost')
@@ -93,10 +92,10 @@ class ContractorContactService {
   /**
    * Find all contractor contacts for a job post
    */
-  async findContractorContactsByJobPost(
+  async findContactsByJobPost(
     jobPostId: string
-  ): Promise<IContractorContactDocument[]> {
-    return ContractorContact.find({ jobPostId: new Types.ObjectId(jobPostId) })
+  ): Promise<IContactDocument[]> {
+    return Contact.find({ jobPostId: new Types.ObjectId(jobPostId) })
       .populate('contractor', 'firstName lastName email')
       .populate('chatRoom')
       .sort({ createdAt: -1 })
@@ -106,10 +105,10 @@ class ContractorContactService {
   /**
    * Find all contractor contacts for a homeowner
    */
-  async findContractorContactsByHomeowner(
+  async findContactsByHomeowner(
     homeownerId: string
-  ): Promise<IContractorContactDocument[]> {
-    return ContractorContact.find({ homeownerId: new Types.ObjectId(homeownerId) })
+  ): Promise<IContactDocument[]> {
+    return Contact.find({ homeownerId: new Types.ObjectId(homeownerId) })
       .populate('contractor', 'firstName lastName email')
       .populate('jobPost', 'description categories status')
       .populate('chatRoom')
@@ -120,11 +119,11 @@ class ContractorContactService {
   /**
    * Find contractor contact by job post and contractor
    */
-  async findContractorContactByJobPostAndContractor(
+  async findContactByJobPostAndContractor(
     jobPostId: string,
     contractorId: string
-  ): Promise<IContractorContactDocument | null> {
-    return ContractorContact.findOne({
+  ): Promise<IContactDocument | null> {
+    return Contact.findOne({
       jobPostId: new Types.ObjectId(jobPostId),
       contractorId: new Types.ObjectId(contractorId),
     })
@@ -136,12 +135,12 @@ class ContractorContactService {
   /**
    * Create contact (used by payment service)
    */
-  async createContact(
+  async createContactWithPayment(
     jobPostId: string,
     contractorId: string,
     homeownerId: string
-  ): Promise<IContractorContactDocument> {
-    return this.createContractorContact({
+  ): Promise<IContactDocument> {
+    return this.createContact({
       jobPostId: jobPostId as any,
       contractorId: contractorId as any,
       homeownerId: homeownerId as any,
@@ -157,7 +156,7 @@ class ContractorContactService {
     id: string,
     paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded',
     paymentData?: { paymentIntentId?: string; paymentDate?: Date }
-  ): Promise<IContractorContactDocument | null> {
+  ): Promise<IContactDocument | null> {
     const updateData: any = { paymentStatus };
     if (paymentData?.paymentIntentId) {
       updateData.paymentTransactionId = paymentData.paymentIntentId;
@@ -168,14 +167,14 @@ class ContractorContactService {
     if (paymentStatus === 'completed') {
       updateData.contactInfoRevealed = true;
     }
-    return ContractorContact.findByIdAndUpdate(new Types.ObjectId(id), updateData, { new: true }).exec();
+    return Contact.findByIdAndUpdate(new Types.ObjectId(id), updateData, { new: true }).exec();
   }
 
   /**
    * Link chat to contact
    */
-  async linkChatToContact(contactId: string, chatId: string): Promise<IContractorContactDocument | null> {
-    return ContractorContact.findByIdAndUpdate(
+  async linkChatToContact(contactId: string, chatId: string): Promise<IContactDocument | null> {
+    return Contact.findByIdAndUpdate(
       new Types.ObjectId(contactId),
       { chatRoomId: new Types.ObjectId(chatId) },
       { new: true }
@@ -183,5 +182,5 @@ class ContractorContactService {
   }
 }
 
-export default new ContractorContactService();
+export default new ContactService();
 

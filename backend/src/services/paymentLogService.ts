@@ -20,8 +20,8 @@ class PaymentLogService {
   ): Promise<IPaymentLogDocument> {
     try {
       const paymentLog = await PaymentLog.create({
-        contractorContactId: logData.contractorContactId
-          ? new Types.ObjectId(logData.contractorContactId)
+        contactId: logData.contactId
+          ? new Types.ObjectId(logData.contactId)
           : undefined,
         jobPostId: new Types.ObjectId(logData.jobPostId),
         contractorId: new Types.ObjectId(logData.contractorId),
@@ -52,7 +52,7 @@ class PaymentLogService {
     updateData?: {
       errorMessage?: string;
       paymentTransactionId?: string;
-      contractorContactId?: string;
+      contactId?: string;
       stripePaymentMethodId?: string;
       metadata?: Record<string, any>;
     }
@@ -68,8 +68,8 @@ class PaymentLogService {
         updateFields.paymentTransactionId = updateData.paymentTransactionId;
       }
       
-      if (updateData?.contractorContactId) {
-        updateFields.contractorContactId = new Types.ObjectId(updateData.contractorContactId);
+      if (updateData?.contactId) {
+        updateFields.contactId = new Types.ObjectId(updateData.contactId);
       }
       
       if (updateData?.stripePaymentMethodId) {
@@ -123,11 +123,11 @@ class PaymentLogService {
    * Find payment logs by contractor contact ID
    */
   async findPaymentLogsByContactId(
-    contractorContactId: string
+    contactId: string
   ): Promise<IPaymentLogDocument[]> {
     try {
       return await PaymentLog.find({
-        contractorContactId: new Types.ObjectId(contractorContactId),
+        contactId: new Types.ObjectId(contactId),
       })
         .sort({ createdAt: -1 })
         .exec();

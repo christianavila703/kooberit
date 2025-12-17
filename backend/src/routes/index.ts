@@ -2,7 +2,7 @@ import { Router } from 'express';
 import authRoutes from './authRoutes';
 import userRoutes from './userRoutes';
 import jobPostRoutes from './jobPostRoutes';
-import contractorContactRoutes from './contractorContactRoutes';
+import contactRoutes from './contactRoutes';
 import contractorRoutes from './contractorRoutes';
 import profileRoutes from './profileRoutes';
 import chatRoutes from './chatRoutes';
@@ -21,8 +21,8 @@ router.use('/users', isAuthenticated, userRoutes);
 // Job post routes
 router.use('/job-posts', isAuthenticated, jobPostRoutes);
 
-// Contractor contact routes
-router.use('/contractor-contacts', isAuthenticated, contractorContactRoutes);
+// Contact routes
+router.use('/contacts', isAuthenticated, contactRoutes);
 
 // Contractor routes
 router.use('/contractor', isAuthenticated, contractorRoutes);

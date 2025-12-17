@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { STRIPE_SECRET_KEY, PAYMENT_AMOUNT } from '@/config/constants';
 import logger from '@/utils/logger';
 import CustomError from '@/utils/customError';
-import contractorContactService from './contractorContactService';
+import contactService from './contactService';
 import chatService from './chatService';
 import paymentLogService from './paymentLogService';
 
@@ -141,7 +141,7 @@ class PaymentService {
 
       if (confirmedPayment.status === 'succeeded') {
         // Create contractor contact
-        const contact = await contractorContactService.createContact(
+        const contact = await contactService.createContactWithPayment(
           jobPostId,
           contractorId,
           homeownerId
@@ -153,10 +153,10 @@ class PaymentService {
           homeownerId: homeownerId,
           contractorId: contractorId,
         } as any);
-        await contractorContactService.linkChatToContact(contact._id.toString(), chat._id.toString());
+        await contactService.linkChatToContact(contact._id.toString(), chat._id.toString());
 
         // Update payment status
-        await contractorContactService.updatePaymentStatus(contact._id.toString(), 'completed', {
+        await contactService.updatePaymentStatus(contact._id.toString(), 'completed', {
           paymentIntentId: confirmedPayment.id,
           paymentDate: new Date(),
         });
@@ -165,7 +165,7 @@ class PaymentService {
         if (paymentLogId) {
           await paymentLogService.updatePaymentLogStatus(paymentLogId, 'completed', {
             paymentTransactionId: confirmedPayment.id,
-            contractorContactId: contact._id.toString(),
+            contactId: contact._id.toString(),
             metadata: {
               chatRoomId: chat._id.toString(),
             },
@@ -245,7 +245,7 @@ class PaymentService {
 
       if (confirmedPayment.status === 'succeeded') {
         // Create contractor contact
-        const contact = await contractorContactService.createContact(
+        const contact = await contactService.createContactWithPayment(
           jobPostId,
           contractorId,
           homeownerId
@@ -257,10 +257,10 @@ class PaymentService {
           homeownerId: homeownerId,
           contractorId: contractorId,
         } as any);
-        await contractorContactService.linkChatToContact(contact._id.toString(), chat._id.toString());
+        await contactService.linkChatToContact(contact._id.toString(), chat._id.toString());
 
         // Update payment status
-        await contractorContactService.updatePaymentStatus(contact._id.toString(), 'completed', {
+        await contactService.updatePaymentStatus(contact._id.toString(), 'completed', {
           paymentIntentId: confirmedPayment.id,
           paymentDate: new Date(),
         });
@@ -269,7 +269,7 @@ class PaymentService {
         if (paymentLogId) {
           await paymentLogService.updatePaymentLogStatus(paymentLogId, 'completed', {
             paymentTransactionId: confirmedPayment.id,
-            contractorContactId: contact._id.toString(),
+            contactId: contact._id.toString(),
             metadata: {
               chatRoomId: chat._id.toString(),
             },

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import paymentService from '@/services/paymentService';
 import logger from '@/utils/logger';
 import { USER_ROLES } from '@enums';
-import { JobPost, ContractorContact} from '@/models';
+import { JobPost, Contact} from '@/models';
 
 /**
  * Process payment
@@ -46,7 +46,7 @@ export const processPayment = async (req: Request, res: Response) => {
 
     if (result.success) {
       // Get chat ID from contact
-      const contact = await ContractorContact.findOne({
+      const contact = await Contact.findOne({
         jobPostId,
         contractorId: user.id,
       }).exec();

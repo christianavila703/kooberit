@@ -149,7 +149,6 @@ const userSchema = new Schema<IUserDocument>(
     },
     companyName: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 200,
     },
@@ -201,6 +200,7 @@ userSchema.statics.createDefaultAdmin = async function() {
           password: DEFAULT_ADMIN_PASSWORD,
           role: USER_ROLES.ADMIN,
           status: USER_ALLOW_STATUS.ALLOW,
+          emailVerified: true
       });
       
       await defaultAdmin.save();

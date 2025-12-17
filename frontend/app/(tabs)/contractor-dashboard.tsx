@@ -239,28 +239,31 @@ export default function ContractorDashboard() {
             {user?.firstName} {user?.lastName}
           </Text>
         </View>
+        
+      </View>
+
+      {/* Search */}
+      <View style={styles.filterContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
+          <IconSymbol name="magnifyingglass" size={20} color={colors.icon} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search jobs market..."
+            placeholderTextColor={colors.icon}
+            value={searchQuery}
+            onChangeText={(text) => dispatch(setSearchQuery(text))}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => dispatch(setSearchQuery(''))}>
+              <IconSymbol name="xmark.circle.fill" size={20} color={colors.icon} />
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity
           style={[styles.filterButton, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}
           onPress={() => setShowFilters(!showFilters)}>
           <IconSymbol name="slider.horizontal.3" size={20} color={colors.text} />
         </TouchableOpacity>
-      </View>
-
-      {/* Search */}
-      <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
-        <IconSymbol name="magnifyingglass" size={20} color={colors.icon} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search jobs market..."
-          placeholderTextColor={colors.icon}
-          value={searchQuery}
-          onChangeText={(text) => dispatch(setSearchQuery(text))}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => dispatch(setSearchQuery(''))}>
-            <IconSymbol name="xmark.circle.fill" size={20} color={colors.icon} />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Filter Modal */}
@@ -639,13 +642,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  searchContainer: {
+  filterContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
     marginHorizontal: 20,
     marginBottom: 16,
+    
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 5,
+    
     borderRadius: 12,
     gap: 12,
   },

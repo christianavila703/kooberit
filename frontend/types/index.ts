@@ -171,7 +171,7 @@ export interface IUpdateJobPostRequest {
 // Contractor Contact Types
 export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
-export interface IContractorContact {
+export interface IContact {
   id: string;
   jobPostId: string;
   contractorId: string;
@@ -197,7 +197,7 @@ export interface IContractorContact {
   };
 }
 
-export interface ICreateContractorContactRequest {
+export interface ICreateContactRequest {
   jobPostId: string;
   paymentTransactionId?: string;
 }

@@ -19,11 +19,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   useEffect(() => {
-    if (token === null) return; // Still initializing
 
     const firstSegment = segments[0] as string;
     const inAuthGroup = firstSegment === '(auth)' || firstSegment === 'sign-in' || firstSegment === 'sign-up';
     const isSplash = firstSegment === 'splash' || firstSegment === undefined;
+
+    if (token === null && !inAuthGroup) {
+      router.replace('/sign-in' as any);
+      return;
+    }
+
+    if (token === null) return;
 
     // Don't redirect if on splash screen - let splash handle navigation
     if (isSplash) return;
@@ -35,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Redirect to tabs if authenticated
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, segments, token, router]);
+  }, [isAuthenticated, segments, token]);
 
   return <>{children}</>;
 }

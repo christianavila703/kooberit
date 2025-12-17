@@ -17,11 +17,11 @@ const endpoints = {
         close: (id: string) => `/job-posts/${id}/close`,
         delete: (id: string) => `/job-posts/${id}`,
     },
-    contractorContacts: {
-        getByJobPost: (jobPostId: string) => `/contractor-contacts/job-post/${jobPostId}`,
-        getHomeowner: '/contractor-contacts/homeowner',
-        checkContact: (jobPostId: string) => `/contractor-contacts/check/${jobPostId}`,
-        create: '/contractor-contacts',
+    contacts: {
+        getByJobPost: (jobPostId: string) => `/contacts/job-post/${jobPostId}`,
+        getHomeowner: '/contacts/homeowner',
+        checkContact: (jobPostId: string) => `/contacts/check/${jobPostId}`,
+        create: '/contacts',
     },
     chats: {
         getAll: '/chats',

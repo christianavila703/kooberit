@@ -15,7 +15,7 @@ import {
   closeJobPost,
   deleteJobPost,
 } from '@/store/slices/jobPostSlice';
-import contractorContactService from '@/services/contractorContact';
+import contactService from '@/services/contact';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
@@ -60,7 +60,7 @@ export default function JobPostDetailsScreen() {
     if (!id) return;
     setLoadingContacts(true);
     try {
-      const contacts = await contractorContactService.getContractorContactsByJobPost(id);
+      const contacts = await contactService.getContactsByJobPost(id);
       setContractorContacts(contacts);
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load contractor contacts');
@@ -73,7 +73,7 @@ export default function JobPostDetailsScreen() {
     if (!id || !user) return;
     setLoadingContacts(true);
     try {
-      const result = await contractorContactService.checkContractorContact(id);
+      const result = await contactService.checkContact(id);
       setHasContacted(result.hasContacted);
       setContactData(result.contact);
     } catch (error: any) {

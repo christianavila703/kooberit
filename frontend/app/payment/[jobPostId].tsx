@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
-import contractorContactService from '@/services/contractorContact';
+import contractorContactService from '@/services/contact';
 import { useAppSelector } from '@/store/hooks';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';

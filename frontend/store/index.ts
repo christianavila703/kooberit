@@ -2,7 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import jobPostReducer from './slices/jobPostSlice';
 import chatReducer from './slices/chatSlice';
-import contractorContactReducer from './slices/contractorContactSlice';
+import contactReducer from './slices/contactSlice';
 import contractorReducer from './slices/contractorSlice';
 import profileReducer from './slices/profileSlice';
 
@@ -11,7 +11,7 @@ export const store = configureStore({
     auth: authReducer,
     jobPost: jobPostReducer,
     chat: chatReducer,
-    contractorContact: contractorContactReducer,
+    contact: contactReducer,
     contractor: contractorReducer,
     profile: profileReducer,
   },

@@ -1,23 +1,23 @@
 import User from './User';
-import JobPost from './JobPost';
 import Contact from './Contact';
 import Chat from './Chat';
 import Message from './Message';
 import PaymentLog from './PaymentLog';
 import OTP from './OTP';
+import Job from './Job';
 
 // Define associations here if needed
 
-export { User, JobPost, Contact, Chat, Message, PaymentLog, OTP };
+export { User, Contact, Chat, Message, PaymentLog, OTP, Job };
 
 // Export a default object with all models
 export default {
   User,
-  JobPost,
   Contact,
   Chat,
   Message,
   PaymentLog,
   OTP,
+  Job,
 };
 

@@ -1,4 +1,4 @@
-import JobPost from '@/models/JobPost';
+import Job from '@/models/Job';
 import User from '@/models/User';
 import socketService from '@/socket/socket';
 import emailService from '@/services/emailService';
@@ -55,9 +55,9 @@ class NotificationService {
     try {
       logger.info('Starting notification check for unchecked jobs');
 
-      // Find all active jobs that haven't been checked for notifications
-      const uncheckedJobs = await JobPost.find({
-        status: 'active',
+      // Find all open jobs that haven't been checked for notifications
+      const uncheckedJobs = await Job.find({
+        status: 'open',
         notificationsChecked: { $ne: true },
       }).populate('homeownerId', 'firstName lastName email');
 
@@ -89,12 +89,12 @@ class NotificationService {
    * Process notifications for a single job
    */
   private async processJobNotifications(job: any): Promise<void> {
-    // JobPost uses GeoJSON format: location.coordinates.coordinates = [longitude, latitude]
+    // Job uses GeoJSON format: location.coordinates.coordinates = [longitude, latitude]
     const jobLocation = job.location?.coordinates?.coordinates;
     if (!jobLocation || !Array.isArray(jobLocation) || jobLocation.length !== 2) {
       logger.warn(`Job ${job._id} has invalid location coordinates`);
       // Mark as checked even if invalid to avoid reprocessing
-      await JobPost.updateOne({ _id: job._id }, { notificationsChecked: true });
+      await Job.updateOne({ _id: job._id }, { notificationsChecked: true });
       return;
     }
 
@@ -111,7 +111,7 @@ class NotificationService {
 
     if (contractors.length === 0) {
       logger.info(`No contractors found for job ${job._id}`);
-      await JobPost.updateOne({ _id: job._id }, { notificationsChecked: true });
+      await Job.updateOne({ _id: job._id }, { notificationsChecked: true });
       return;
     }
 
@@ -164,7 +164,7 @@ class NotificationService {
     );
 
     // Mark job as checked
-    await JobPost.updateOne({ _id: job._id }, { notificationsChecked: true });
+    await Job.updateOne({ _id: job._id }, { notificationsChecked: true });
   }
 
   /**
@@ -200,7 +200,7 @@ class NotificationService {
 
     // Send email notification
     try {
-      await emailService.sendNewJobPostNotification(
+      await emailService.sendNewJobNotification(
         contractor.email,
         contractorName,
         job.jobTitle,

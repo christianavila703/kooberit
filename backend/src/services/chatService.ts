@@ -19,7 +19,7 @@ class ChatService {
    */
   async createOrGetChat(chatData: IChatCreationAttributes): Promise<IChatDocument> {
     const existing = await Chat.findOne({
-      jobPostId: new Types.ObjectId(chatData.jobPostId),
+      jobId: new Types.ObjectId(chatData.jobId),
       homeownerId: new Types.ObjectId(chatData.homeownerId),
       contractorId: new Types.ObjectId(chatData.contractorId),
     }).exec();
@@ -30,7 +30,7 @@ class ChatService {
 
     const chat = await Chat.create({
       ...chatData,
-      jobPostId: new Types.ObjectId(chatData.jobPostId),
+      jobId: new Types.ObjectId(chatData.jobId),
       homeownerId: new Types.ObjectId(chatData.homeownerId),
       contractorId: new Types.ObjectId(chatData.contractorId),
       homeownerUnreadCount: 0,
@@ -61,7 +61,7 @@ class ChatService {
     return Chat.findById(id)
       .populate('homeowner', 'firstName lastName email phone')
       .populate('contractor', 'firstName lastName email phone')
-      .populate('jobPost', 'description categories status')
+      .populate('job', 'description categories status')
       .exec();
   }
 
@@ -76,27 +76,27 @@ class ChatService {
     return Chat.find(filter)
       .populate('homeowner', 'firstName lastName email phone')
       .populate('contractor', 'firstName lastName email phone')
-      .populate('jobPost', 'description categories status')
+      .populate('job', 'description categories status')
       .sort({ lastMessageAt: -1 })
       .exec();
   }
 
   /**
-   * Find chat by job post and users
+   * Find chat by job and users
    */
-  async findChatByJobPostAndUsers(
-    jobPostId: string,
+  async findChatByJobAndUsers(
+    jobId: string,
     homeownerId: string,
     contractorId: string
   ): Promise<IChatDocument | null> {
     return Chat.findOne({
-      jobPostId: new Types.ObjectId(jobPostId),
+      jobId: new Types.ObjectId(jobId),
       homeownerId: new Types.ObjectId(homeownerId),
       contractorId: new Types.ObjectId(contractorId),
     })
       .populate('homeowner', 'firstName lastName email phone')
       .populate('contractor', 'firstName lastName email phone')
-      .populate('jobPost', 'description categories status')
+      .populate('job', 'description categories status')
       .exec();
   }
 

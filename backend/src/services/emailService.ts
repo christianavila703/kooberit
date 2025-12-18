@@ -47,9 +47,9 @@ class EmailService {
   }
 
   /**
-   * Send notification to contractor about new job post
+   * Send notification to contractor about new job
    */
-  async sendNewJobPostNotification(
+  async sendNewJobNotification(
     contractorEmail: string,
     contractorName: string,
     jobTitle: string,
@@ -60,7 +60,7 @@ class EmailService {
     location: string,
     distance: number
   ): Promise<void> {
-    const subject = 'New Job Post Available Near You';
+    const subject = 'New Job Available Near You';
     
     // Format job size for display
     const jobSizeLabels: Record<string, string> = {

@@ -5,7 +5,7 @@ import {
   IContactCreationAttributes,
   IContactDocument,
 } from '@/types';
-import jobPostService from './jobPostService';
+import jobService from './jobService';
 
 /**
  * Contact Service
@@ -19,7 +19,7 @@ class ContactService {
   ): Promise<IContactDocument> {
     // Check if contact already exists
     const existing = await Contact.findOne({
-      jobPostId: new Types.ObjectId(contactData.jobPostId),
+      jobId: new Types.ObjectId(contactData.jobId),
       contractorId: new Types.ObjectId(contactData.contractorId),
     }).exec();
 
@@ -27,19 +27,19 @@ class ContactService {
       throw new CustomError('You have already contacted this homeowner', 409);
     }
 
-    // Check if job post has reached contractor limit
-    const jobPost = await jobPostService.findJobPostById(contactData.jobPostId.toString());
-    if (!jobPost) {
-      throw new CustomError('Job post not found', 404);
+    // Check if job has reached contractor limit
+    const job = await jobService.findJobById(contactData.jobId.toString());
+    if (!job) {
+      throw new CustomError('Job not found', 404);
     }
 
-    if (jobPost.contractorContactsCount >= jobPost.contractorLimit) {
-      throw new CustomError('This job post has reached its contractor limit', 400);
+    if (job.contractorContactsCount >= job.contractorLimit) {
+      throw new CustomError('This job has reached its contractor limit', 400);
     }
 
     // Create chat room
     const chat = await Chat.create({
-      jobPostId: new Types.ObjectId(contactData.jobPostId),
+      jobId: new Types.ObjectId(contactData.jobId),
       homeownerId: new Types.ObjectId(contactData.homeownerId),
       contractorId: new Types.ObjectId(contactData.contractorId),
       homeownerUnreadCount: 0,
@@ -61,7 +61,7 @@ class ContactService {
     // Create contractor contact
     const contact = await Contact.create({
       ...contactData,
-      jobPostId: new Types.ObjectId(contactData.jobPostId),
+      jobId: new Types.ObjectId(contactData.jobId),
       contractorId: new Types.ObjectId(contactData.contractorId),
       homeownerId: new Types.ObjectId(contactData.homeownerId),
       chatRoomId: chat._id,
@@ -70,7 +70,7 @@ class ContactService {
     });
 
     // Increment contractor contacts count
-    await jobPostService.incrementContractorContactsCount(contactData.jobPostId.toString());
+    await jobService.incrementContractorContactsCount(contactData.jobId.toString());
 
     return contact;
   }
@@ -85,17 +85,17 @@ class ContactService {
     return Contact.findById(id)
       .populate('contractor', 'firstName lastName email')
       .populate('homeowner', 'firstName lastName email')
-      .populate('jobPost')
+      .populate('job')
       .exec();
   }
 
   /**
-   * Find all contractor contacts for a job post
+   * Find all contractor contacts for a job
    */
-  async findContactsByJobPost(
-    jobPostId: string
+  async findContactsByJob(
+    jobId: string
   ): Promise<IContactDocument[]> {
-    return Contact.find({ jobPostId: new Types.ObjectId(jobPostId) })
+    return Contact.find({ jobId: new Types.ObjectId(jobId) })
       .populate('contractor', 'firstName lastName email')
       .populate('chatRoom')
       .sort({ createdAt: -1 })
@@ -110,21 +110,21 @@ class ContactService {
   ): Promise<IContactDocument[]> {
     return Contact.find({ homeownerId: new Types.ObjectId(homeownerId) })
       .populate('contractor', 'firstName lastName email')
-      .populate('jobPost', 'description categories status')
+      .populate('job', 'description categories status')
       .populate('chatRoom')
       .sort({ createdAt: -1 })
       .exec();
   }
 
   /**
-   * Find contractor contact by job post and contractor
+   * Find contractor contact by job and contractor
    */
-  async findContactByJobPostAndContractor(
-    jobPostId: string,
+  async findContactByJobAndContractor(
+    jobId: string,
     contractorId: string
   ): Promise<IContactDocument | null> {
     return Contact.findOne({
-      jobPostId: new Types.ObjectId(jobPostId),
+      jobId: new Types.ObjectId(jobId),
       contractorId: new Types.ObjectId(contractorId),
     })
       .populate('contractor', 'firstName lastName email')
@@ -136,12 +136,12 @@ class ContactService {
    * Create contact (used by payment service)
    */
   async createContactWithPayment(
-    jobPostId: string,
+    jobId: string,
     contractorId: string,
     homeownerId: string
   ): Promise<IContactDocument> {
     return this.createContact({
-      jobPostId: jobPostId as any,
+      jobId: jobId as any,
       contractorId: contractorId as any,
       homeownerId: homeownerId as any,
       paymentAmount: 19.99,

@@ -2,9 +2,9 @@ import Joi from 'joi';
 import { CONSTRUCTION_CATEGORIES } from '@/config/constants';
 
 /**
- * Validation schema for creating a job post
+ * Validation schema for creating a job
  */
-export const createJobPostSchema = Joi.object({
+export const createJobSchema = Joi.object({
   jobTitle: Joi.string()
     .min(1)
     .max(200)
@@ -138,9 +138,9 @@ export const createJobPostSchema = Joi.object({
 });
 
 /**
- * Validation schema for updating a job post
+ * Validation schema for updating a job
  */
-export const updateJobPostSchema = Joi.object({
+export const updateJobSchema = Joi.object({
   jobTitle: Joi.string()
     .min(1)
     .max(200)
@@ -257,16 +257,16 @@ export const updateJobPostSchema = Joi.object({
 });
 
 /**
- * Validation schema for pagination query parameters (homeowner job posts)
+ * Validation schema for pagination query parameters (homeowner jobs)
  */
-export const fetchHomeownerJobPostsSchema = Joi.object({
+export const fetchHomeownerJobsSchema = Joi.object({
   status: Joi.string()
-    .valid('active', 'closed')
+    .valid('all', 'pending', 'closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled')
     .optional()
     .lowercase()
     .trim()
     .messages({
-      'any.only': 'Status must be either active or closed',
+      'any.only': 'Status must be one of: pending, closed, open, awaiting, accepted, completed, cancelled',
     }),
   page: Joi.number()
     .integer()
@@ -295,7 +295,15 @@ export const fetchHomeownerJobPostsSchema = Joi.object({
 /**
  * Validation schema for pagination query parameters (contractor job board)
  */
-export const fetchJobBoardSchema = Joi.object({
+export const fetchContractorJobsSchema = Joi.object({
+  status: Joi.string()
+    .valid('all', 'pending', 'closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled')
+    .optional()
+    .lowercase()
+    .trim()
+    .messages({
+      'any.only': 'Status must be one of: pending, closed, open, awaiting, accepted, completed, cancelled',
+    }),
   radius: Joi.alternatives()
     .try(
       Joi.number().integer().min(1).max(1000),

@@ -6,11 +6,11 @@ import { createContactSchema } from '@/validators';
 const router = Router();
 
 /**
- * @route   GET /api/contacts/job-post/:jobPostId
- * @desc    Get contacts for a job post
+ * @route   GET /api/contacts/job/:jobId
+ * @desc    Get contacts for a job
  * @access  Private (Homeowner)
  */
-router.get('/job-post/:jobPostId', contactController.getContactsByJobPost);
+router.get('/job/:jobId', contactController.getContactsByJob);
 
 /**
  * @route   GET /api/contacts/homeowner
@@ -20,11 +20,11 @@ router.get('/job-post/:jobPostId', contactController.getContactsByJobPost);
 router.get('/homeowner', contactController.getHomeownerContractorContacts);
 
 /**
- * @route   GET /api/contacts/check/:jobPostId
- * @desc    Check if has contacted a job post
+ * @route   GET /api/contacts/check/:jobId
+ * @desc    Check if has contacted a job
  * @access  Private (Contractor)
  */
-router.get('/check/:jobPostId', contactController.checkContractorContact);
+router.get('/check/:jobId', contactController.checkContractorContact);
 
 /**
  * @route   POST /api/contacts

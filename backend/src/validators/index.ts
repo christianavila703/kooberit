@@ -2,7 +2,7 @@ import Joi from 'joi';
 
 export * from './authSchema';
 export * from './userSchema';
-export * from './jobPostSchema';
+export * from './jobSchema'; // Keep filename for now, but exports renamed schemas
 export * from './chatSchema';
 export * from './paymentSchema';
 export * from './profileSchema';

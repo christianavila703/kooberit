@@ -9,9 +9,9 @@ const paymentLogSchema = new Schema<IPaymentLogDocument>(
       ref: 'ContractorContact',
       index: true,
     },
-    jobPostId: {
+    jobId: {
       type: Schema.Types.ObjectId,
-      ref: 'JobPost',
+      ref: 'Job',
       required: true,
       index: true,
     },
@@ -87,9 +87,9 @@ paymentLogSchema.virtual('homeowner', {
   justOne: true
 });
 
-paymentLogSchema.virtual('jobPost', {
-  ref: 'JobPost',
-  localField: 'jobPostId',
+paymentLogSchema.virtual('job', {
+  ref: 'Job',
+  localField: 'jobId',
   foreignField: '_id',
   justOne: true
 });
@@ -97,7 +97,7 @@ paymentLogSchema.virtual('jobPost', {
 // Indexes for efficient queries
 paymentLogSchema.index({ contractorId: 1, createdAt: -1 });
 paymentLogSchema.index({ homeownerId: 1, createdAt: -1 });
-paymentLogSchema.index({ jobPostId: 1, createdAt: -1 });
+paymentLogSchema.index({ jobId: 1, createdAt: -1 });
 paymentLogSchema.index({ paymentStatus: 1, createdAt: -1 });
 paymentLogSchema.index({ stripePaymentIntentId: 1 });
 

@@ -6,12 +6,12 @@ import logger from '@/utils/logger';
 import { IContactDocument } from '@/types';
 
 /**
- * Get contractor contacts for a job post
+ * Get contractor contacts for a job
  */
-export const getContactsByJobPost = async (req: Request, res: Response) => {
+export const getContactsByJob = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { jobPostId } = req.params;
+    const { jobId } = req.params;
 
     if (user.role !== 'homeowner') {
       return res.status(403).json({
@@ -20,7 +20,7 @@ export const getContactsByJobPost = async (req: Request, res: Response) => {
       });
     }
 
-    const contacts = await contactService.findContactsByJobPost(jobPostId);
+    const contacts = await contactService.findContactsByJob(jobId);
 
     // Mongoose automatically converts ObjectIds to strings in JSON
     // Serialize with virtuals included
@@ -75,12 +75,12 @@ export const getHomeownerContractorContacts = async (req: Request, res: Response
 };
 
 /**
- * Check if contractor has contacted a job post
+ * Check if contractor has contacted a job
  */
 export const checkContractorContact = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { jobPostId } = req.params;
+    const { jobId } = req.params;
 
     if (user.role !== 'contractor') {
       return res.status(403).json({
@@ -89,8 +89,8 @@ export const checkContractorContact = async (req: Request, res: Response) => {
       });
     }
 
-    const contact = await contactService.findContactByJobPostAndContractor(
-      jobPostId,
+    const contact = await contactService.findContactByJobAndContractor(
+      jobId,
       user.id
     );
 
@@ -122,7 +122,7 @@ export const checkContractorContact = async (req: Request, res: Response) => {
 export const createContact = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { jobPostId, paymentTransactionId } = req.body;
+    const { jobId, paymentTransactionId } = req.body;
 
     if (user.role !== 'contractor') {
       return res.status(403).json({
@@ -131,23 +131,23 @@ export const createContact = async (req: Request, res: Response) => {
       });
     }
 
-    // Get job post to find homeowner
-    const { JobPost } = await import('@/models');
-    const jobPost = await JobPost.findById(jobPostId)
+    // Get job to find homeowner
+    const { Job } = await import('@/models');
+    const job = await Job.findById(jobId)
       .populate('homeowner', 'firstName lastName email')
       .exec();
 
-    if (!jobPost) {
+    if (!job) {
       return res.status(404).json({
         success: false,
-        message: 'Job post not found',
+        message: 'Job not found',
       });
     }
 
     let contactData = {
-      jobPostId: jobPostId as any,
+      jobId: jobId as any,
       contractorId: user.id as any,
-      homeownerId: jobPost.homeownerId as any,
+      homeownerId: job.homeownerId as any,
       paymentAmount: 19.99,
       paymentTransactionId,
       paymentStatus: 'completed' as const,
@@ -157,14 +157,14 @@ export const createContact = async (req: Request, res: Response) => {
 
     // Send email notification to homeowner
     try {
-      const homeowner = (jobPost as any).homeowner || { email: '', firstName: '', lastName: '' };
+      const homeowner = (job as any).homeowner || { email: '', firstName: '', lastName: '' };
       await emailService.sendContractorContactNotification(
         homeowner.email,
         `${homeowner.firstName} ${homeowner.lastName}`,
         `${user.firstName} ${user.lastName}`,
-        jobPost.jobTitle,
-        jobPost.jobNumber,
-        jobPost.description
+        job.jobTitle,
+        job.jobNumber,
+        job.description
       );
     } catch (emailError) {
       logger.error('Failed to send email notification:', emailError);

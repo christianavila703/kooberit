@@ -4,9 +4,9 @@ import { IChatDocument } from '@/types';
 
 const chatSchema = new Schema<IChatDocument>(
   {
-    jobPostId: {
+    jobId: {
       type: Schema.Types.ObjectId,
-      ref: 'JobPost',
+      ref: 'Job',
       required: true,
       index: true,
     },
@@ -59,14 +59,14 @@ chatSchema.virtual('contractor', {
   justOne: true
 });
 
-chatSchema.virtual('jobPost', {
-  ref: 'JobPost',
-  localField: 'jobPostId',
+chatSchema.virtual('job', {
+  ref: 'Job',
+  localField: 'jobId',
   foreignField: '_id',
   justOne: true
 });
 
-chatSchema.index({ homeownerId: 1, contractorId: 1, jobPostId: 1 }, { unique: true });
+chatSchema.index({ homeownerId: 1, contractorId: 1, jobId: 1 }, { unique: true });
 chatSchema.index({ homeownerId: 1, lastMessageAt: -1 });
 chatSchema.index({ contractorId: 1, lastMessageAt: -1 });
 

@@ -42,10 +42,10 @@ export const sendMessageSchema = Joi.object({
  * Validation schema for creating contractor contact
  */
 export const createContactSchema = Joi.object({
-  jobPostId: Joi.string()
+  jobId: Joi.string()
     .required()
     .messages({
-      'any.required': 'Job post ID is required',
+      'any.required': 'Job ID is required',
     }),
   paymentTransactionId: Joi.string()
     .optional()

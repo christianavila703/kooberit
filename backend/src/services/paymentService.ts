@@ -59,7 +59,7 @@ class PaymentService {
     expiryYear: string,
     cvv: string,
     cardholderName: string,
-    jobPostId: string,
+    jobId: string,
     contractorId: string,
     homeownerId: string
   ): Promise<{ success: boolean; paymentIntentId?: string; error?: string }> {
@@ -76,14 +76,14 @@ class PaymentService {
       try {
         // Create payment intent first
         const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
-          jobPostId,
+          jobId,
           contractorId,
           homeownerId,
         });
 
         // Create payment log entry (pending status)
         const paymentLog = await paymentLogService.createPaymentLog({
-          jobPostId,
+          jobId,
           contractorId,
           homeownerId,
           paymentAmount: PAYMENT_AMOUNT / 100, // Convert cents to dollars
@@ -142,14 +142,14 @@ class PaymentService {
       if (confirmedPayment.status === 'succeeded') {
         // Create contractor contact
         const contact = await contactService.createContactWithPayment(
-          jobPostId,
+          jobId,
           contractorId,
           homeownerId
         );
 
         // Create chat room (chatService expects strings, it will convert to ObjectId internally)
         const chat = await chatService.createOrGetChat({
-          jobPostId: jobPostId,
+          jobId: jobId,
           homeownerId: homeownerId,
           contractorId: contractorId,
         } as any);
@@ -172,7 +172,7 @@ class PaymentService {
           });
         }
 
-        logger.info(`Payment successful: ${confirmedPayment.id} for job post: ${jobPostId}`);
+        logger.info(`Payment successful: ${confirmedPayment.id} for job: ${jobId}`);
 
         return {
           success: true,
@@ -205,7 +205,7 @@ class PaymentService {
   async processPaymentWithMethodId(
     paymentMethodId: string,
     cardholderName: string,
-    jobPostId: string,
+    jobId: string,
     contractorId: string,
     homeownerId: string
   ): Promise<{ success: boolean; paymentIntentId?: string; error?: string }> {
@@ -217,14 +217,14 @@ class PaymentService {
     try {
       // Create payment intent
       const paymentIntent = await this.createPaymentIntent(PAYMENT_AMOUNT, {
-        jobPostId,
+        jobId,
         contractorId,
         homeownerId,
       });
 
       // Create payment log entry (pending status)
       const paymentLog = await paymentLogService.createPaymentLog({
-        jobPostId,
+        jobId,
         contractorId,
         homeownerId,
         paymentAmount: PAYMENT_AMOUNT / 100, // Convert cents to dollars
@@ -246,14 +246,14 @@ class PaymentService {
       if (confirmedPayment.status === 'succeeded') {
         // Create contractor contact
         const contact = await contactService.createContactWithPayment(
-          jobPostId,
+          jobId,
           contractorId,
           homeownerId
         );
 
         // Create chat room (chatService expects strings, it will convert to ObjectId internally)
         const chat = await chatService.createOrGetChat({
-          jobPostId: jobPostId,
+          jobId: jobId,
           homeownerId: homeownerId,
           contractorId: contractorId,
         } as any);
@@ -276,7 +276,7 @@ class PaymentService {
           });
         }
 
-        logger.info(`Payment successful: ${confirmedPayment.id} for job post: ${jobPostId}`);
+        logger.info(`Payment successful: ${confirmedPayment.id} for job: ${jobId}`);
 
         return {
           success: true,

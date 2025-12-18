@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import paymentService from '@/services/paymentService';
 import logger from '@/utils/logger';
 import { USER_ROLES } from '@enums';
-import { JobPost, Contact} from '@/models';
+import { Job, Contact} from '@/models';
 
 /**
  * Process payment
@@ -10,7 +10,7 @@ import { JobPost, Contact} from '@/models';
 export const processPayment = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { jobPostId, paymentMethodId, cardholderName } = req.body;
+    const { jobId, paymentMethodId, cardholderName } = req.body;
 
     if (user.role !== USER_ROLES.CONTRACTOR) {
       return res.status(403).json({
@@ -26,12 +26,12 @@ export const processPayment = async (req: Request, res: Response) => {
       });
     }
 
-    const jobPost = await JobPost.findById(jobPostId).exec();
+    const job = await Job.findById(jobId).exec();
 
-    if (!jobPost) {
+    if (!job) {
       return res.status(404).json({
         success: false,
-        message: 'Job post not found',
+        message: 'Job not found',
       });
     }
 
@@ -39,15 +39,15 @@ export const processPayment = async (req: Request, res: Response) => {
     const result = await paymentService.processPaymentWithMethodId(
       paymentMethodId,
       cardholderName,
-      jobPostId,
+      jobId,
       user.id,
-      jobPost.homeownerId.toString()
+      job.homeownerId.toString()
     );
 
     if (result.success) {
       // Get chat ID from contact
       const contact = await Contact.findOne({
-        jobPostId,
+        jobId,
         contractorId: user.id,
       }).exec();
 

@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes';
 import userRoutes from './userRoutes';
-import jobPostRoutes from './jobPostRoutes';
 import contactRoutes from './contactRoutes';
-import contractorRoutes from './contractorRoutes';
 import profileRoutes from './profileRoutes';
 import chatRoutes from './chatRoutes';
 import uploadRoutes from './uploadRoutes';
 import paymentRoutes from './paymentRoutes';
+import jobRoutes from './jobRoutes';
+
 import { isAuthenticated } from '@/middlewares/auth';
 
 const router = Router();
@@ -18,14 +18,11 @@ router.use('/auth', authRoutes);
 // User routes
 router.use('/users', isAuthenticated, userRoutes);
 
-// Job post routes
-router.use('/job-posts', isAuthenticated, jobPostRoutes);
+// Job routes
+router.use('/jobs', isAuthenticated, jobRoutes);
 
 // Contact routes
 router.use('/contacts', isAuthenticated, contactRoutes);
-
-// Contractor routes
-router.use('/contractor', isAuthenticated, contractorRoutes);
 
 // Profile routes (settings for both contractor and homeowner)
 router.use('/profile', isAuthenticated, profileRoutes);

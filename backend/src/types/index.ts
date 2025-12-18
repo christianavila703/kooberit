@@ -1,6 +1,14 @@
 import { Document, Types } from 'mongoose';
 import type { UserRole, UserAllowStatus } from '@enums';
 
+export type IProvince = 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+
+export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
+
+export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled';
+
+export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
 /**
  * Custom error interface
  */
@@ -98,7 +106,7 @@ export interface IUserAttributes {
     unitNumber?: string;
     cityName?: string;
     areaCode?: string;
-    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province?: IProvince;
   };
   notificationEnabled?: boolean;
   notificationRadius?: number;
@@ -121,19 +129,16 @@ export interface IUserPaginationOptions extends IPaginationOptions {
 export type { UserRole, UserAllowStatus } from '@enums';
 
 /**
- * Job Post types
+ * Job types
  */
-export type JobPostStatus = 'active' | 'closed';
 
-export type JobSize = 'micro' | 'small' | 'big' | 'very_big';
-
-export interface IJobPostAttributes {
+export interface IJobAttributes {
   id?: string;
   _id?: Types.ObjectId;
   homeownerId: Types.ObjectId;
   jobTitle: string;
   jobNumber: string;
-  jobSize: JobSize;
+  jobSize: IJobSize;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -148,31 +153,29 @@ export interface IJobPostAttributes {
     unitNumber?: string;
     cityName: string;
     areaCode?: string;
-    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province: IProvince;
   };
-  status: JobPostStatus;
+  status: IJobStatus;
   contractorContactsCount: number;
   notificationsChecked?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export type IJobPostCreationAttributes = Omit<IJobPostAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contractorContactsCount'>;
-export type IJobPostDocument = IJobPostAttributes & Document<Types.ObjectId>;
+export type IJobCreationAttributes = Omit<IJobAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'contractorContactsCount'>;
+export type IJobDocument = IJobAttributes & Document<Types.ObjectId>;
 
 /**
  * Contractor Contact types
  */
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
-
 export interface IContactAttributes {
   id?: string;
   _id?: Types.ObjectId;
-  jobPostId: Types.ObjectId;
+  jobId: Types.ObjectId;
   contractorId: Types.ObjectId;
   homeownerId: Types.ObjectId;
   paymentAmount: number;
-  paymentStatus: PaymentStatus;
+  paymentStatus: IPaymentStatus;
   paymentTransactionId?: string;
   chatRoomId?: Types.ObjectId;
   contactInfoRevealed: boolean;
@@ -189,7 +192,7 @@ export type IContactDocument = IContactAttributes & Document<Types.ObjectId>;
 export interface IChatAttributes {
   id?: string;
   _id?: Types.ObjectId;
-  jobPostId: Types.ObjectId;
+  jobId: Types.ObjectId;
   homeownerId: Types.ObjectId;
   contractorId: Types.ObjectId;
   lastMessage?: string;
@@ -232,11 +235,11 @@ export interface IPaymentLogAttributes {
   id?: string;
   _id?: Types.ObjectId;
   contactId?: Types.ObjectId;
-  jobPostId: Types.ObjectId;
+  jobId: Types.ObjectId;
   contractorId: Types.ObjectId;
   homeownerId: Types.ObjectId;
   paymentAmount: number;
-  paymentStatus: PaymentStatus;
+  paymentStatus: IPaymentStatus;
   paymentTransactionId?: string;
   stripePaymentIntentId?: string;
   stripePaymentMethodId?: string;
@@ -248,11 +251,11 @@ export interface IPaymentLogAttributes {
 
 export interface IPaymentLogCreationAttributes {
   contactId?: string | Types.ObjectId;
-  jobPostId: string | Types.ObjectId;
+  jobId: string | Types.ObjectId;
   contractorId: string | Types.ObjectId;
   homeownerId: string | Types.ObjectId;
   paymentAmount: number;
-  paymentStatus: PaymentStatus;
+  paymentStatus: IPaymentStatus;
   paymentTransactionId?: string;
   stripePaymentIntentId?: string;
   stripePaymentMethodId?: string;

@@ -1,8 +1,8 @@
 import Joi from 'joi';
 
 export const processPaymentSchema = Joi.object({
-    jobPostId: Joi.string().required().messages({
-      'any.required': 'Job post ID is required',
+    jobId: Joi.string().required().messages({
+      'any.required': 'Job ID is required',
     }),
     paymentMethodId: Joi.string()
       .pattern(/^pm_[a-zA-Z0-9]+$/)

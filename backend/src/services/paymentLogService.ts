@@ -23,7 +23,7 @@ class PaymentLogService {
         contactId: logData.contactId
           ? new Types.ObjectId(logData.contactId)
           : undefined,
-        jobPostId: new Types.ObjectId(logData.jobPostId),
+        jobId: new Types.ObjectId(logData.jobId),
         contractorId: new Types.ObjectId(logData.contractorId),
         homeownerId: new Types.ObjectId(logData.homeownerId),
         paymentAmount: logData.paymentAmount,
@@ -138,19 +138,19 @@ class PaymentLogService {
   }
 
   /**
-   * Find payment logs by job post ID
+   * Find payment logs by job ID
    */
-  async findPaymentLogsByJobPostId(
-    jobPostId: string
+  async findPaymentLogsByJobId(
+    jobId: string
   ): Promise<IPaymentLogDocument[]> {
     try {
       return await PaymentLog.find({
-        jobPostId: new Types.ObjectId(jobPostId),
+        jobId: new Types.ObjectId(jobId),
       })
         .sort({ createdAt: -1 })
         .exec();
     } catch (error: any) {
-      logger.error('Error finding payment logs by job post ID:', error);
+      logger.error('Error finding payment logs by job ID:', error);
       throw error;
     }
   }

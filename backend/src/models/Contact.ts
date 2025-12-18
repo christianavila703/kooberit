@@ -3,9 +3,9 @@ import { IContactDocument } from '@/types';
 
 const contactSchema = new Schema<IContactDocument>(
   {
-    jobPostId: {
+    jobId: {
       type: Schema.Types.ObjectId,
-      ref: 'JobPost',
+      ref: 'Job',
       required: true,
       index: true,
     },
@@ -66,9 +66,9 @@ contactSchema.virtual('homeowner', {
   justOne: true
 });
 
-contactSchema.virtual('jobPost', {
-  ref: 'JobPost',
-  localField: 'jobPostId',
+contactSchema.virtual('job', {
+  ref: 'Job',
+  localField: 'jobId',
   foreignField: '_id',
   justOne: true
 });
@@ -80,7 +80,7 @@ contactSchema.virtual('chatRoom', {
   justOne: true
 });
 
-contactSchema.index({ jobPostId: 1, contractorId: 1 }, { unique: true });
+contactSchema.index({ jobId: 1, contractorId: 1 }, { unique: true });
 contactSchema.index({ contractorId: 1, createdAt: -1 });
 contactSchema.index({ homeownerId: 1, createdAt: -1 });
 

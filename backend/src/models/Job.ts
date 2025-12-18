@@ -1,8 +1,8 @@
 import { Schema, model } from 'mongoose';
 import { Types } from 'mongoose';
-import { IJobPostDocument } from '@/types';
+import { IJobDocument } from '@/types';
 
-const jobPostSchema = new Schema<IJobPostDocument>(
+const jobSchema = new Schema<IJobDocument>(
   {
     homeownerId: {
       type: Schema.Types.ObjectId,
@@ -92,8 +92,8 @@ const jobPostSchema = new Schema<IJobPostDocument>(
     },
     status: {
       type: String,
-      enum: ['active', 'closed'],
-      default: 'active',
+      enum: ['pending','closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled'],
+      default: 'pending',
       index: true,
     },
     contractorContactsCount: {
@@ -113,19 +113,19 @@ const jobPostSchema = new Schema<IJobPostDocument>(
   }
 );
 
-jobPostSchema.virtual('homeowner', {
+jobSchema.virtual('homeowner', {
   ref: 'User',
   localField: 'homeownerId',
   foreignField: '_id',
   justOne: true
 });
 
-jobPostSchema.index({ homeownerId: 1, status: 1 });
-jobPostSchema.index({ status: 1, createdAt: -1 });
-jobPostSchema.index({ 'location.coordinates': '2dsphere' });
-jobPostSchema.index({ 'location.cityName': 1, 'location.province': 1 });
+jobSchema.index({ homeownerId: 1, status: 1 });
+jobSchema.index({ status: 1, createdAt: -1 });
+jobSchema.index({ 'location.coordinates': '2dsphere' });
+jobSchema.index({ 'location.cityName': 1, 'location.province': 1 });
 
-const JobPost = model<IJobPostDocument>('JobPost', jobPostSchema);
+const Job = model<IJobDocument>('Job', jobSchema);
 
-export default JobPost;
+export default Job;
 

@@ -42,10 +42,10 @@ export default function RootLayout() {
               <Stack.Screen name="splash" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="create-job-post" options={{ headerShown: true, title: 'Create Job' }} />
-              <Stack.Screen name="job-post/[id]" options={{ headerShown: true, title: 'Job Details' }} />
+              <Stack.Screen name="create-job" options={{ headerShown: true, title: 'Create Job' }} />
+              <Stack.Screen name="job/[id]" options={{ headerShown: true, title: 'Job Details' }} />
               <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Chat' }} />
-              <Stack.Screen name="payment/[jobPostId]" options={{ headerShown: true, title: 'Payment' }} />
+              <Stack.Screen name="payment/[jobId]" options={{ headerShown: true, title: 'Payment' }} />
               <Stack.Screen name="change-password" options={{ headerShown: true, title: 'Change Password' }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>

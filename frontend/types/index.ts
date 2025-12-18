@@ -5,6 +5,8 @@
 // User Role Types
 export type IUserRole = 'homeowner' | 'contractor' | 'admin';
 
+export type IProvince = 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+
 // API Types
 export interface IApiResponse<T = unknown> {
   success: boolean;
@@ -47,7 +49,7 @@ export interface IUser {
     unitNumber?: string;
     cityName?: string;
     areaCode?: string;
-    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province?: IProvince;
   };
   constructionCategories?: string[];
   notificationEnabled?: boolean;
@@ -60,12 +62,15 @@ export interface IAuthResponse {
 }
 
 // Auth State Types
+export type IMode = 'contractor' | 'homeowner';
+
 export interface IAuthState {
   user: IUser | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
+  mode: IMode;
 }
 
 // Redux Types
@@ -86,12 +91,24 @@ export interface INotificationOptions {
   autoHide?: boolean;
 }
 
-// Job Post Types
-export type IJobPostStatus = 'active' | 'closed';
+// Pagination Types
+export interface IPagination {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+// Job Types
+export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled';
 
 export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 
-export interface IJobPost {
+export type IJobType = 'single detached house' | 'semi detached house' | 'townhouse' | 'low rise building' | 'high rise building';
+
+export type IJob = {
   id: string;
   homeownerId: string;
   jobTitle: string;
@@ -111,9 +128,9 @@ export interface IJobPost {
     unitNumber?: string;
     cityName: string;
     areaCode?: string;
-    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province: IProvince;
   };
-  status: IJobPostStatus;
+  status: IJobStatus;
   contractorContactsCount: number;
   hasContacted?: boolean;
   createdAt?: string;
@@ -126,7 +143,13 @@ export interface IJobPost {
   };
 }
 
-export interface ICreateJobPostRequest {
+
+
+
+
+
+// Job Request Types (aliases for backward compatibility during migration)
+export interface ICreateJobRequest {
   jobTitle: string;
   jobSize: IJobSize;
   description: string;
@@ -143,11 +166,11 @@ export interface ICreateJobPostRequest {
     unitNumber?: string;
     cityName: string;
     areaCode?: string;
-    province: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province: IProvince;
   };
 }
 
-export interface IUpdateJobPostRequest {
+export interface IUpdateJobRequest {
   jobTitle?: string;
   jobSize?: IJobSize;
   description?: string;
@@ -164,16 +187,16 @@ export interface IUpdateJobPostRequest {
     unitNumber?: string;
     cityName?: string;
     areaCode?: string;
-    province?: 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT';
+    province?: IProvince;
   };
 }
 
 // Contractor Contact Types
-export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
 
 export interface IContact {
   id: string;
-  jobPostId: string;
+  jobId: string;
   contractorId: string;
   homeownerId: string;
   paymentAmount: number;
@@ -189,23 +212,23 @@ export interface IContact {
     lastName: string;
     email: string;
   };
-  jobPost?: {
+  job?: {
     id: string;
     description: string;
     categories: string[];
-    status: IJobPostStatus;
+    status: IJobStatus;
   };
 }
 
 export interface ICreateContactRequest {
-  jobPostId: string;
+  jobId: string;
   paymentTransactionId?: string;
 }
 
 // Chat Types
 export interface IChat {
   id: string;
-  jobPostId: string;
+  jobId: string;
   homeownerId: string;
   contractorId: string;
   lastMessage?: string;
@@ -228,11 +251,11 @@ export interface IChat {
     email: string;
     phone?: string;
   };
-  jobPost?: {
+  job?: {
     id: string;
     description: string;
     categories: string[];
-    status: IJobPostStatus;
+    status: IJobStatus;
   };
 }
 

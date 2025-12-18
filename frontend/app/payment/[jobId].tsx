@@ -17,11 +17,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import notificationService from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
-import jobPostService from '@/services/jobPost';
+import jobService from '@/services/job';
 
 export default function PaymentScreen() {
   const router = useRouter();
-  const { jobPostId } = useLocalSearchParams<{ jobPostId: string }>();
+  const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const { user } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -32,21 +32,21 @@ export default function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState<any>(null);
   const [showContractorLimitPopup, setShowContractorLimitPopup] = useState(false);
-  const [jobPost, setJobPost] = useState<any>(null);
+  const [job, setJob] = useState<any>(null);
 
-  // Load job post to get contractor limit
+  // Load job to get contractor limit
   useEffect(() => {
-    if (jobPostId) {
-      loadJobPost();
+    if (jobId) {
+      loadJob();
     }
-  }, [jobPostId]);
+  }, [jobId]);
 
-  const loadJobPost = async () => {
+  const loadJob = async () => {
     try {
-      const post = await jobPostService.getJobPostById(jobPostId);
-      setJobPost(post);
+      const jobData = await jobService.getJobById(jobId);
+      setJob(jobData);
     } catch (error: any) {
-      notificationService.error('Error', 'Failed to load job post details');
+      notificationService.error('Error', 'Failed to load job details');
     }
   };
 
@@ -56,13 +56,13 @@ export default function PaymentScreen() {
       return;
     }
 
-    if (!jobPostId || !user) {
+    if (!jobId || !user) {
       notificationService.error('Error', 'Missing required information');
       return;
     }
 
     // Show popup about contractor limit before processing payment
-    if (jobPost?.contractorLimit) {
+    if (job?.contractorLimit) {
       setShowContractorLimitPopup(true);
       return;
     }
@@ -89,7 +89,7 @@ export default function PaymentScreen() {
 
       // Process payment through backend with payment method ID
       const paymentResult = await contractorContactService.processPayment({
-        jobPostId: jobPostId,
+        jobId: jobId,
         paymentMethodId: paymentMethod.id,
         cardholderName,
         saveCard,
@@ -213,7 +213,7 @@ export default function PaymentScreen() {
           </View>
           <View style={styles.popupContent}>
             <Text style={[styles.popupMessage, { color: colors.text }]}>
-              Please note that the Homeowner has indicated that they would like {jobPost?.contractorLimit || 'X'} contractors to contact them. We cannot guarantee their response as their circumstances might have changed since posting the job.
+              Please note that the Homeowner has indicated that they would like {job?.contractorLimit || 'X'} contractors to contact them. We cannot guarantee their response as their circumstances might have changed since posting the job.
             </Text>
           </View>
           <View style={styles.popupButtons}>

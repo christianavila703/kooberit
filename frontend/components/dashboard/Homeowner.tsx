@@ -10,12 +10,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchHomeownerJobPosts } from '@/store/slices/jobPostSlice';
+ import { fetchHomeownerJobs } from '@/store/slices/jobSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { statusBarHeight } from '@/constants/resources'
 
 export default function TabIndex() {
   const { user } = useAppSelector((state) => state.auth);
@@ -34,7 +33,7 @@ export default function TabIndex() {
 function HomeownerDashboard() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { jobPosts, isLoading } = useAppSelector((state) => state.jobPost);
+  const { jobs, isLoading } = useAppSelector((state) => state.job.homeowner);
   const { user } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -52,10 +51,10 @@ function HomeownerDashboard() {
   } | null>(null);
 
   useEffect(() => {
-    loadJobPosts(true);
+    loadjobs(true);
   }, []);
 
-  const loadJobPosts = async (reset: boolean = false) => {
+  const loadjobs = async (reset: boolean = false) => {
     if (reset) {
       setPage(1);
       setHasMore(true);
@@ -67,7 +66,7 @@ function HomeownerDashboard() {
     try {
       const currentPage = reset ? 1 : page;
       const result = await dispatch(
-        fetchHomeownerJobPosts({ page: currentPage, limit: 20, append: !reset })
+        fetchHomeownerJobs({ status: 'all', page: currentPage, limit: 20, append: !reset })
       ).unwrap();
       
       setPagination(result.pagination);
@@ -82,64 +81,55 @@ function HomeownerDashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadJobPosts(true);
+    await loadjobs(true);
     setRefreshing(false);
   };
 
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore && !isLoading) {
-      loadJobPosts(false);
+      loadjobs(false);
     }
   }, [loadingMore, hasMore, isLoading]);
 
-  const handleCreateJobPost = () => {
-    router.push('/create-job-post' as any);
+  const handleCreateJob = () => {
+    router.push('/create-job' as any);
   };
 
-  const handleJobPostPress = (jobPostId: string) => {
-    router.push(`/job-post/${jobPostId}` as any);
+  const handleJobPress = (jobId: string) => {
+    router.push(`/job/${jobId}` as any);
   };
 
   const isDark = colorScheme === 'dark';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.icon }]}>Welcome back,</Text>
-          <Text style={[styles.name, { color: colors.text }]}>
-            {user?.firstName} {user?.lastName}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.container}>
 
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
           <Text style={[styles.statNumber, { color: colors.tint }]}>
-            {jobPosts.filter((jp) => jp.status === 'active').length}
+            {jobs.filter((j) => j.status === 'open').length}
           </Text>
           <Text style={[styles.statLabel, { color: colors.icon }]}>Active Jobs</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
           <Text style={[styles.statNumber, { color: colors.tint }]}>
-            {jobPosts.reduce((sum, jp) => sum + jp.contractorContactsCount, 0)}
+            {jobs.reduce((sum, j) => sum + j.contractorContactsCount, 0)}
           </Text>
           <Text style={[styles.statLabel, { color: colors.icon }]}>Total Contacts</Text>
         </View>
       </View>
 
-      {/* Job Posts List */}
+      {/* Jobs List */}
       <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        data={jobPosts}
+        data={jobs}
         keyExtractor={(item) => item.id}
-        renderItem={({ item: jobPost }) => (
+        renderItem={({ item: job }) => (
           <TouchableOpacity
             style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-            onPress={() => handleJobPostPress(jobPost.id)}
+            onPress={() => handleJobPress(job.id)}
             activeOpacity={0.7}>
             <View style={styles.jobCardHeader}>
               <View style={styles.jobCardTitleRow}>
@@ -147,24 +137,24 @@ function HomeownerDashboard() {
                   <Text
                     style={[styles.jobCardTitle, { color: colors.text }]}
                     numberOfLines={2}>
-                    {jobPost.jobTitle || jobPost.description
-                      ? (jobPost.jobTitle || jobPost.description).substring(0, 60)
+                    {job.jobTitle || job.description
+                      ? (job.jobTitle || job.description).substring(0, 60)
                       : 'No title'}
-                    {(jobPost.jobTitle || jobPost.description || '').length > 60 ? '...' : ''}
+                    {(job.jobTitle || job.description || '').length > 60 ? '...' : ''}
                   </Text>
-                  {jobPost.jobNumber && (
+                  {job.jobNumber && (
                     <Text style={[styles.jobNumber, { color: colors.icon }]}>
-                      Job #{jobPost.jobNumber}
+                      Job #{job.jobNumber}
                     </Text>
                   )}
-                  {jobPost.jobSize && (
+                  {job.jobSize && (
                     <View style={styles.jobSizeContainer}>
                       <Text style={[styles.jobSizeLabel, { color: colors.icon }]}>Job Size: </Text>
                       <Text style={[styles.jobSizeValue, { color: colors.tint }]}>
-                        {jobPost.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
-                        {jobPost.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
-                        {jobPost.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
-                        {jobPost.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
+                        {job.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
+                        {job.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
+                        {job.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
+                        {job.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
                       </Text>
                     </View>
                   )}
@@ -174,11 +164,11 @@ function HomeownerDashboard() {
                     styles.statusBadge,
                     {
                       backgroundColor:
-                        jobPost.status === 'active' ? '#4CAF50' : '#9E9E9E',
+                        job.status === 'closed' ? '#9E9E9E' : '#4CAF50',
                     },
                   ]}>
                   <Text style={styles.statusText}>
-                    {jobPost.status === 'active' ? 'Active' : 'Closed'}
+                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </Text>
                 </View>
               </View>
@@ -186,9 +176,9 @@ function HomeownerDashboard() {
 
             <View style={styles.jobCardBody}>
               <View style={styles.categoriesContainer}>
-                {jobPost.categories.slice(0, 3).map((category) => (
+                {job.categories.slice(0, 3).map((category) => (
                   <View
-                    key={`${jobPost.id}-${category}`}
+                    key={`${job.id}-${category}`}
                     style={[
                       styles.categoryTag,
                       { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
@@ -198,9 +188,9 @@ function HomeownerDashboard() {
                     </Text>
                   </View>
                 ))}
-                {jobPost.categories.length > 3 && (
+                {job.categories.length > 3 && (
                   <Text style={[styles.moreCategories, { color: colors.icon }]}>
-                    +{jobPost.categories.length - 3}
+                    +{job.categories.length - 3}
                   </Text>
                 )}
               </View>
@@ -209,12 +199,12 @@ function HomeownerDashboard() {
                 <View style={styles.contactInfo}>
                   <IconSymbol name="person.2.fill" size={16} color={colors.icon} />
                   <Text style={[styles.contactText, { color: colors.icon }]}>
-                    {jobPost.contractorContactsCount} / {jobPost.contractorLimit} contractors
+                    {job.contractorContactsCount} / {job.contractorLimit} contractors
                   </Text>
                 </View>
                 <Text style={[styles.dateText, { color: colors.icon }]}>
-                  {jobPost.createdAt
-                    ? new Date(jobPost.createdAt).toLocaleDateString()
+                  {job.createdAt
+                    ? new Date(job.createdAt).toLocaleDateString()
                     : ''}
                 </Text>
               </View>
@@ -230,10 +220,10 @@ function HomeownerDashboard() {
             <View style={styles.emptyContainer}>
               <IconSymbol name="doc.text" size={64} color={colors.icon} />
               <Text style={[styles.emptyText, { color: colors.icon }]}>
-                No job posts yet
+                No jobs yet
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-                Create your first job post to get started
+                Create your first job to get started
               </Text>
             </View>
           )
@@ -255,7 +245,7 @@ function HomeownerDashboard() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.tint }]}
-        onPress={handleCreateJobPost}
+        onPress={handleCreateJob}
         activeOpacity={0.8}>
         <IconSymbol name="plus" size={24} color="#FFFFFF" />
       </TouchableOpacity>
@@ -266,19 +256,6 @@ function HomeownerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    paddingTop: statusBarHeight,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  greeting: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: '700',
   },
   statsContainer: {
     flexDirection: 'row',

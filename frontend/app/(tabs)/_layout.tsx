@@ -5,17 +5,10 @@ import { HapticTab } from '@/components/haptic-tab';
 import { AnimatedTabIcon } from '@/components/animated-tab-icon';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAppSelector } from '@/store/hooks';
 import { useExitConfirmation } from '@/hooks/use-exit-confirmation';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user } = useAppSelector((state) => state.auth);
-  const role = user?.role || 'homeowner';
-
-  // Role-based tab configuration
-  const isHomeowner = role === 'homeowner';
-  const isContractor = role === 'contractor';
 
   // Handle exit confirmation on back button press
   useExitConfirmation();
@@ -37,32 +30,18 @@ export default function TabLayout() {
         },
         tabBarHideOnKeyboard: true,
       }}
-      initialRouteName={isHomeowner ? 'homeowner-dashboard' : 'contractor-dashboard'}>
-      {/* Homeowner Dashboard - only show for homeowners */}
+      initialRouteName="dashboard">
+
       <Tabs.Screen
-        name="homeowner-dashboard"
+        name="dashboard"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, focused }) => (
             <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
           ),
-          href: isHomeowner ? undefined : null,
         }}
       />
       
-      {/* Contractor Dashboard - only show for contractors */}
-      <Tabs.Screen
-        name="contractor-dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon size={28} name="house.fill" color={color} focused={focused} />
-          ),
-          href: isContractor ? undefined : null,
-        }}
-      />
-      
-      {/* Messages - show for both roles */}
       <Tabs.Screen
         name="messages"
         options={{
@@ -73,7 +52,6 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Profile - show for both roles */}
       <Tabs.Screen
         name="profile"
         options={{

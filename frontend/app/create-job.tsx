@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { createJobPost } from '@/store/slices/jobPostSlice';
+import { createJob } from '@/store/slices/jobSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
@@ -23,10 +23,10 @@ import { geocodeAddress, buildAddressString } from '@/utils/geocode';
 import ProvinceSelect from '@/components/ProvinceSelect';
 
 
-export default function CreateJobPostScreen() {
+export default function CreateJobScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { currentJobPost } = useAppSelector((state) => state.jobPost);
+  const { currentJob } = useAppSelector((state) => state.job.homeowner);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -157,8 +157,8 @@ export default function CreateJobPostScreen() {
 
     setIsLoading(true);
     try {
-      const jobPost = await dispatch(
-        createJobPost({
+      const job = await dispatch(
+        createJob({
           jobTitle: jobTitle.trim(),
           jobSize: jobSize as 'micro' | 'small' | 'big' | 'very_big',
           description: description.trim(),
@@ -187,10 +187,10 @@ export default function CreateJobPostScreen() {
         })
       ).unwrap();
 
-      // Show popup after successful job post
+      // Show popup after successful job creation
       setShowPostJobPopup(true);
     } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to create job post');
+      notification.error('Error', error.message || 'Failed to create job');
       setIsLoading(false);
     }
   };
@@ -198,8 +198,8 @@ export default function CreateJobPostScreen() {
   const handlePopupClose = () => {
     setShowPostJobPopup(false);
     setIsLoading(false);
-    if (currentJobPost?.id) {
-      router.replace(`/job-post/${currentJobPost.id}` as any);
+    if (currentJob?.id) {
+      router.replace(`/job/${currentJob.id}` as any);
     } else {
       router.back();
     }
@@ -627,7 +627,7 @@ export default function CreateJobPostScreen() {
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.submitButtonText}>Create Job Post</Text>
+            <Text style={styles.submitButtonText}>Create Job</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -642,11 +642,11 @@ export default function CreateJobPostScreen() {
             <Text style={[styles.popupMessage, { color: colors.text }]}>
               Please note we are in initial stages of app deployment, it may take a few days for contractors to contact you. At full app deployment we expect instantaneous responses.
             </Text>
-            {currentJobPost?.jobNumber && (
+            {currentJob?.jobNumber && (
               <View style={[styles.jobNumberContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
                 <Text style={[styles.jobNumberLabel, { color: colors.icon }]}>Job Number</Text>
                 <Text style={[styles.jobNumber, { color: colors.tint }]}>
-                  {currentJobPost.jobNumber}
+                  {currentJob.jobNumber}
                 </Text>
               </View>
             )}

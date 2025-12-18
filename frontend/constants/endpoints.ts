@@ -9,18 +9,19 @@ const endpoints = {
         verifyEmailOTP: '/auth/verify-email-otp',
         resendVerificationOTP: '/auth/resend-verification-otp',
     },
-    jobPosts: {
-        create: '/job-posts',
-        getHomeowner: '/job-posts/homeowner',
-        getById: (id: string) => `/job-posts/${id}`,
-        update: (id: string) => `/job-posts/${id}`,
-        close: (id: string) => `/job-posts/${id}/close`,
-        delete: (id: string) => `/job-posts/${id}`,
+    jobs: {
+        getContractor: '/jobs/contractor',
+        getHomeowner: '/jobs/homeowner',
+        create: '/jobs',
+        getById: (id: string) => `/jobs/${id}`,
+        update: (id: string) => `/jobs/${id}`,
+        close: (id: string) => `/jobs/${id}/close`,
+        delete: (id: string) => `/jobs/${id}`,
     },
     contacts: {
-        getByJobPost: (jobPostId: string) => `/contacts/job-post/${jobPostId}`,
+        getByJob: (jobId: string) => `/contacts/job/${jobId}`,
         getHomeowner: '/contacts/homeowner',
-        checkContact: (jobPostId: string) => `/contacts/check/${jobPostId}`,
+        checkContact: (jobId: string) => `/contacts/check/${jobId}`,
         create: '/contacts',
     },
     chats: {
@@ -30,9 +31,6 @@ const endpoints = {
         sendMessage: (chatId: string) => `/chats/${chatId}/messages`,
         markAsRead: (chatId: string) => `/chats/${chatId}/read`,
         getUnreadCount: '/chats/unread-count',
-    },
-    contractor: {
-        getJobBoard: '/contractor/job-board',
     },
     profile: {
         getSettings: '/profile/settings',

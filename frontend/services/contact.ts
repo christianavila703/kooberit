@@ -11,13 +11,20 @@ import type {
  */
 class ContactService {
   /**
-   * Get contractor contacts for a job post
+   * Get contractor contacts for a job
    */
-    async getContactsByJobPost(jobPostId: string): Promise<IContact[]> {
+    async getContactsByJob(jobId: string): Promise<IContact[]> {
     const response = await api.get<IApiResponse<IContact[]>>(
-      endpoints.contacts.getByJobPost(jobPostId)
+      endpoints.contacts.getByJob(jobId)
     );
     return response.data.data || [];
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  async getContactsByjob(jobId: string): Promise<IContact[]> {
+    return this.getContactsByJob(jobId);
   }
 
   /**
@@ -31,11 +38,11 @@ class ContactService {
   }
 
   /**
-   * Check if contractor has contacted a job post
+   * Check if contractor has contacted a job
    */
-  async checkContact(jobPostId: string): Promise<{ hasContacted: boolean; contact: IContact | null }> {
+  async checkContact(jobId: string): Promise<{ hasContacted: boolean; contact: IContact | null }> {
     const response = await api.get<IApiResponse<{ hasContacted: boolean; contact: IContact | null }>>(
-      endpoints.contacts.checkContact(jobPostId)
+      endpoints.contacts.checkContact(jobId)
     );
     return response.data.data || { hasContacted: false, contact: null };
   }
@@ -55,15 +62,22 @@ class ContactService {
    * Process payment and create contact
    */
   async processPayment(data: {
-    jobPostId: string;
+    jobId: string;
     paymentMethodId: string;
     cardholderName: string;
     saveCard: boolean;
+    // Legacy field for backward compatibility
+    jobId?: string;
   }): Promise<{ success: boolean; chatId?: string; error?: string }> {
+    // Use jobId if provided, otherwise fall back to jobId for backward compatibility
+    const finalJobId = data.jobId || data.jobId;
+    if (!finalJobId) {
+      return { success: false, error: 'Job ID is required' };
+    }
     try {
       const response = await api.post<IApiResponse<{ paymentIntentId: string; chatId?: string }>>(
         endpoints.payments.process,
-        data
+        { ...data, jobId: finalJobId }
       );
       return {
         success: true,

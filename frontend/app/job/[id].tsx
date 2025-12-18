@@ -11,10 +11,10 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchJobPostById,
-  closeJobPost,
-  deleteJobPost,
-} from '@/store/slices/jobPostSlice';
+  fetchJobById,
+  closeJob,
+  deleteJob,
+} from '@/store/slices/jobSlice';
 import contactService from '@/services/contact';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -22,11 +22,11 @@ import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IRootState } from '@/store';
 
-export default function JobPostDetailsScreen() {
+export default function JobDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
-  const { currentJobPost, isLoading } = useAppSelector((state) => state.jobPost);
+  const { currentJob, isLoading } = useAppSelector((state) => state.job.homeowner);
   const { user } = useAppSelector((state: IRootState) => state.auth);
   const [contractorContacts, setContractorContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -38,7 +38,7 @@ export default function JobPostDetailsScreen() {
 
   useEffect(() => {
     if (id) {
-      loadJobPost();
+      loadJob();
       if (!isContractor) {
         loadContractorContacts();
       } else {
@@ -47,11 +47,11 @@ export default function JobPostDetailsScreen() {
     }
   }, [id, isContractor]);
 
-  const loadJobPost = async () => {
+  const loadJob = async () => {
     try {
-      await dispatch(fetchJobPostById(id!)).unwrap();
+      await dispatch(fetchJobById(id!)).unwrap();
     } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to load job post');
+      notification.error('Error', error.message || 'Failed to load job');
       router.back();
     }
   };
@@ -60,7 +60,7 @@ export default function JobPostDetailsScreen() {
     if (!id) return;
     setLoadingContacts(true);
     try {
-      const contacts = await contactService.getContactsByJobPost(id);
+      const contacts = await contactService.getContactsByJob(id);
       setContractorContacts(contacts);
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load contractor contacts');
@@ -92,8 +92,8 @@ export default function JobPostDetailsScreen() {
   const handleCloseJob = async () => {
     if (!id) return;
     Alert.alert(
-      'Close Job Post',
-      'Are you sure you want to close this job post? Contractors will no longer be able to contact you.',
+      'Close Job',
+      'Are you sure you want to close this job? Contractors will no longer be able to contact you.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -101,10 +101,10 @@ export default function JobPostDetailsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dispatch(closeJobPost(id)).unwrap();
-              notification.success('Success', 'Job post closed successfully');
+              await dispatch(closeJob(id)).unwrap();
+              notification.success('Success', 'Job closed successfully');
             } catch (error: any) {
-              notification.error('Error', error.message || 'Failed to close job post');
+              notification.error('Error', error.message || 'Failed to close job');
             }
           },
         },
@@ -115,8 +115,8 @@ export default function JobPostDetailsScreen() {
   const handleDeleteJob = async () => {
     if (!id) return;
     Alert.alert(
-      'Delete Job Post',
-      'Are you sure you want to delete this job post? This action cannot be undone.',
+      'Delete Job',
+      'Are you sure you want to delete this job? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -124,11 +124,11 @@ export default function JobPostDetailsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dispatch(deleteJobPost(id)).unwrap();
-              notification.success('Success', 'Job post deleted successfully');
+              await dispatch(deleteJob(id)).unwrap();
+              notification.success('Success', 'Job deleted successfully');
               router.back();
             } catch (error: any) {
-              notification.error('Error', error.message || 'Failed to delete job post');
+              notification.error('Error', error.message || 'Failed to delete job');
             }
           },
         },
@@ -142,7 +142,7 @@ export default function JobPostDetailsScreen() {
 
   const isDark = colorScheme === 'dark';
 
-  if (isLoading || !currentJobPost) {
+  if (isLoading || !currentJob) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.tint} />
@@ -159,11 +159,11 @@ export default function JobPostDetailsScreen() {
             style={[
               styles.statusBadge,
               {
-                backgroundColor: currentJobPost.status === 'active' ? '#4CAF50' : '#9E9E9E',
+                backgroundColor: currentJob.status === 'closed' ? '#9E9E9E' : '#4CAF50',
               },
             ]}>
             <Text style={styles.statusText}>
-              {currentJobPost.status === 'active' ? 'Active' : 'Closed'}
+              {currentJob.status.charAt(0).toUpperCase() + currentJob.status.slice(1)}
             </Text>
           </View>
         </View>
@@ -172,29 +172,29 @@ export default function JobPostDetailsScreen() {
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Job Title</Text>
           <Text style={[styles.jobTitle, { color: colors.text }]}>
-            {currentJobPost.jobTitle || 'No title'}
+            {currentJob.jobTitle || 'No title'}
           </Text>
         </View>
 
         {/* Job Number & Job Size */}
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={styles.infoRow}>
-            {currentJobPost.jobNumber && (
+            {currentJob.jobNumber && (
               <View style={styles.infoItem}>
                 <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Number</Text>
                 <Text style={[styles.infoValue, { color: colors.tint }]}>
-                  #{currentJobPost.jobNumber}
+                  #{currentJob.jobNumber}
                 </Text>
               </View>
             )}
-            {currentJobPost.jobSize && (
+            {currentJob.jobSize && (
               <View style={styles.infoItem}>
                 <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Size</Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {currentJobPost.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
-                  {currentJobPost.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
-                  {currentJobPost.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
-                  {currentJobPost.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
+                  {currentJob.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
+                  {currentJob.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
+                  {currentJob.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
+                  {currentJob.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
                 </Text>
               </View>
             )}
@@ -205,7 +205,7 @@ export default function JobPostDetailsScreen() {
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Description</Text>
           <Text style={[styles.description, { color: colors.text }]}>
-            {currentJobPost.description}
+            {currentJob.description}
           </Text>
         </View>
 
@@ -213,9 +213,9 @@ export default function JobPostDetailsScreen() {
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Categories</Text>
           <View style={styles.categoriesContainer}>
-            {currentJobPost.categories.map((category) => (
+            {currentJob.categories.map((category) => (
               <View
-                key={`${currentJobPost.id}-${category}`}
+                key={`${currentJob.id}-${category}`}
                 style={[
                   styles.categoryTag,
                   { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
@@ -236,16 +236,16 @@ export default function JobPostDetailsScreen() {
                 ? (
                   <>
                     {/* City and Province - Always visible */}
-                    {(currentJobPost.location.cityName || currentJobPost.location.province) && (
+                    {(currentJob.location.cityName || currentJob.location.province) && (
                       <Text style={[styles.cityProvinceText, { color: colors.text }]}>
-                        {currentJobPost.location.cityName}
-                        {currentJobPost.location.cityName && currentJobPost.location.province && ', '}
-                        {currentJobPost.location.province}
+                        {currentJob.location.cityName}
+                        {currentJob.location.cityName && currentJob.location.province && ', '}
+                        {currentJob.location.province}
                       </Text>
                     )}
                   </>
                 )
-                : currentJobPost.location.address}
+                : currentJob.location.address}
             </Text>
           </View>
           
@@ -255,13 +255,13 @@ export default function JobPostDetailsScreen() {
         <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Contractor Contacts</Text>
           <Text style={[styles.infoText, { color: colors.icon }]}>
-            {currentJobPost.contractorContactsCount} / {currentJobPost.contractorLimit} contractors
+            {currentJob.contractorContactsCount} / {currentJob.contractorLimit} contractors
             have contacted you
           </Text>
         </View>
 
         {/* Contractor View - Contact Button */}
-        {isContractor && currentJobPost.status === 'active' && (
+        {isContractor && (
           <View style={styles.section}>
             {loadingContacts ? (
               <ActivityIndicator color={colors.tint} />
@@ -353,7 +353,7 @@ export default function JobPostDetailsScreen() {
         )}
 
         {/* Actions - Homeowner Only */}
-        {!isContractor && currentJobPost.status === 'active' && (
+        {!isContractor && currentJob.status === 'open' && (
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: '#FF9500' }]}

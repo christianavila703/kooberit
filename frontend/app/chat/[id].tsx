@@ -509,14 +509,14 @@ export default function ChatScreen() {
               </Text>
             )}
             {/* Job Status Indicator */}
-            {currentChat.jobPostId && (
+            {currentChat.jobId && (
               <View style={styles.jobStatusContainer}>
-                {!currentChat.jobPost ? (
+                {!currentChat.job ? (
                   <View style={[styles.jobStatusBadge, { backgroundColor: '#F44336' }]}>
                     <IconSymbol name="exclamationmark.triangle.fill" size={12} color="#FFFFFF" />
                     <Text style={styles.jobStatusText}>Job Deleted</Text>
                   </View>
-                ) : currentChat.jobPost.status === 'closed' ? (
+                ) : currentChat.job.status === 'closed' ? (
                   <View style={[styles.jobStatusBadge, { backgroundColor: '#9E9E9E' }]}>
                     <IconSymbol name="lock.fill" size={12} color="#FFFFFF" />
                     <Text style={styles.jobStatusText}>Job Closed</Text>
@@ -525,19 +525,19 @@ export default function ChatScreen() {
               </View>
             )}
           </View>
-          {currentChat.jobPostId && (
+          {currentChat.jobId && (
             <TouchableOpacity
               style={[
                 styles.jobButton,
                 { backgroundColor: colors.tint },
-                !currentChat.jobPost && styles.jobButtonDisabled,
+                !currentChat.job && styles.jobButtonDisabled,
               ]}
               onPress={() => {
-                if (currentChat.jobPost) {
-                  router.push(`/job-post/${currentChat.jobPostId}` as any);
+                if (currentChat.job) {
+                  router.push(`/job/${currentChat.jobId}` as any);
                 }
               }}
-              disabled={!currentChat.jobPost}>
+              disabled={!currentChat.job}>
               <IconSymbol name="briefcase.fill" size={16} color="#FFFFFF" />
               <Text style={styles.jobButtonText}>View Job</Text>
             </TouchableOpacity>

@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchJobPosts,
+  fetchContractorJobs,
   setRadius,
   setCategories,
   setCities,
@@ -21,7 +21,7 @@ import {
   setSearchQuery,
   resetFilters,
   setRefreshing,
-} from '@/store/slices/contractorSlice';
+} from '@/store/slices/jobSlice';
 import {
   fetchProfileSettings,
 } from '@/store/slices/profileSlice';
@@ -32,27 +32,24 @@ import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
 import { arraysEqual, calculateDistance, formatDistance } from '@/utils/helper';
-import { statusBarHeight } from '@/constants/resources';
+import { IProvince } from '@/types';
 
 export default function ContractorDashboard() {
   const router = useRouter();
-  const { user } = useAppSelector((state: IRootState) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
   const dispatch = useAppDispatch();
+
   const {
-    jobPosts,
-    radius,
-    categories,
-    cities,
-    province,
-    searchQuery,
+    jobs,
+    filters,
     isLoading,
     isLoadingMore,
     isRefreshing,
     pagination,
-  } = useAppSelector((state: IRootState) => state.contractor);
+  } = useAppSelector((state: IRootState) => state.job.contractor);
+  
+  const { radius, categories, cities, province, searchQuery } = filters;
   const { settings: profileSettings, isSaving } = useAppSelector(
     (state: IRootState) => state.profile
   );
@@ -61,7 +58,7 @@ export default function ContractorDashboard() {
   const [tempRadius, setTempRadius] = useState<number | null>(null);
   const [tempCategories, setTempCategories] = useState<string[]>([]);
   const [tempCities, setTempCities] = useState<string[]>([]);
-  const [tempProvince, setTempProvince] = useState<'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 'QC' | 'SK' | 'NT' | 'NU' | 'YT'>('ON');
+  const [tempProvince, setTempProvince] = useState<IProvince>('ON');
   const [cityInput, setCityInput] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -90,7 +87,7 @@ export default function ContractorDashboard() {
       const profileCategories = profileSettings.constructionCategories || [];
       const categoriesToUse = categories.length > 0 ? categories : profileCategories;
       dispatch(
-        fetchJobPosts({
+        fetchContractorJobs({
           reset: true,
           page: 1,
           search: searchQuery || undefined,
@@ -123,7 +120,7 @@ export default function ContractorDashboard() {
     dispatch(setRefreshing(true));
     const profileCategories = profileSettings.constructionCategories || [];
     await dispatch(
-      fetchJobPosts({
+      fetchContractorJobs({
         reset: true,
         page: 1,
         search: searchQuery || undefined,
@@ -139,7 +136,7 @@ export default function ContractorDashboard() {
     if (!isLoadingMore && pagination?.hasNextPage && !isLoading) {
       const profileCategories = profileSettings.constructionCategories || [];
       dispatch(
-        fetchJobPosts({
+        fetchContractorJobs({
           reset: false,
           page: (pagination.currentPage || 0) + 1,
           search: searchQuery || undefined,
@@ -185,7 +182,7 @@ export default function ContractorDashboard() {
     setTempRadius(null);
     setTempCategories([...profileCategories]);
     setTempCities([]);
-    setTempProvince('ON');
+    setTempProvince('ON' as IProvince);
     dispatch(resetFilters({ profileCategories }));
   };
 
@@ -193,28 +190,28 @@ export default function ContractorDashboard() {
     setShowFilters(false);
   };
 
-  const handleJobPostPress = (jobPostId: string) => {
-    router.push(`/job-post/${jobPostId}` as any);
+  const handleJobPress = (jobId: string) => {
+    router.push(`/job/${jobId}` as any);
   };
 
-  const getLocationText = (jobPost: any): string => {
+  const getLocationText = (job: any): string => {
     // If contractor has contacted, show full address
-    if (jobPost.hasContacted) {
-      return jobPost.location?.address || 'Location not specified';
+    if (job.hasContacted) {
+      return job.location?.address || 'Location not specified';
     }
 
     // Calculate distance if we have both profile address and job location coordinates
     if (
       profileSettings.contractorAddress?.coordinates?.latitude &&
       profileSettings.contractorAddress?.coordinates?.longitude &&
-      jobPost.location?.coordinates?.latitude &&
-      jobPost.location?.coordinates?.longitude
+      job.location?.coordinates?.latitude &&
+      job.location?.coordinates?.longitude
     ) {
       const distance = calculateDistance(
         profileSettings.contractorAddress.coordinates.latitude,
         profileSettings.contractorAddress.coordinates.longitude,
-        jobPost.location.coordinates.latitude,
-        jobPost.location.coordinates.longitude
+        job.location.coordinates.latitude,
+        job.location.coordinates.longitude
       );
       return formatDistance(distance);
     }
@@ -230,18 +227,7 @@ export default function ContractorDashboard() {
   const isDark = colorScheme === 'dark';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.icon }]}>Welcome back,</Text>
-          <Text style={[styles.name, { color: colors.text }]}>
-            {user?.firstName} {user?.lastName}
-          </Text>
-        </View>
-        
-      </View>
-
+    <View style={styles.container}>
       {/* Search */}
       <View style={styles.filterContainer}>
         <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
@@ -456,28 +442,28 @@ export default function ContractorDashboard() {
         </View>
       </Modal>
 
-      {/* Job Posts List */}
+      {/* Jobs List */}
       <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        data={jobPosts}
-        keyExtractor={(item, index) => item.id || `job-post-${index}`}
-        renderItem={({ item: jobPost }) => (
+        data={jobs}
+        keyExtractor={(item, index) => item.id || `job-${index}`}
+        renderItem={({ item: job }) => (
           <TouchableOpacity
             style={[styles.jobCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-            onPress={() => jobPost.id && handleJobPostPress(jobPost.id)}
+            onPress={() => job.id && handleJobPress(job.id)}
             activeOpacity={0.7}>
             <View style={styles.jobCardHeader}>
               <View style={styles.jobCardTitleContainer}>
                 <View style={styles.jobCardTitleRow}>
                   <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
-                    {jobPost.jobTitle || jobPost.description
-                      ? (jobPost.jobTitle || jobPost.description).length > 60
-                        ? (jobPost.jobTitle || jobPost.description).substring(0, 60) + '...'
-                        : (jobPost.jobTitle || jobPost.description)
+                    {job.jobTitle || job.description
+                      ? (job.jobTitle || job.description).length > 60
+                        ? (job.jobTitle || job.description).substring(0, 60) + '...'
+                        : (job.jobTitle || job.description)
                       : 'No title'}
                   </Text>
-                  {jobPost.hasContacted && (
+                  {job.hasContacted && (
                     <View
                       style={[
                         styles.contactedBadge,
@@ -488,19 +474,19 @@ export default function ContractorDashboard() {
                     </View>
                   )}
                 </View>
-                {jobPost.jobNumber && (
+                {job.jobNumber && (
                   <Text style={[styles.jobNumber, { color: colors.icon }]}>
-                    Job #{jobPost.jobNumber}
+                    Job #{job.jobNumber}
                   </Text>
                 )}
-                {jobPost.jobSize && (
+                {job.jobSize && (
                   <View style={styles.jobSizeContainer}>
                     <Text style={[styles.jobSizeLabel, { color: colors.icon }]}>Job Size: </Text>
                     <Text style={[styles.jobSizeValue, { color: colors.tint }]}>
-                      {jobPost.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
-                      {jobPost.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
-                      {jobPost.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
-                      {jobPost.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
+                      {job.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
+                      {job.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
+                      {job.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
+                      {job.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
                     </Text>
                   </View>
                 )}
@@ -509,10 +495,10 @@ export default function ContractorDashboard() {
 
             <View style={styles.jobCardBody}>
               <View style={styles.categoriesContainer}>
-                {jobPost.categories && jobPost.categories.length > 0
-                  ? jobPost.categories.slice(0, 3).map((category: string) => (
+                {job.categories && job.categories.length > 0
+                  ? job.categories.slice(0, 3).map((category: string) => (
                       <View
-                        key={`${jobPost.id}-${category}`}
+                        key={`${job.id}-${category}`}
                         style={[
                           styles.categoryTag,
                           { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
@@ -523,9 +509,9 @@ export default function ContractorDashboard() {
                       </View>
                     ))
                   : null}
-                {jobPost.categories && jobPost.categories.length > 3 && (
+                {job.categories && job.categories.length > 3 && (
                   <Text style={[styles.moreCategories, { color: colors.icon }]}>
-                    +{jobPost.categories.length - 3}
+                    +{job.categories.length - 3}
                   </Text>
                 )}
               </View>
@@ -535,11 +521,11 @@ export default function ContractorDashboard() {
                   <IconSymbol name="location.fill" size={14} color={colors.icon} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.locationText, { color: colors.icon }]}>
-                      {getLocationText(jobPost)} {'  '}
+                      {getLocationText(job)} {'  '}
 
-                      {jobPost.location?.cityName && jobPost.location?.province && (
+                      {job.location?.cityName && job.location?.province && (
                       <Text style={[styles.cityProvinceText, { color: colors.icon }]}>
-                        {jobPost.location.cityName}, {jobPost.location.province}
+                        {job.location.cityName}, {job.location.province}
                       </Text>
                     )}
                     </Text>
@@ -547,8 +533,8 @@ export default function ContractorDashboard() {
                   </View>
                 </View>
                 <Text style={[styles.dateText, { color: colors.icon }]}>
-                  {jobPost.createdAt
-                    ? new Date(jobPost.createdAt).toLocaleDateString()
+                  {job.createdAt
+                    ? new Date(job.createdAt).toLocaleDateString()
                     : ''}
                 </Text>
               </View>
@@ -563,7 +549,7 @@ export default function ContractorDashboard() {
           ) : (
             <View style={styles.emptyContainer}>
               <IconSymbol name="doc.text" size={64} color={colors.icon} />
-              <Text style={[styles.emptyText, { color: colors.icon }]}>No job posts found</Text>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>No jobs found</Text>
               <Text style={[styles.emptySubtext, { color: colors.icon }]}>
                 Try adjusting your filters or radius
               </Text>
@@ -590,22 +576,6 @@ export default function ContractorDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: statusBarHeight,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  greeting: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: '700',
   },
   filterButton: {
     width: 40,

@@ -5,6 +5,7 @@ import type {
   IRegisterRequest,
   IUser,
   IAuthState,
+  IMode,
 } from '@/types';
 
 const initialState: IAuthState = {
@@ -13,6 +14,7 @@ const initialState: IAuthState = {
   isLoading: false,
   isAuthenticated: false,
   error: null,
+  mode: 'homeowner',
 };
 
 /**
@@ -119,6 +121,12 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<IUser>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+      // Set default mode based on user role
+      if (action.payload.role === 'contractor') {
+        state.mode = 'contractor';
+      } else {
+        state.mode = 'homeowner';
+      }
     },
     setCredentials: (state, action: PayloadAction<{ user: IUser; token: string }>) => {
       console.log('setCredentials', action.payload);
@@ -126,6 +134,22 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.error = null;
+      // Set default mode based on user role
+      if (action.payload.user.role === 'contractor') {
+        state.mode = 'contractor';
+      } else {
+        state.mode = 'homeowner';
+      }
+    },
+    toggleMode: (state) => {
+      if (state.user?.role === 'contractor') {
+        state.mode = state.mode === 'contractor' ? 'homeowner' : 'contractor';
+      }
+    },
+    setMode: (state, action: PayloadAction<IMode>) => {
+      if (state.user?.role === 'contractor') {
+        state.mode = action.payload;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -141,6 +165,12 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
+        // Set default mode based on user role
+        if (action.payload.user.role === 'contractor') {
+          state.mode = 'contractor';
+        } else {
+          state.mode = 'homeowner';
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -176,6 +206,7 @@ const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         state.error = null;
+        state.mode = 'homeowner';
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -194,6 +225,12 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
+        // Set default mode based on user role
+        if (action.payload.user.role === 'contractor') {
+          state.mode = 'contractor';
+        } else {
+          state.mode = 'homeowner';
+        }
       })
       .addCase(verifyEmailOTP.rejected, (state, action) => {
         state.isLoading = false;
@@ -226,6 +263,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, setCredentials } = authSlice.actions;
+export const { clearError, setUser, setCredentials, toggleMode, setMode } = authSlice.actions;
 export default authSlice.reducer;
 

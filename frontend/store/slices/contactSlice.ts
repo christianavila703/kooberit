@@ -15,14 +15,14 @@ const initialState: IContactState = {
 };
 
 /**
- * Fetch contacts by job post
+ * Fetch contacts by job
  */
-export const fetchContactsByJobPost = createAsyncThunk(
-  'contact/fetchByJobPost',
-  async (jobPostId: string, { rejectWithValue }) => {
+export const fetchContactsByJob = createAsyncThunk(
+  'contact/fetchByJob',
+  async (jobId: string, { rejectWithValue }) => {
     try {
-      const contacts = await contactService.getContactsByJobPost(jobPostId);
-      return { jobPostId, contacts };
+      const contacts = await contactService.getContactsByJob(jobId);
+      return { jobId, contacts };
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch contacts');
     }
@@ -54,20 +54,20 @@ const contactSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchContactsByJobPost.pending, (state) => {
+      .addCase(fetchContactsByJob.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(fetchContactsByJobPost.fulfilled, (state, action) => {
+      .addCase(fetchContactsByJob.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Store contacts by job post ID
+        // Store contacts by job ID
         state.contacts = action.payload.contacts;
         state.error = null;
       })
-      .addCase(fetchContactsByJobPost.rejected, (state, action) => {
+      .addCase(fetchContactsByJob.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
-      });
+      })
 
     builder
       .addCase(fetchHomeownerContacts.pending, (state) => {

@@ -1,6 +1,6 @@
 import User from './User';
 import JobPost from './JobPost';
-import Contact from './contact';
+import Contact from './Contact';
 import Chat from './Chat';
 import Message from './Message';
 import PaymentLog from './PaymentLog';

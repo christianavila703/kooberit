@@ -64,4 +64,9 @@ export const CONSTRUCTION_CATEGORIES = [
   'heating',
   'cooling',
   'electrical',
+  'new build structural',
+  'new build plumbing',
+  'new build HVAC',
+  'new build electrical',
+  'new build civil'
 ];

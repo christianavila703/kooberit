@@ -4,7 +4,7 @@ import {
   IPaymentLogAttributes,
   IPaymentLogCreationAttributes,
   IPaymentLogDocument,
-  PaymentStatus,
+  IPaymentStatus,
 } from '@/types';
 import logger from '@/utils/logger';
 
@@ -48,7 +48,7 @@ class PaymentLogService {
    */
   async updatePaymentLogStatus(
     paymentLogId: string,
-    status: PaymentStatus,
+    status: IPaymentStatus,
     updateData?: {
       errorMessage?: string;
       paymentTransactionId?: string;

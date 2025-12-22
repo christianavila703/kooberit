@@ -105,6 +105,16 @@ class JobService {
     }
 
     /**
+     * Post job to market (change status from pending to open)
+     */
+    async postJobToMarket(id: string): Promise<IJob> {
+        const response = await api.post<IApiResponse<IJob>>(
+            endpoints.jobs.postToMarket(id)
+        );
+        return response.data.data!;
+    }
+
+    /**
      * Delete job
      */
     async deleteJob(id: string): Promise<void> {

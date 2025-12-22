@@ -67,9 +67,9 @@ export const logoutUser = createAsyncThunk(
  */
 export const verifyEmailOTP = createAsyncThunk(
   'auth/verifyEmailOTP',
-  async ({ email, otpCode }: { email: string; otpCode: string }, { rejectWithValue }) => {
+  async ({ email, otpCode, inviteCode }: { email: string; otpCode: string; inviteCode?: string }, { rejectWithValue }) => {
     try {
-      const response = await apiService.verifyEmailOTP(email, otpCode);
+      const response = await apiService.verifyEmailOTP(email, otpCode, inviteCode);
       return response;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Email verification failed');

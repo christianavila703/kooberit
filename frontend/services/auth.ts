@@ -90,10 +90,10 @@ class AuthService {
   /**
    * Verify email with OTP
    */
-  async verifyEmailOTP(email: string, otpCode: string): Promise<IAuthResponse> {
+  async verifyEmailOTP(email: string, otpCode: string, inviteCode?: string): Promise<IAuthResponse> {
     const response = await api.post<IApiResponse<IAuthResponse>>(
       endpoints.auth.verifyEmailOTP,
-      { email, otpCode }
+      { email, otpCode, inviteCode }
     );
 
     if (response.data.data?.token) {

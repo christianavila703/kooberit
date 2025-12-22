@@ -210,6 +210,21 @@ export const closeJob = createAsyncThunk(
 );
 
 /**
+ * Post job to market
+ */
+export const postJobToMarket = createAsyncThunk(
+    'job/postToMarket',
+    async (id: string, { rejectWithValue }) => {
+        try {
+            const job = await jobService.postJobToMarket(id);
+            return job;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Failed to post job to market');
+        }
+    }
+);
+
+/**
  * Delete job
  */
 export const deleteJob = createAsyncThunk(
@@ -414,6 +429,28 @@ const jobSlice = createSlice({
                 state.homeowner.error = null;
             })
             .addCase(closeJob.rejected, (state, action) => {
+                state.homeowner.isLoading = false;
+                state.homeowner.error = action.payload as string;
+            });
+
+        // Post job to market
+        builder
+            .addCase(postJobToMarket.pending, (state) => {
+                state.homeowner.isLoading = true;
+                state.homeowner.error = null;
+            })
+            .addCase(postJobToMarket.fulfilled, (state, action) => {
+                state.homeowner.isLoading = false;
+                const index = state.homeowner.jobs.findIndex((j) => j.id === action.payload.id);
+                if (index !== -1) {
+                    state.homeowner.jobs[index] = action.payload;
+                }
+                if (state.homeowner.currentJob?.id === action.payload.id) {
+                    state.homeowner.currentJob = action.payload;
+                }
+                state.homeowner.error = null;
+            })
+            .addCase(postJobToMarket.rejected, (state, action) => {
                 state.homeowner.isLoading = false;
                 state.homeowner.error = action.payload as string;
             });

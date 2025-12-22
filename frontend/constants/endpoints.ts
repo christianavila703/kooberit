@@ -16,6 +16,7 @@ const endpoints = {
         getById: (id: string) => `/jobs/${id}`,
         update: (id: string) => `/jobs/${id}`,
         close: (id: string) => `/jobs/${id}/close`,
+        postToMarket: (id: string) => `/jobs/${id}/post`,
         delete: (id: string) => `/jobs/${id}`,
     },
     contacts: {
@@ -41,6 +42,13 @@ const endpoints = {
     payments: {
         process: '/payments/process',
         getStatus: (paymentIntentId: string) => `/payments/status/${paymentIntentId}`,
+    },
+    invitations: {
+        external: '/invitations/external',
+        internal: '/invitations/internal',
+        validate: (code: string) => `/invitations/validate/${code}`,
+        myInvitations: '/invitations/my-invitations',
+        countByJob: (jobId: string) => `/invitations/job/${jobId}/count`,
     },
 }
 

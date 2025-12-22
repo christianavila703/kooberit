@@ -27,6 +27,7 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<IUserRole>('homeowner');
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -132,16 +133,17 @@ export default function SignUpScreen() {
     }
 
     try {
-      const result = await dispatch(
-        registerUser({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          companyName: companyName.trim(),
-          email: email.trim(),
-          password,
-          role,
-        })
-      ).unwrap();
+        const result = await dispatch(
+          registerUser({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            companyName: companyName.trim(),
+            email: email.trim(),
+            password,
+            role,
+            inviteCode: inviteCodeInput || undefined,
+          })
+        ).unwrap();
       
       notificationService.success(
         'Verification Code Sent!',
@@ -151,7 +153,10 @@ export default function SignUpScreen() {
       // Navigate to OTP verification screen
       router.push({
         pathname: '/verify-email' as any,
-        params: { email: email.trim() },
+        params: { 
+          email: email.trim(),
+          ...(inviteCodeInput ? { inviteCode: inviteCodeInput } : {}),
+        },
       });
     } catch (err: any) {
       // Error is handled by the useEffect above
@@ -332,6 +337,53 @@ export default function SignUpScreen() {
                 <Text style={styles.errorText}>{errors.companyName}</Text>
               ) : null}
             </View>
+
+            {/* Invite Code Input - Only for Homeowner */}
+            {role === 'homeowner' && (
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>
+                  Invite Code <Text style={[styles.optionalLabel, { color: colors.icon }]}>(Optional)</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                      color: colors.text,
+                      borderColor: errors.inviteCode ? '#FF3B30' : 'transparent',
+                      borderWidth: errors.inviteCode ? 1 : 0,
+                    },
+                  ]}
+                  placeholder="Enter invite code (if you have one)"
+                  placeholderTextColor={colors.icon}
+                  value={inviteCodeInput}
+                  onChangeText={(text) => {
+                    setInviteCodeInput(text.trim().toUpperCase());
+                    if (errors.inviteCode) {
+                      setErrors({ ...errors, inviteCode: '' });
+                    }
+                  }}
+                  onBlur={() => {
+                    if (inviteCodeInput && inviteCodeInput.length > 0 && inviteCodeInput.length < 6) {
+                      setErrors({ ...errors, inviteCode: 'Invite code must be at least 6 characters' });
+                    } else if (errors.inviteCode) {
+                      setErrors({ ...errors, inviteCode: '' });
+                    }
+                  }}
+                  autoCapitalize="characters"
+                  editable={!isLoading}
+                  maxLength={20}
+                />
+                {errors.inviteCode ? (
+                  <Text style={styles.errorText}>{errors.inviteCode}</Text>
+                ) : null}
+                {inviteCodeInput && (
+                  <Text style={[styles.hintText, { color: colors.icon }]}>
+                    If you received an invitation email, enter the code here
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* Email Input */}
             <View style={styles.inputContainer}>
@@ -615,6 +667,15 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  optionalLabel: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  hintText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });
 

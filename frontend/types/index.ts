@@ -26,6 +26,7 @@ export interface IRegisterRequest {
   lastName: string;
   companyName?: string;
   role?: IUserRole;
+  inviteCode?: string;
 }
 
 export interface IUser {
@@ -106,7 +107,7 @@ export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'a
 
 export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 
-export type IJobType = 'single detached house' | 'semi detached house' | 'townhouse' | 'low rise building' | 'high rise building';
+export type IStructureType = 'single_detached_house' | 'semi_detached_house' | 'townhouse' | 'low_rise_building' | 'high_rise_building';
 
 export type IJob = {
   id: string;
@@ -114,6 +115,7 @@ export type IJob = {
   jobTitle: string;
   jobNumber: string;
   jobSize: IJobSize;
+  structureType: IStructureType;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -133,6 +135,7 @@ export type IJob = {
   status: IJobStatus;
   contractorContactsCount: number;
   hasContacted?: boolean;
+  hasInvitation?: boolean;
   createdAt?: string;
   updatedAt?: string;
   homeowner?: {
@@ -152,6 +155,7 @@ export type IJob = {
 export interface ICreateJobRequest {
   jobTitle: string;
   jobSize: IJobSize;
+  structureType: IStructureType;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -173,6 +177,7 @@ export interface ICreateJobRequest {
 export interface IUpdateJobRequest {
   jobTitle?: string;
   jobSize?: IJobSize;
+  structureType?: IStructureType;
   description?: string;
   categories?: string[];
   contractorLimit?: number;

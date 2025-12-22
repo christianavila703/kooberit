@@ -33,6 +33,8 @@ import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
 import { arraysEqual, calculateDistance, formatDistance } from '@/utils/helper';
 import { IProvince } from '@/types';
+import invitationService from '@/services/invitation';
+import notification from '@/services/notification';
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -55,6 +57,10 @@ export default function ContractorDashboard() {
   );
 
   const [showFilters, setShowFilters] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteType, setInviteType] = useState<'homeowner' | 'contractor'>('homeowner');
+  const [isInviting, setIsInviting] = useState(false);
   const [tempRadius, setTempRadius] = useState<number | null>(null);
   const [tempCategories, setTempCategories] = useState<string[]>([]);
   const [tempCities, setTempCities] = useState<string[]>([]);
@@ -192,6 +198,40 @@ export default function ContractorDashboard() {
 
   const handleJobPress = (jobId: string) => {
     router.push(`/job/${jobId}` as any);
+  };
+
+  const handleInviteHomeowner = () => {
+    setInviteType('homeowner');
+    setShowInviteModal(true);
+  };
+
+  const handleSendInvitation = async () => {
+    if (!inviteEmail.trim()) {
+      notification.error('Error', 'Please enter an email address');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      notification.error('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      await invitationService.createExternalInvitation({
+        inviteeEmail: inviteEmail.trim(),
+        inviteType: inviteType,
+      });
+      notification.success('Success', `Invitation sent to ${inviteEmail.trim()}`);
+      setShowInviteModal(false);
+      setInviteEmail('');
+    } catch (error: any) {
+      notification.error('Error', error.message || 'Failed to send invitation');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const getLocationText = (job: any): string => {
@@ -442,6 +482,70 @@ export default function ContractorDashboard() {
         </View>
       </Modal>
 
+      {/* Invite Homeowner Modal */}
+      <Modal visible={showInviteModal} onClose={() => setShowInviteModal(false)}>
+        <View style={styles.inviteModalContainer}>
+          <View style={styles.inviteModalHeader}>
+            <Text style={[styles.inviteModalTitle, { color: colors.text }]}>
+              Invite Homeowner
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowInviteModal(false)}
+              disabled={isInviting}>
+              <IconSymbol name="xmark.circle.fill" size={24} color={colors.icon} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inviteModalContent}>
+            <Text style={[styles.inviteModalLabel, { color: colors.text }]}>
+              Enter homeowner email address
+            </Text>
+            <TextInput
+              style={[
+                styles.inviteModalInput,
+                {
+                  backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
+                  color: colors.text,
+                },
+              ]}
+              placeholder="homeowner@example.com"
+              placeholderTextColor={colors.icon}
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              editable={!isInviting}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+            <Text style={[styles.inviteModalHint, { color: colors.icon }]}>
+              An invitation email will be sent with a signup link
+            </Text>
+          </View>
+          <View style={styles.inviteModalActions}>
+            <TouchableOpacity
+              style={[styles.inviteModalButton, styles.inviteModalButtonCancel]}
+              onPress={() => setShowInviteModal(false)}
+              disabled={isInviting}>
+              <Text style={[styles.inviteModalButtonText, { color: colors.text }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.inviteModalButton,
+                styles.inviteModalButtonPrimary,
+                { backgroundColor: colors.tint },
+                isInviting && styles.inviteModalButtonDisabled,
+              ]}
+              onPress={handleSendInvitation}
+              disabled={isInviting || !inviteEmail.trim()}>
+              {isInviting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.inviteModalButtonTextPrimary}>Send Invitation</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Jobs List */}
       <FlatList
         style={styles.scrollView}
@@ -463,16 +567,28 @@ export default function ContractorDashboard() {
                         : (job.jobTitle || job.description)
                       : 'No title'}
                   </Text>
-                  {job.hasContacted && (
-                    <View
-                      style={[
-                        styles.contactedBadge,
-                        { backgroundColor: isDark ? '#2E7D32' : '#4CAF50' },
-                      ]}>
-                      <IconSymbol name="checkmark.circle.fill" size={14} color="#FFFFFF" />
-                      <Text style={styles.contactedBadgeText}>Contacted</Text>
-                    </View>
-                  )}
+                  <View style={styles.badgesContainer}>
+                    {job.hasInvitation && (
+                      <View
+                        style={[
+                          styles.invitedBadge,
+                          { backgroundColor: isDark ? '#1976D2' : '#2196F3' },
+                        ]}>
+                        <IconSymbol name="envelope.fill" size={12} color="#FFFFFF" />
+                        <Text style={styles.invitedBadgeText}>Invited</Text>
+                      </View>
+                    )}
+                    {job.hasContacted && (
+                      <View
+                        style={[
+                          styles.contactedBadge,
+                          { backgroundColor: isDark ? '#2E7D32' : '#4CAF50' },
+                        ]}>
+                        <IconSymbol name="checkmark.circle.fill" size={14} color="#FFFFFF" />
+                        <Text style={styles.contactedBadgeText}>Contacted</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 {job.jobNumber && (
                   <Text style={[styles.jobNumber, { color: colors.icon }]}>
@@ -569,6 +685,14 @@ export default function ContractorDashboard() {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.tint} />
         }
       />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.tint }]}
+        onPress={handleInviteHomeowner}
+        activeOpacity={0.8}>
+        <IconSymbol name="person.badge.plus.fill" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -722,7 +846,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 100,
     flexGrow: 1,
   },
   loadingMoreContainer: {
@@ -793,6 +917,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  badgesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  invitedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   contactedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -800,7 +943,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
   },
   contactedBadgeText: {
     color: '#FFFFFF',
@@ -900,6 +1042,95 @@ const styles = StyleSheet.create({
   },
   provinceButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  inviteModalContainer: {
+    padding: 24,
+  },
+  inviteModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  inviteModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+  },
+  inviteModalContent: {
+    marginBottom: 24,
+  },
+  inviteModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  inviteModalInput: {
+    height: 56,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 8,
+  },
+  inviteModalHint: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  inviteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inviteModalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inviteModalButtonCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  inviteModalButtonPrimary: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  inviteModalButtonDisabled: {
+    opacity: 0.6,
+  },
+  inviteModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  inviteModalButtonTextPrimary: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

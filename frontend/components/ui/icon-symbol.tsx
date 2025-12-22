@@ -36,6 +36,7 @@ const MAPPING = {
   'location.fill': 'location-on',
   'person.2.fill': 'people',
   'person.2': 'people',
+  'person.badge.plus.fill': 'person-add',
   'pencil': 'edit',
   'xmark': 'close',
   'xmark.circle.fill': 'cancel',
@@ -62,6 +63,7 @@ const MAPPING = {
   'doc': 'description',
   'clock.fill': 'access-time',
   'mappin': 'place',
+  'envelope.fill': 'mail',
 } as IconMapping;
 
 /**

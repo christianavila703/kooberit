@@ -20,8 +20,9 @@ import { verifyEmailOTP, resendVerificationOTP, clearError } from '@/store/slice
 import { IRootState } from '@/store';
 
 export default function VerifyEmailScreen() {
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; inviteCode?: string }>();
   const email = params.email || '';
+  const inviteCode = params.inviteCode;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isResending, setIsResending] = useState(false);
   const [localError, setLocalError] = useState('');
@@ -92,7 +93,7 @@ export default function VerifyEmailScreen() {
     }
 
     setLocalError('');
-    await dispatch(verifyEmailOTP({ email, otpCode }));
+    await dispatch(verifyEmailOTP({ email, otpCode, inviteCode }));
   };
 
   const handleResend = async () => {

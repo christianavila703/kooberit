@@ -32,6 +32,7 @@ export default function CreateJobScreen() {
 
   const [jobTitle, setJobTitle] = useState('');
   const [jobSize, setJobSize] = useState<'micro' | 'small' | 'big' | 'very_big' | ''>('');
+  const [structureType, setStructureType] = useState<'single_detached_house' | 'semi_detached_house' | 'townhouse' | 'low_rise_building' | 'high_rise_building' | ''>('');
   const [description, setDescription] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contractorLimit, setContractorLimit] = useState(3);
@@ -122,6 +123,10 @@ export default function CreateJobScreen() {
       newErrors.jobSize = 'Job size is required';
     }
 
+    if (!structureType) {
+      newErrors.structureType = 'Type of structure is required';
+    }
+
     if (description.trim().length < 10) {
       newErrors.description = 'Description must be at least 10 characters';
     }
@@ -161,6 +166,7 @@ export default function CreateJobScreen() {
         createJob({
           jobTitle: jobTitle.trim(),
           jobSize: jobSize as 'micro' | 'small' | 'big' | 'very_big',
+          structureType: structureType as 'single_detached_house' | 'semi_detached_house' | 'townhouse' | 'low_rise_building' | 'high_rise_building',
           description: description.trim(),
           categories: selectedCategories,
           contractorLimit,
@@ -300,6 +306,57 @@ export default function CreateJobScreen() {
             ))}
           </View>
           {errors.jobSize && <Text style={styles.errorText}>{errors.jobSize}</Text>}
+        </View>
+
+        {/* Structure Type */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Type of Structure</Text>
+          <Text style={[styles.subLabel, { color: colors.icon }]}>
+            Please select the type of structure
+          </Text>
+          <View style={styles.jobSizeContainer}>
+            {[
+              { value: 'single_detached_house', label: 'Single Detached House' },
+              { value: 'semi_detached_house', label: 'Semi Detached House' },
+              { value: 'townhouse', label: 'Townhouse' },
+              { value: 'low_rise_building', label: 'Low Rise Building' },
+              { value: 'high_rise_building', label: 'High Rise Building' },
+            ].map((type) => (
+              <TouchableOpacity
+                key={type.value}
+                style={[
+                  styles.jobSizeButton,
+                  {
+                    backgroundColor:
+                      structureType === type.value
+                        ? colors.tint
+                        : isDark
+                        ? '#1E1E1E'
+                        : '#F5F5F5',
+                    borderColor: structureType === type.value ? colors.tint : isDark ? '#2E2E2E' : '#E0E0E0',
+                  },
+                ]}
+                onPress={() => {
+                  setStructureType(type.value as any);
+                  if (errors.structureType) {
+                    setErrors({ ...errors, structureType: '' });
+                  }
+                }}
+                disabled={isLoading}>
+                <Text
+                  style={[
+                    styles.jobSizeLabel,
+                    {
+                      color: structureType === type.value ? '#FFFFFF' : colors.text,
+                      fontWeight: structureType === type.value ? '600' : '400',
+                    },
+                  ]}>
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {errors.structureType && <Text style={styles.errorText}>{errors.structureType}</Text>}
         </View>
 
         {/* Description */}

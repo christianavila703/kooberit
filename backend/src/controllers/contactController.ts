@@ -124,7 +124,7 @@ export const createContact = async (req: Request, res: Response) => {
     }
 
     // Get job to find homeowner
-    const { Job } = await import('@/models');
+    const { Job, User } = await import('@/models');
     const job = await Job.findById(jobId)
       .populate('homeowner', 'firstName lastName email')
       .exec();
@@ -149,15 +149,36 @@ export const createContact = async (req: Request, res: Response) => {
 
     // Send email notification to homeowner
     try {
-      const homeowner = (job as any).homeowner || { email: '', firstName: '', lastName: '' };
-      await emailService.sendContractorContactNotification(
-        homeowner.email,
-        `${homeowner.firstName} ${homeowner.lastName}`,
-        `${user.firstName} ${user.lastName}`,
-        job.jobTitle,
-        job.jobNumber,
-        job.description
-      );
+      // Get homeowner - try from populated field first, then fetch directly if needed
+      let homeowner = (job as any).homeowner;
+      
+      // If homeowner is not populated or is null, fetch it directly
+      if (!homeowner || !homeowner.email) {
+        if (job.homeownerId) {
+          homeowner = await User.findById(job.homeownerId)
+            .select('firstName lastName email')
+            .exec();
+        }
+      }
+
+      // Validate homeowner and email before sending
+      if (homeowner && homeowner.email && homeowner.email.trim()) {
+        const homeownerName = homeowner.firstName && homeowner.lastName
+          ? `${homeowner.firstName} ${homeowner.lastName}`
+          : homeowner.firstName || homeowner.lastName || 'Homeowner';
+        
+        await emailService.sendContractorContactNotification(
+          homeowner.email.trim(),
+          homeownerName,
+          `${user.firstName} ${user.lastName}`,
+          job.jobTitle || job.description || 'Your Job Post',
+          job.jobNumber || 'N/A',
+          job.description || ''
+        );
+        logger.info(`Email notification sent to homeowner ${homeowner.email} for contact ${contact._id}`);
+      } else {
+        logger.warn(`Cannot send email notification: homeowner email is missing for job ${jobId}, homeownerId: ${job.homeownerId}`);
+      }
     } catch (emailError) {
       logger.error('Failed to send email notification:', emailError);
       // Don't fail the request if email fails

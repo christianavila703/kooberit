@@ -30,8 +30,23 @@ class EmailService {
         return;
       }
 
+      // Validate email address
+      if (!to || !to.trim()) {
+        logger.warn(`Cannot send email: recipient email is empty. Subject: ${subject}`);
+        return;
+      }
+
+      const trimmedTo = to.trim();
+      
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedTo)) {
+        logger.warn(`Cannot send email: invalid email address "${trimmedTo}". Subject: ${subject}`);
+        return;
+      }
+
       const msg = {
-        to,
+        to: trimmedTo,
         from: `Kooberit <${SENDGRID_FROM_EMAIL}>`,
         subject,
         text: text || subject,
@@ -39,7 +54,7 @@ class EmailService {
       };
 
       await sgMail.send(msg);
-      logger.info(`Email sent to ${to}: ${subject}`);
+      logger.info(`Email sent to ${trimmedTo}: ${subject}`);
     } catch (error: any) {
       logger.error('Error sending email:', error);
       throw error;
@@ -71,6 +86,11 @@ class EmailService {
     };
     const formattedJobSize = jobSizeLabels[jobSize] || jobSize;
     
+    // Format distance similar to frontend formatDistance function
+    // Round to nearest 25km increment, but minimum 25km
+    const roundedDistance = Math.max(25, Math.round(distance / 25) * 25);
+    const formattedDistance = `Within ${roundedDistance} km`;
+    
     const html = `
       <!DOCTYPE html>
       <html>
@@ -99,15 +119,14 @@ class EmailService {
             </div>
             <div class="content">
               <p>Hi ${contractorName},</p>
-              <p>A new job post has been posted within ${distance.toFixed(1)} km of your location!</p>
+              <p>A new job post has been posted ${formattedDistance.toLowerCase()} of your location!</p>
               <div class="job-details">
                 <div class="job-header">
                   <h3 class="job-title">${jobTitle}</h3>
                   <div class="job-meta">
                     <strong>Job Number:</strong> ${jobNumber}<br>
                     <strong>Job Size:</strong> ${formattedJobSize}<br>
-                    <strong>Location:</strong> ${location}<br>
-                    <strong>Distance:</strong> ${distance.toFixed(1)} km away
+                    <strong>Location:</strong> ${formattedDistance} (contact to view full address)
                   </div>
                 </div>
                 <h3>Job Description:</h3>

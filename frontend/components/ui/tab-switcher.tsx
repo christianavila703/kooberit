@@ -12,9 +12,18 @@ interface TabSwitcherProps {
     icon: string;
   };
   isDark: boolean;
+  contractorUnreadCount?: number;
+  homeownerUnreadCount?: number;
 }
 
-export function TabSwitcher({ value, onValueChange, colors, isDark }: TabSwitcherProps) {
+export const TabSwitcher = React.memo(function TabSwitcher({ 
+  value, 
+  onValueChange, 
+  colors, 
+  isDark,
+  contractorUnreadCount = 0,
+  homeownerUnreadCount = 0,
+}: TabSwitcherProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -29,11 +38,16 @@ export function TabSwitcher({ value, onValueChange, colors, isDark }: TabSwitche
         ]}
         onPress={() => onValueChange('contractor')}
         activeOpacity={0.7}>
-        <IconSymbol
-          name="person.2.fill"
-          size={18}
-          color={value === 'contractor' ? '#fff' : colors.icon}
-        />
+        <View style={styles.iconContainer}>
+          <IconSymbol
+            name="person.2.fill"
+            size={18}
+            color={value === 'contractor' ? '#fff' : colors.icon}
+          />
+          {contractorUnreadCount > 0 && (
+            <View style={styles.notificationDot} />
+          )}
+        </View>
         <Text
           style={[
             styles.tabText,
@@ -57,11 +71,16 @@ export function TabSwitcher({ value, onValueChange, colors, isDark }: TabSwitche
         ]}
         onPress={() => onValueChange('homeowner')}
         activeOpacity={0.7}>
-        <IconSymbol
-          name="person.fill"
-          size={18}
-          color={value === 'homeowner' ? '#fff' : colors.icon}
-        />
+        <View style={styles.iconContainer}>
+          <IconSymbol
+            name="person.fill"
+            size={18}
+            color={value === 'homeowner' ? '#fff' : colors.icon}
+          />
+          {homeownerUnreadCount > 0 && (
+            <View style={styles.notificationDot} />
+          )}
+        </View>
         <Text
           style={[
             styles.tabText,
@@ -74,7 +93,7 @@ export function TabSwitcher({ value, onValueChange, colors, isDark }: TabSwitche
       </TouchableOpacity>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -96,6 +115,20 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF3B30',
+    borderWidth: 1.5,
+    borderColor: '#FF3B30',
   },
 });
 

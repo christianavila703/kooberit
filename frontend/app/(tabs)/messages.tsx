@@ -27,6 +27,8 @@ export default function MessagesScreen() {
   const dispatch = useAppDispatch();
   const { user, mode } = useAppSelector((state: IRootState) => state.auth);
   const { chats, unreadCount, isLoading } = useAppSelector((state) => state.chat[mode]);
+  const contractorUnreadCount = useAppSelector((state) => state.chat.contractor.unreadCount);
+  const homeownerUnreadCount = useAppSelector((state) => state.chat.homeowner.unreadCount);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
@@ -156,11 +158,6 @@ export default function MessagesScreen() {
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
-          {unreadCount > 0 && (
-            <View style={[styles.unreadBadge, { backgroundColor: colors.tint }]}>
-              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
         </View>
         
         {showToggle && (
@@ -169,6 +166,8 @@ export default function MessagesScreen() {
             onValueChange={handleModeChange}
             colors={colors}
             isDark={isDark}
+            contractorUnreadCount={contractorUnreadCount}
+            homeownerUnreadCount={homeownerUnreadCount}
           />
         )}
       </View>
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: statusBarHeight,
+    paddingTop: statusBarHeight + 9,
     paddingHorizontal: 20,
     paddingBottom: 16,
     flexDirection: 'row',

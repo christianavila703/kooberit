@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
+import { useMemo, useCallback } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Colors } from "@/constants/theme";
@@ -17,19 +18,19 @@ export default function DashboardScreen() {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
 
-    const isDark = colorScheme === 'dark';
-    const isContractor = user?.role === 'contractor';
+    const isDark = useMemo(() => colorScheme === 'dark', [colorScheme]);
+    const isContractor = useMemo(() => user?.role === 'contractor', [user?.role]);
     const showToggle = isContractor;
 
-    const handleModeChange = (newMode: 'contractor' | 'homeowner') => {
+    const handleModeChange = useCallback((newMode: 'contractor' | 'homeowner') => {
         dispatch(setMode(newMode));
-    };
+    }, [dispatch]);
 
     // Determine which dashboard to show based on mode
-    const showContractorDashboard = isContractor && mode === 'contractor';
+    const showContractorDashboard = useMemo(() => isContractor && mode === 'contractor', [isContractor, mode]);
 
     // Format name: if full name > 14 chars, show only first name (max 14 chars)
-    const formatName = () => {
+    const formattedName = useMemo(() => {
         if (!user?.firstName) return '';
         const fullName = `${user.firstName} ${user.lastName || ''}`.trim();
         if (fullName.length > 14) {
@@ -38,7 +39,7 @@ export default function DashboardScreen() {
                 : user.firstName;
         }
         return fullName;
-    };
+    }, [user?.firstName, user?.lastName]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -47,7 +48,7 @@ export default function DashboardScreen() {
                 <View>
                     <Text style={[styles.greeting, { color: colors.icon }]}>Welcome back,</Text>
                     <Text style={[styles.name, { color: colors.text }]}>
-                        {formatName()}
+                        {formattedName}
                     </Text>
                 </View>
 

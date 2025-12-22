@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: statusBarHeight,
+    paddingTop: statusBarHeight + 9,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },

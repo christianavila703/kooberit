@@ -108,7 +108,6 @@ export default function ChatScreen() {
 
         // Listen for read receipts (when other user marks messages as read)
         socketService.on('messages_read', (data: { chatId: string; userId: string }) => {
-          console.log('messages_read', data);
           if (data.chatId === chatId && data.userId !== user?.id) {
             dispatch(markMessagesAsReadInChat({ mode, chatId: chatId, currentUserId: data.userId }));
           }

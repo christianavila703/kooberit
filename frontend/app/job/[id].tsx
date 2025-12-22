@@ -283,12 +283,20 @@ export default function JobDetailsScreen() {
                 )}
               </View>
             ) : (
+              currentJob.status === 'open' && currentJob.contractorContactsCount < currentJob.contractorLimit
+              ? (
               <TouchableOpacity
                 style={[styles.contactButton, { backgroundColor: colors.tint }]}
                 onPress={handleContactHomeowner}>
                 <IconSymbol name="creditcard.fill" size={20} color="#FFFFFF" />
                 <Text style={styles.contactButtonText}>Contact Homeowner ($19.99)</Text>
               </TouchableOpacity>
+              ) : (
+                <View style={styles.contactButtonDisabled}>
+                  <IconSymbol name="lock.fill" size={20} color="#FFFFFF" />
+                  <Text style={styles.contactButtonTextDisabled}>Contact Limit Reached</Text>
+                </View>
+              )
             )}
           </View>
         )}
@@ -593,6 +601,19 @@ const styles = StyleSheet.create({
   },
   chatButtonText: {
     color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  contactButtonDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  contactButtonTextDisabled: {
     fontSize: 18,
     fontWeight: '600',
   },

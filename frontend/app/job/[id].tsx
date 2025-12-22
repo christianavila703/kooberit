@@ -27,14 +27,14 @@ export default function JobDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const { currentJob, isLoading } = useAppSelector((state) => state.job.homeowner);
-  const { user } = useAppSelector((state: IRootState) => state.auth);
+  const { user, mode } = useAppSelector((state: IRootState) => state.auth);
   const [contractorContacts, setContractorContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [hasContacted, setHasContacted] = useState(false);
   const [contactData, setContactData] = useState<any>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const isContractor = user?.role === 'contractor';
+  const isContractor = user?.role === 'contractor' && mode === 'contractor';
 
   useEffect(() => {
     if (id) {

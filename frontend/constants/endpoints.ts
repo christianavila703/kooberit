@@ -20,7 +20,6 @@ const endpoints = {
     },
     contacts: {
         getByJob: (jobId: string) => `/contacts/job/${jobId}`,
-        getHomeowner: '/contacts/homeowner',
         checkContact: (jobId: string) => `/contacts/check/${jobId}`,
         create: '/contacts',
     },

@@ -28,16 +28,6 @@ class ContactService {
   }
 
   /**
-   * Get all contractor contacts for homeowner
-   */
-  async getHomeownerContacts(): Promise<IContact[]> {
-    const response = await api.get<IApiResponse<IContact[]>>(
-      endpoints.contacts.getHomeowner
-    );
-    return response.data.data || [];
-  }
-
-  /**
    * Check if contractor has contacted a job
    */
   async checkContact(jobId: string): Promise<{ hasContacted: boolean; contact: IContact | null }> {
@@ -66,8 +56,6 @@ class ContactService {
     paymentMethodId: string;
     cardholderName: string;
     saveCard: boolean;
-    // Legacy field for backward compatibility
-    jobId?: string;
   }): Promise<{ success: boolean; chatId?: string; error?: string }> {
     // Use jobId if provided, otherwise fall back to jobId for backward compatibility
     const finalJobId = data.jobId || data.jobId;

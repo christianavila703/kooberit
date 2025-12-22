@@ -29,21 +29,6 @@ export const fetchContactsByJob = createAsyncThunk(
   }
 );
 
-/**
- * Fetch homeowner contacts
- */
-export const fetchHomeownerContacts = createAsyncThunk(
-  'contact/fetchHomeowner',
-  async (_, { rejectWithValue }) => {
-    try {
-      const contacts = await contactService.getHomeownerContacts();
-      return contacts;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch contacts');
-    }
-  }
-);
-
 const contactSlice = createSlice({
   name: 'contact',
   initialState,
@@ -68,21 +53,6 @@ const contactSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-
-    builder
-      .addCase(fetchHomeownerContacts.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchHomeownerContacts.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.contacts = action.payload;
-        state.error = null;
-      })
-      .addCase(fetchHomeownerContacts.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
   },
 });
 

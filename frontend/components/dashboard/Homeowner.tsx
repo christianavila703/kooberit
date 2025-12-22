@@ -16,25 +16,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-export default function TabIndex() {
-  const { user } = useAppSelector((state) => state.auth);
-  const role = user?.role || 'homeowner';
-
-  // For contractors, they should use contractor-dashboard tab
-  // This index tab is for homeowners only
-  if (role === 'contractor') {
-    return null; // Contractor will use contractor-dashboard tab
-  }
-
-  // Homeowner dashboard
-  return <HomeownerDashboard />;
-}
-
-function HomeownerDashboard() {
+export default function HomeownerDashboard() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { jobs, isLoading } = useAppSelector((state) => state.job.homeowner);
-  const { user } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);

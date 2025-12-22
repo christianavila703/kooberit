@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -36,8 +36,8 @@ export default function ChatScreen() {
   const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
-  const { currentChat, messages, isLoading } = useAppSelector((state) => state.chat);
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, mode } = useAppSelector((state) => state.auth);
+  const { currentChat, messages, isLoading } = useAppSelector((state) => state.chat[mode]);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -49,6 +49,8 @@ export default function ChatScreen() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const isNavigatingToMessagesRef = useRef(false);
+
+  const isContractor = user?.role === 'contractor' && mode === 'contractor';
 
   useEffect(() => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
@@ -84,7 +86,7 @@ export default function ChatScreen() {
         socketService.on('new_message', (message: any) => {
           // Only add if message matches current chat
           if (message.chatId === chatId) {
-            dispatch(addMessage({ chatId: chatId, message }));
+            dispatch(addMessage({ mode, chatId: chatId, message }));
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
@@ -108,7 +110,7 @@ export default function ChatScreen() {
         socketService.on('messages_read', (data: { chatId: string; userId: string }) => {
           console.log('messages_read', data);
           if (data.chatId === chatId && data.userId !== user?.id) {
-            dispatch(markMessagesAsReadInChat({ chatId: chatId, currentUserId: data.userId }));
+            dispatch(markMessagesAsReadInChat({ mode, chatId: chatId, currentUserId: data.userId }));
           }
         });
       }
@@ -135,7 +137,7 @@ export default function ChatScreen() {
         // Small delay to ensure messages are loaded
         const timer = setTimeout(() => {
           // Mark messages as read via API (Redux will update state automatically)
-          dispatch(markMessagesAsRead(chatId));
+          dispatch(markMessagesAsRead({ chatId, mode }));
         }, 300);
 
         return () => clearTimeout(timer);
@@ -154,28 +156,28 @@ export default function ChatScreen() {
     }
   }, [messages, id, dispatch]);
 
-  const loadChat = async () => {
+  const loadChat = useCallback(async () => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
     const chatId = Array.isArray(id) ? id[0] : id;
     if (!chatId || typeof chatId !== 'string') return;
     try {
-      await dispatch(fetchChatById(chatId)).unwrap();
+      await dispatch(fetchChatById({ id: chatId, mode })).unwrap();
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load chat');
       router.back();
     }
-  };
+  }, [id, dispatch, router]);
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
     const chatId = Array.isArray(id) ? id[0] : id;
     if (!chatId || typeof chatId !== 'string') return;
     try {
-      await dispatch(fetchChatMessages({ chatId: chatId })).unwrap();
+      await dispatch(fetchChatMessages({ chatId: chatId, mode })).unwrap();
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load messages');
     }
-  };
+  }, [id, dispatch]);
 
   const handleSendMessage = async () => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
@@ -192,6 +194,7 @@ export default function ChatScreen() {
       await dispatch(
         sendMessage({
           chatId: chatId,
+          mode,
           data: {
             content: text,
             type: 'text',
@@ -247,6 +250,7 @@ export default function ChatScreen() {
           await dispatch(
             sendMessage({
               chatId: chatId,
+              mode,
               data: {
                 content,
                 type: messageType,
@@ -330,7 +334,8 @@ export default function ChatScreen() {
 
   const getChatPartner = () => {
     if (!currentChat) return null;
-    if (user?.role === 'homeowner') {
+    // Use mode instead of user?.role to support contractor switching to homeowner mode
+    if (!isContractor) {
       return currentChat.contractor;
     }
     return currentChat.homeowner;
@@ -489,8 +494,8 @@ export default function ChatScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      {/* Homeowner Info Section (for contractors) */}
-      {user?.role === 'contractor' && currentChat?.homeowner && (
+      {/* Homeowner Info Section (for contractors in contractor mode) */}
+      {isContractor && currentChat?.homeowner && (
         <View style={[styles.infoSection, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5', borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
           <View style={styles.infoContent}>
             <View style={styles.infoHeader}>
@@ -506,6 +511,62 @@ export default function ChatScreen() {
             {currentChat.homeowner.phone && (
               <Text style={[styles.infoPhone, { color: colors.icon }]}>
                 {currentChat.homeowner.phone}
+              </Text>
+            )}
+            {/* Job Status Indicator */}
+            {currentChat.jobId && (
+              <View style={styles.jobStatusContainer}>
+                {!currentChat.job ? (
+                  <View style={[styles.jobStatusBadge, { backgroundColor: '#F44336' }]}>
+                    <IconSymbol name="exclamationmark.triangle.fill" size={12} color="#FFFFFF" />
+                    <Text style={styles.jobStatusText}>Job Deleted</Text>
+                  </View>
+                ) : currentChat.job.status === 'closed' ? (
+                  <View style={[styles.jobStatusBadge, { backgroundColor: '#9E9E9E' }]}>
+                    <IconSymbol name="lock.fill" size={12} color="#FFFFFF" />
+                    <Text style={styles.jobStatusText}>Job Closed</Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </View>
+          {currentChat.jobId && (
+            <TouchableOpacity
+              style={[
+                styles.jobButton,
+                { backgroundColor: colors.tint },
+                !currentChat.job && styles.jobButtonDisabled,
+              ]}
+              onPress={() => {
+                if (currentChat.job) {
+                  router.push(`/job/${currentChat.jobId}` as any);
+                }
+              }}
+              disabled={!currentChat.job}>
+              <IconSymbol name="briefcase.fill" size={16} color="#FFFFFF" />
+              <Text style={styles.jobButtonText}>View Job</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Contractor Info Section (for homeowners or contractors in homeowner mode) */}
+      {!isContractor && currentChat?.contractor && (
+        <View style={[styles.infoSection, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5', borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+          <View style={styles.infoContent}>
+            <View style={styles.infoHeader}>
+              <IconSymbol name="person.fill" size={20} color={colors.tint} />
+              <Text style={[styles.infoTitle, { color: colors.text }]}>Contractor</Text>
+            </View>
+            <Text style={[styles.infoName, { color: colors.text }]}>
+              {currentChat.contractor.firstName} {currentChat.contractor.lastName}
+            </Text>
+            <Text style={[styles.infoEmail, { color: colors.icon }]}>
+              {currentChat.contractor.email}
+            </Text>
+            {currentChat.contractor.phone && (
+              <Text style={[styles.infoPhone, { color: colors.icon }]}>
+                {currentChat.contractor.phone}
               </Text>
             )}
             {/* Job Status Indicator */}
@@ -576,7 +637,7 @@ export default function ChatScreen() {
               
               if (hasUnreadMessages) {
                 // Mark messages as read via API (Redux will update state automatically)
-                dispatch(markMessagesAsRead(chatId));
+                dispatch(markMessagesAsRead({ chatId, mode }));
               }
             }
           }}

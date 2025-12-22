@@ -14,9 +14,10 @@ class ChatService {
   /**
    * Get all chats for user
    */
-  async getUserChats(): Promise<IChat[]> {
+  async getUserChats(mode: 'homeowner' | 'contractor'): Promise<IChat[]> {
     const response = await api.get<IApiResponse<IChat[]>>(
-      endpoints.chats.getAll
+      endpoints.chats.getAll,
+      { params: { role: mode } }
     );
     return response.data.data || [];
   }
@@ -67,9 +68,10 @@ class ChatService {
   /**
    * Get unread count
    */
-  async getUnreadCount(): Promise<number> {
+  async getUnreadCount(mode: 'homeowner' | 'contractor'): Promise<number> {
     const response = await api.get<IApiResponse<{ count: number }>>(
-      endpoints.chats.getUnreadCount
+      endpoints.chats.getUnreadCount,
+      { params: { role: mode } }
     );
     return response.data.data?.count || 0;
   }

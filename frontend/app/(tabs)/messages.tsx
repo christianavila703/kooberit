@@ -12,36 +12,46 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchUserChats, fetchUnreadCount } from '@/store/slices/chatSlice';
+import { setMode } from '@/store/slices/authSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { TabSwitcher } from '@/components/ui/tab-switcher';
 import socketService from '@/services/socket';
 import { statusBarHeight } from '@/constants/resources';
+import { IRootState } from '@/store/index';
 
 export default function MessagesScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { chats, unreadCount, isLoading } = useAppSelector((state) => state.chat);
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, mode } = useAppSelector((state: IRootState) => state.auth);
+  const { chats, unreadCount, isLoading } = useAppSelector((state) => state.chat[mode]);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
+  
+  const isContractor = user?.role === 'contractor' && mode === 'contractor';
+  const showToggle = user?.role === 'contractor';
+  
+  const handleModeChange = (newMode: 'contractor' | 'homeowner') => {
+    dispatch(setMode(newMode));
+  };
   const loadChats = useCallback(async () => {
     try {
-      await dispatch(fetchUserChats()).unwrap();
+      await dispatch(fetchUserChats(mode)).unwrap();
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load chats');
     }
-  }, [dispatch]);
+  }, [dispatch, mode]);
 
   const loadUnreadCount = useCallback(async () => {
     try {
-      await dispatch(fetchUnreadCount()).unwrap();
+      await dispatch(fetchUnreadCount(mode)).unwrap();
     } catch (error: any) {
       // Silently fail
     }
-  }, [dispatch]);
+  }, [dispatch, mode]);
 
   // Store handlers in refs so they can be cleaned up properly
   const handlersRef = useRef<{
@@ -109,7 +119,7 @@ export default function MessagesScreen() {
           handlersRef.current.handleMessagesRead = null;
         }
       };
-    }, [loadChats, loadUnreadCount, user?.id])
+    }, [isContractor])
   );
 
   const onRefresh = async () => {
@@ -123,14 +133,16 @@ export default function MessagesScreen() {
   };
 
   const getChatPartner = (chat: any) => {
-    if (user?.role === 'homeowner') {
+    // Use mode instead of user?.role to support contractor switching to homeowner mode
+    if (!isContractor) {
       return chat.contractor;
     }
     return chat.homeowner;
   };
 
   const getUnreadCount = (chat: any) => {
-    if (user?.role === 'homeowner') {
+    // Use mode instead of user?.role to support contractor switching to homeowner mode
+    if (!isContractor) {
       return chat.homeownerUnreadCount;
     }
     return chat.contractorUnreadCount;
@@ -142,11 +154,22 @@ export default function MessagesScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
-        {unreadCount > 0 && (
-          <View style={[styles.unreadBadge, { backgroundColor: colors.tint }]}>
-            <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-          </View>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
+          {unreadCount > 0 && (
+            <View style={[styles.unreadBadge, { backgroundColor: colors.tint }]}>
+              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+        
+        {showToggle && (
+          <TabSwitcher
+            value={mode}
+            onValueChange={handleModeChange}
+            colors={colors}
+            isDark={isDark}
+          />
         )}
       </View>
 
@@ -159,7 +182,9 @@ export default function MessagesScreen() {
           <IconSymbol name="message" size={64} color={colors.icon} />
           <Text style={[styles.emptyText, { color: colors.icon }]}>No messages yet</Text>
           <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-            Start a conversation with a contractor
+            {!isContractor 
+              ? 'Start a conversation with a contractor'
+              : 'Start a conversation with a homeowner'}
           </Text>
         </View>
       ) : (
@@ -228,6 +253,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   headerTitle: {
     fontSize: 28,

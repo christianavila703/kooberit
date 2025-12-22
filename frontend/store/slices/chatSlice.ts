@@ -4,24 +4,45 @@ import type {
   IChat,
   IMessage,
   ISendMessageRequest,
+  IMode
 } from '@/types';
 
 interface IChatState {
-  chats: IChat[];
-  currentChat: IChat | null;
-  messages: { [chatId: string]: IMessage[] };
-  unreadCount: number;
-  isLoading: boolean;
-  error: string | null;
+  contractor: {
+    chats: IChat[];
+    currentChat: IChat | null;
+    messages: { [chatId: string]: IMessage[] };
+    unreadCount: number;
+    isLoading: boolean;
+    error: string | null;
+  };
+  homeowner: {
+    chats: IChat[];
+    currentChat: IChat | null;
+    messages: { [chatId: string]: IMessage[] };
+    unreadCount: number;
+    isLoading: boolean;
+    error: string | null;
+  };
 }
 
 const initialState: IChatState = {
-  chats: [],
-  currentChat: null,
-  messages: {},
-  unreadCount: 0,
-  isLoading: false,
-  error: null,
+  contractor: {
+    chats: [],
+    currentChat: null,
+    messages: {},
+    unreadCount: 0,
+    isLoading: false,
+    error: null,
+  },
+  homeowner: {
+    chats: [],
+    currentChat: null,
+    messages: {},
+    unreadCount: 0,
+    isLoading: false,
+    error: null,
+  }
 };
 
 /**
@@ -29,12 +50,12 @@ const initialState: IChatState = {
  */
 export const fetchUserChats = createAsyncThunk(
   'chat/fetchUserChats',
-  async (_, { rejectWithValue }) => {
+  async (mode: IMode, { rejectWithValue }) => {
     try {
-      const chats = await chatService.getUserChats();
-      return chats;
+      const chats = await chatService.getUserChats(mode);
+      return { mode, chats };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch chats');
+      return rejectWithValue({ mode, error: error.message || 'Failed to fetch chats' });
     }
   }
 );
@@ -44,12 +65,12 @@ export const fetchUserChats = createAsyncThunk(
  */
 export const fetchChatById = createAsyncThunk(
   'chat/fetchById',
-  async (id: string, { rejectWithValue }) => {
+  async ({ id, mode }: { id: string; mode: IMode }, { rejectWithValue }) => {
     try {
       const chat = await chatService.getChatById(id);
-      return chat;
+      return { mode, chat };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch chat');
+      return rejectWithValue({ mode, error: error.message || 'Failed to fetch chat' });
     }
   }
 );
@@ -59,12 +80,12 @@ export const fetchChatById = createAsyncThunk(
  */
 export const fetchChatMessages = createAsyncThunk(
   'chat/fetchMessages',
-  async ({ chatId, limit, before }: { chatId: string; limit?: number; before?: string }, { rejectWithValue }) => {
+  async ({ chatId, mode, limit, before }: { chatId: string; mode: IMode; limit?: number; before?: string }, { rejectWithValue }) => {
     try {
       const messages = await chatService.getChatMessages(chatId, limit, before);
-      return { chatId, messages };
+      return { mode, chatId, messages };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch messages');
+      return rejectWithValue({ mode, error: error.message || 'Failed to fetch messages' });
     }
   }
 );
@@ -74,12 +95,12 @@ export const fetchChatMessages = createAsyncThunk(
  */
 export const sendMessage = createAsyncThunk(
   'chat/sendMessage',
-  async ({ chatId, data }: { chatId: string; data: ISendMessageRequest }, { rejectWithValue }) => {
+  async ({ chatId, mode, data }: { chatId: string; mode: IMode; data: ISendMessageRequest }, { rejectWithValue }) => {
     try {
       const message = await chatService.sendMessage(chatId, data);
-      return { chatId, message };
+      return { mode, chatId, message };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to send message');
+      return rejectWithValue({ mode, error: error.message || 'Failed to send message' });
     }
   }
 );
@@ -89,15 +110,15 @@ export const sendMessage = createAsyncThunk(
  */
 export const markMessagesAsRead = createAsyncThunk(
   'chat/markAsRead',
-  async (chatId: string, { rejectWithValue, getState }) => {
+  async ({ chatId, mode }: { chatId: string; mode: IMode }, { rejectWithValue, getState }) => {
     try {
       await chatService.markMessagesAsRead(chatId);
       // Get current user ID from auth state
       const state = getState() as any;
       const currentUserId = state.auth?.user?.id;
-      return { chatId, currentUserId };
+      return { mode, chatId, currentUserId };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to mark messages as read');
+      return rejectWithValue({ mode, error: error.message || 'Failed to mark messages as read' });
     }
   }
 );
@@ -107,12 +128,12 @@ export const markMessagesAsRead = createAsyncThunk(
  */
 export const fetchUnreadCount = createAsyncThunk(
   'chat/fetchUnreadCount',
-  async (_, { rejectWithValue }) => {
+  async (mode: IMode, { rejectWithValue }) => {
     try {
-      const count = await chatService.getUnreadCount();
-      return count;
+      const count = await chatService.getUnreadCount(mode);
+      return { mode, count };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch unread count');
+      return rejectWithValue({ mode, error: error.message || 'Failed to fetch unread count' });
     }
   }
 );
@@ -121,166 +142,184 @@ const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
-    clearError: (state) => {
-      state.error = null;
+    clearError: (state, action: PayloadAction<IMode>) => {
+      const mode = action.payload;
+      state[mode].error = null;
     },
-    setCurrentChat: (state, action: PayloadAction<IChat | null>) => {
-      state.currentChat = action.payload;
+    setCurrentChat: (state, action: PayloadAction<{ mode: IMode; chat: IChat | null }>) => {
+      const { mode, chat } = action.payload;
+      state[mode].currentChat = chat;
     },
-    addMessage: (state, action: PayloadAction<{ chatId: string; message: IMessage }>) => {
-      const { chatId, message } = action.payload;
-      if (!state.messages[chatId]) {
-        state.messages[chatId] = [];
+    addMessage: (state, action: PayloadAction<{ mode: IMode; chatId: string; message: IMessage }>) => {
+      const { mode, chatId, message } = action.payload;
+      if (!state[mode].messages[chatId]) {
+        state[mode].messages[chatId] = [];
       }
       // Prevent duplicate messages by checking if message ID already exists
-      const existingIndex = state.messages[chatId].findIndex((m) => m.id === message.id);
+      const existingIndex = state[mode].messages[chatId].findIndex((m) => m.id === message.id);
       if (existingIndex === -1) {
-        state.messages[chatId].push(message);
+        state[mode].messages[chatId].push(message);
       }
     },
-    clearMessages: (state, action: PayloadAction<string>) => {
-      state.messages[action.payload] = [];
+    clearMessages: (state, action: PayloadAction<{ mode: IMode; chatId: string }>) => {
+      const { mode, chatId } = action.payload;
+      state[mode].messages[chatId] = [];
     },
-    markMessagesAsReadInChat: (state, action: PayloadAction<{ chatId: string; currentUserId: string }>) => {
-      const { chatId, currentUserId } = action.payload;
+    markMessagesAsReadInChat: (state, action: PayloadAction<{ mode: IMode; chatId: string; currentUserId: string }>) => {
+      const { mode, chatId, currentUserId } = action.payload;
+      const modeState = state[mode];
       // Only mark messages from other users as read
-      if (state.messages[chatId]) {
-        state.messages[chatId].forEach((msg) => {
+      if (modeState.messages[chatId]) {
+        modeState.messages[chatId].forEach((msg) => {
           if (msg.senderId !== currentUserId && !msg.isRead) {
             msg.isRead = true;
           }
         });
       }
       // Update unread counts
-      const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+      const chatIndex = modeState.chats.findIndex((c) => c.id === chatId);
       if (chatIndex !== -1) {
-        state.chats[chatIndex].homeownerUnreadCount = 0;
-        state.chats[chatIndex].contractorUnreadCount = 0;
+        modeState.chats[chatIndex].homeownerUnreadCount = 0;
+        modeState.chats[chatIndex].contractorUnreadCount = 0;
       }
-      if (state.currentChat?.id === chatId) {
-        state.currentChat.homeownerUnreadCount = 0;
-        state.currentChat.contractorUnreadCount = 0;
+      if (modeState.currentChat?.id === chatId) {
+        modeState.currentChat.homeownerUnreadCount = 0;
+        modeState.currentChat.contractorUnreadCount = 0;
       }
     },
   },
   extraReducers: (builder) => {
     // Fetch user chats
     builder
-      .addCase(fetchUserChats.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
+      .addCase(fetchUserChats.pending, (state, action) => {
+        const mode = action.meta.arg;
+        state[mode].isLoading = true;
+        state[mode].error = null;
       })
       .addCase(fetchUserChats.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.chats = action.payload;
-        state.error = null;
+        const { mode, chats } = action.payload;
+        state[mode].isLoading = false;
+        state[mode].chats = chats;
+        state[mode].error = null;
       })
       .addCase(fetchUserChats.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
+        const { mode, error } = action.payload as { mode: IMode; error: string };
+        state[mode].isLoading = false;
+        state[mode].error = error;
       });
 
     // Fetch chat by ID
     builder
-      .addCase(fetchChatById.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
+      .addCase(fetchChatById.pending, (state, action) => {
+        const mode = action.meta.arg.mode;
+        state[mode].isLoading = true;
+        state[mode].error = null;
       })
       .addCase(fetchChatById.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.currentChat = action.payload;
+        const { mode, chat } = action.payload;
+        state[mode].isLoading = false;
+        state[mode].currentChat = chat;
         // Update in list if exists
-        const index = state.chats.findIndex((c) => c.id === action.payload.id);
+        const index = state[mode].chats.findIndex((c) => c.id === chat.id);
         if (index !== -1) {
-          state.chats[index] = action.payload;
+          state[mode].chats[index] = chat;
         } else {
-          state.chats.push(action.payload);
+          state[mode].chats.push(chat);
         }
-        state.error = null;
+        state[mode].error = null;
       })
       .addCase(fetchChatById.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
+        const { mode, error } = action.payload as { mode: IMode; error: string };
+        state[mode].isLoading = false;
+        state[mode].error = error;
       });
 
     // Fetch chat messages
     builder
-      .addCase(fetchChatMessages.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
+      .addCase(fetchChatMessages.pending, (state, action) => {
+        const mode = action.meta.arg.mode;
+        state[mode].isLoading = true;
+        state[mode].error = null;
       })
       .addCase(fetchChatMessages.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.messages[action.payload.chatId] = action.payload.messages;
-        state.error = null;
+        const { mode, chatId, messages } = action.payload;
+        state[mode].isLoading = false;
+        state[mode].messages[chatId] = messages;
+        state[mode].error = null;
       })
       .addCase(fetchChatMessages.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
+        const { mode, error } = action.payload as { mode: IMode; error: string };
+        state[mode].isLoading = false;
+        state[mode].error = error;
       });
 
     // Send message
     builder
-      .addCase(sendMessage.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
+      .addCase(sendMessage.pending, (state, action) => {
+        const mode = action.meta.arg.mode;
+        state[mode].isLoading = true;
+        state[mode].error = null;
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
-        state.isLoading = false;
-        const { chatId, message } = action.payload;
-        if (!state.messages[chatId]) {
-          state.messages[chatId] = [];
+        const { mode, chatId, message } = action.payload;
+        const modeState = state[mode];
+        modeState.isLoading = false;
+        if (!modeState.messages[chatId]) {
+          modeState.messages[chatId] = [];
         }
         // Prevent duplicate messages by checking if message ID already exists
-        const existingIndex = state.messages[chatId].findIndex((m) => m.id === message.id);
+        const existingIndex = modeState.messages[chatId].findIndex((m) => m.id === message.id);
         if (existingIndex === -1) {
-          state.messages[chatId].push(message);
+          modeState.messages[chatId].push(message);
         }
         // Update chat's last message
-        const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+        const chatIndex = modeState.chats.findIndex((c) => c.id === chatId);
         if (chatIndex !== -1) {
-          state.chats[chatIndex].lastMessage = message.content;
-          state.chats[chatIndex].lastMessageAt = message.createdAt;
+          modeState.chats[chatIndex].lastMessage = message.content;
+          modeState.chats[chatIndex].lastMessageAt = message.createdAt;
         }
-        if (state.currentChat?.id === chatId) {
-          state.currentChat.lastMessage = message.content;
-          state.currentChat.lastMessageAt = message.createdAt;
+        if (modeState.currentChat?.id === chatId) {
+          modeState.currentChat.lastMessage = message.content;
+          modeState.currentChat.lastMessageAt = message.createdAt;
         }
-        state.error = null;
+        modeState.error = null;
       })
       .addCase(sendMessage.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
+        const { mode, error } = action.payload as { mode: IMode; error: string };
+        state[mode].isLoading = false;
+        state[mode].error = error;
       });
 
     // Mark messages as read
     builder
       .addCase(markMessagesAsRead.fulfilled, (state, action) => {
-        const { chatId, currentUserId } = action.payload;
+        const { mode, chatId, currentUserId } = action.payload;
+        const modeState = state[mode];
         // Only mark messages from other users as read
-        if (state.messages[chatId] && currentUserId) {
-          state.messages[chatId].forEach((msg) => {
+        if (modeState.messages[chatId] && currentUserId) {
+          modeState.messages[chatId].forEach((msg) => {
             if (msg.senderId !== currentUserId && !msg.isRead) {
               msg.isRead = true;
             }
           });
         }
         // Update unread counts
-        const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+        const chatIndex = modeState.chats.findIndex((c) => c.id === chatId);
         if (chatIndex !== -1) {
-          state.chats[chatIndex].homeownerUnreadCount = 0;
-          state.chats[chatIndex].contractorUnreadCount = 0;
+          modeState.chats[chatIndex].homeownerUnreadCount = 0;
+          modeState.chats[chatIndex].contractorUnreadCount = 0;
         }
-        if (state.currentChat?.id === chatId) {
-          state.currentChat.homeownerUnreadCount = 0;
-          state.currentChat.contractorUnreadCount = 0;
+        if (modeState.currentChat?.id === chatId) {
+          modeState.currentChat.homeownerUnreadCount = 0;
+          modeState.currentChat.contractorUnreadCount = 0;
         }
       });
 
     // Fetch unread count
     builder
       .addCase(fetchUnreadCount.fulfilled, (state, action) => {
-        state.unreadCount = action.payload;
+        const { mode, count } = action.payload;
+        state[mode].unreadCount = count;
       });
   },
 });

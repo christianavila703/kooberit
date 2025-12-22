@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Colors } from "@/constants/theme";
 import { statusBarHeight } from "@/constants/resources";
 import { IRootState } from "@/store/index";
-import { toggleMode } from "@/store/slices/authSlice";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { setMode } from "@/store/slices/authSlice";
+import { TabSwitcher } from "@/components/ui/tab-switcher";
 
 import ContractorDashboard from "@/components/dashboard/Contractor";
 import HomeownerDashboard from "@/components/dashboard/Homeowner";
@@ -21,12 +21,24 @@ export default function DashboardScreen() {
     const isContractor = user?.role === 'contractor';
     const showToggle = isContractor;
 
-    const handleToggle = () => {
-        dispatch(toggleMode());
+    const handleModeChange = (newMode: 'contractor' | 'homeowner') => {
+        dispatch(setMode(newMode));
     };
 
     // Determine which dashboard to show based on mode
     const showContractorDashboard = isContractor && mode === 'contractor';
+
+    // Format name: if full name > 14 chars, show only first name (max 14 chars)
+    const formatName = () => {
+        if (!user?.firstName) return '';
+        const fullName = `${user.firstName} ${user.lastName || ''}`.trim();
+        if (fullName.length > 14) {
+            return user.firstName.length > 14 
+                ? user.firstName.substring(0, 14) 
+                : user.firstName;
+        }
+        return fullName;
+    };
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -35,24 +47,17 @@ export default function DashboardScreen() {
                 <View>
                     <Text style={[styles.greeting, { color: colors.icon }]}>Welcome back,</Text>
                     <Text style={[styles.name, { color: colors.text }]}>
-                        {user?.firstName} {user?.lastName}
+                        {formatName()}
                     </Text>
                 </View>
 
                 {showToggle && (
-                    <TouchableOpacity
-                        style={[styles.toggleButton, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}
-                        onPress={handleToggle}
-                        activeOpacity={0.7}>
-                        <IconSymbol 
-                            name={mode === 'contractor' ? 'person.2.fill' : 'person.fill'} 
-                            size={20} 
-                            color={colors.tint} 
-                        />
-                        <Text style={[styles.toggleText, { color: colors.text }]}>
-                            {mode === 'contractor' ? 'Contractor' : 'Homeowner'}
-                        </Text>
-                    </TouchableOpacity>
+                    <TabSwitcher
+                        value={mode}
+                        onValueChange={handleModeChange}
+                        colors={colors}
+                        isDark={isDark}
+                    />
                 )}
             </View>
 
@@ -80,17 +85,5 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 24,
         fontWeight: '700',
-    },
-    toggleButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    toggleText: {
-        fontSize: 14,
-        fontWeight: '600',
     },
 });

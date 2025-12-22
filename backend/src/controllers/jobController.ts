@@ -3,6 +3,7 @@ import { User } from '@/models';
 import emailService from '@/services/emailService';
 import jobService from '@/services/jobService';
 import userService from '@/services/userService';
+import invitationService from '@/services/invitationService';
 import logger from '@/utils/logger';
 import { IJobStatus, IProvince } from '@/types';
 
@@ -14,8 +15,8 @@ export const getContractorJobs = async (req: Request, res: Response) => {
         const user = (req as any).user;
     
         // Get contractor's location
-        const contractor = await userService.findUserById(user.id);
-        if (!contractor || !contractor.contractorAddress?.coordinates) {
+        const contractorUser = await userService.findUserById(user.id);
+        if (!contractorUser || !contractorUser.contractorAddress?.coordinates) {
             return res.status(400).json({
                 success: false,
                 message: 'Contractor address not set. Please update your address in settings.',
@@ -23,8 +24,8 @@ export const getContractorJobs = async (req: Request, res: Response) => {
         }
   
         // Validate coordinates are numbers
-        const latitude = contractor.contractorAddress.coordinates.latitude || null;
-        const longitude = contractor.contractorAddress.coordinates.longitude || null;
+        const latitude = contractorUser.contractorAddress.coordinates.latitude || null;
+        const longitude = contractorUser.contractorAddress.coordinates.longitude || null;
     
         let { status, radius = 0, categories, search, page, limit, province } = req.query;
 
@@ -75,7 +76,10 @@ export const getContractorJobs = async (req: Request, res: Response) => {
             );
         }
     
-        // Check contact status for each job post
+        // Get contractor email for invitation check
+        const contractorEmail = contractorUser?.email || '';
+
+        // Check contact status and invitation status for each job post
         const jobsWithContactStatus = await Promise.all(
             filteredPosts.map(async (post) => {
                 const postId = (post as any).id || (post as any)._id?.toString() || '';
@@ -84,9 +88,18 @@ export const getContractorJobs = async (req: Request, res: Response) => {
                     user.id
                 );
                 
+                // Check if contractor has been invited to this job
+                const hasInvitation = contractorEmail
+                    ? await invitationService.checkInvitationByJobAndContractor(
+                        postId,
+                        contractorEmail
+                      )
+                    : false;
+                
                 return {
                     ...post,
                     hasContacted: !!contact,
+                    hasInvitation,
                 };
             })
         );
@@ -276,13 +289,6 @@ export const updateJob = async (req: Request, res: Response) => {
         const user = (req as any).user;
         const { id } = req.params;
     
-        if (user.role !== 'homeowner') {
-            return res.status(403).json({
-            success: false,
-            message: 'Only homeowners can update jobs',
-            });
-        }
-    
         const job = await jobService.updateJob(id, user.id, req.body);
     
         if (!job) {
@@ -316,13 +322,6 @@ export const closeJob = async (req: Request, res: Response) => {
       const user = (req as any).user;
       const { id } = req.params;
   
-      if (user.role !== 'homeowner') {
-        return res.status(403).json({
-          success: false,
-          message: 'Only homeowners can close jobs',
-        });
-      }
-  
       const job = await jobService.closeJob(id, user.id);
   
       if (!job) {
@@ -349,19 +348,45 @@ export const closeJob = async (req: Request, res: Response) => {
 };
   
 /**
+ * Post job to market (change status from pending to open)
+ */
+export const postJobToMarket = async (req: Request, res: Response) => {
+    try {
+        const user = (req as any).user;
+        const { id } = req.params;
+    
+        const job = await jobService.postJobToMarket(id, user.id);
+    
+        if (!job) {
+            return res.status(404).json({
+            success: false,
+            message: 'Job not found',
+            });
+        }
+    
+        logger.info(`Job posted to market: ${id} by homeowner: ${user.id}`);
+    
+        return res.status(200).json({
+            success: true,
+            message: 'Job posted to market successfully',
+            data: job,
+        });
+    } catch (error: any) {
+        logger.error('Post job to market error:', error);
+        res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+/**
  * Delete job
  */
 export const deleteJob = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
         const { id } = req.params;
-    
-        if (user.role !== 'homeowner') {
-            return res.status(403).json({
-            success: false,
-            message: 'Only homeowners can delete jobs',
-            });
-        }
     
         const deleted = await jobService.deleteJob(id, user.id);
     

@@ -171,9 +171,9 @@ export const resetPassword = async (req: Request, res: Response) => {
  */
 export const verifyEmailOTP = async (req: Request, res: Response) => {
     try {
-        const { email, otpCode } = req.body;
+        const { email, otpCode, inviteCode } = req.body;
         
-        const result = await authService.verifyEmailOTP(email, otpCode);
+        const result = await authService.verifyEmailOTP(email, otpCode, inviteCode);
 
         logger.info(`Email verified successfully for: ${email}`);
 

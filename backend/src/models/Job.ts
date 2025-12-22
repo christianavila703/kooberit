@@ -27,6 +27,11 @@ const jobSchema = new Schema<IJobDocument>(
       enum: ['micro', 'small', 'big', 'very_big'],
       required: true,
     },
+    structureType: {
+      type: String,
+      enum: ['single_detached_house', 'semi_detached_house', 'townhouse', 'low_rise_building', 'high_rise_building'],
+      required: true,
+    },
     description: {
       type: String,
       required: true,
@@ -92,7 +97,7 @@ const jobSchema = new Schema<IJobDocument>(
     },
     status: {
       type: String,
-      enum: ['pending','closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled'],
+      enum: ['pending', 'closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled'],
       default: 'pending',
       index: true,
     },

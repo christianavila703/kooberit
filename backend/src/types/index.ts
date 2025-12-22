@@ -7,6 +7,8 @@ export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 
 export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled';
 
+export type IStructureType = 'single_detached_house' | 'semi_detached_house' | 'townhouse' | 'low_rise_building' | 'high_rise_building';
+
 export type IPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
 /**
@@ -64,6 +66,7 @@ export interface IRegisterRequest {
   companyName: string;
   role?: UserRole;
   status?: UserAllowStatus;
+  inviteCode?: string; // Optional invite code for external invitations
 }
 
 export interface IAuthResponse {
@@ -139,6 +142,7 @@ export interface IJobAttributes {
   jobTitle: string;
   jobNumber: string;
   jobSize: IJobSize;
+  structureType: IStructureType;
   description: string;
   categories: string[];
   contractorLimit: number;
@@ -264,3 +268,28 @@ export interface IPaymentLogCreationAttributes {
 }
 
 export type IPaymentLogDocument = IPaymentLogAttributes & Document<Types.ObjectId>;
+
+/**
+ * Invitation types
+ */
+export type InviteType = 'homeowner' | 'contractor';
+export type InvitationStatus = 'pending' | 'accepted' | 'expired';
+
+export interface IInvitationAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  inviteCode: string;
+  inviterUserId: Types.ObjectId;
+  inviteeEmail: string;
+  inviteType: InviteType;
+  status: InvitationStatus;
+  jobId?: Types.ObjectId; // For internal invitations (inviting to a specific job)
+  expiresAt: Date;
+  acceptedAt?: Date;
+  acceptedUserId?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IInvitationCreationAttributes = Omit<IInvitationAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'status' | 'acceptedAt' | 'acceptedUserId'>;
+export type IInvitationDocument = IInvitationAttributes & Document<Types.ObjectId>;

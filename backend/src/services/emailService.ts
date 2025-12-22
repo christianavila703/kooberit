@@ -382,6 +382,133 @@ class EmailService {
 
     await this.sendEmail(email, subject, html);
   }
+
+  /**
+   * Send external invitation email (email → signup)
+   */
+  async sendExternalInvitationEmail(
+    inviteeEmail: string,
+    inviteCode: string,
+    inviterCompanyName: string,
+    inviteType: 'homeowner' | 'contractor'
+  ): Promise<void> {
+    const subject = 'You\'ve been invited to Kooberit';
+    const appScheme = 'kooberit';
+    const deepLink = `${appScheme}://sign-up?inviteCode=${inviteCode}`;
+    const webFallback = `${process.env.FRONTEND_URL || 'https://kooberit.com'}/sign-up?inviteCode=${inviteCode}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .invite-box { background-color: white; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #0a7ea4; }
+            .invite-code { font-size: 24px; font-weight: bold; text-align: center; color: #0a7ea4; padding: 15px; background-color: #f0f0f0; border-radius: 5px; margin: 15px 0; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #0a7ea4; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>You've Been Invited to Kooberit</h1>
+            </div>
+            <div class="content">
+              <p>Hi there,</p>
+              <p><strong>${inviterCompanyName}</strong> has invited you to join Kooberit, the home renovation app.</p>
+              <div class="invite-box">
+                <p>Click the link below to sign up and get started:</p>
+                <a href="${deepLink}" class="button">Sign Up on Kooberit</a>
+                <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                  Or copy and paste this link into your browser:<br>
+                  <a href="${webFallback}" style="color: #0a7ea4; word-break: break-all;">${webFallback}</a>
+                </p>
+                <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                  Your invite code: <strong>${inviteCode}</strong>
+                </p>
+              </div>
+              <p>Once you sign up, you'll be automatically connected with ${inviterCompanyName} in a private chat.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(inviteeEmail, subject, html);
+  }
+
+  /**
+   * Send internal invitation email (existing users, for a specific job)
+   */
+  async sendInternalInvitationEmail(
+    inviteeEmail: string,
+    inviteCode: string,
+    inviterName: string,
+    jobTitle: string,
+    jobNumber: string,
+    jobId: string
+  ): Promise<void> {
+    const subject = `Job Invitation: ${jobTitle}`;
+    const appScheme = 'kooberit';
+    const deepLink = `${appScheme}://job/${jobId}?inviteCode=${inviteCode}`;
+    const webFallback = `${process.env.FRONTEND_URL || 'https://kooberit.com'}/job/${jobId}?inviteCode=${inviteCode}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .job-box { background-color: white; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #0a7ea4; }
+            .job-title { font-size: 20px; font-weight: bold; color: #0a7ea4; margin: 0 0 10px 0; }
+            .job-meta { color: #666; font-size: 14px; margin: 5px 0; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #0a7ea4; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Job Invitation</h1>
+            </div>
+            <div class="content">
+              <p>Hi there,</p>
+              <p><strong>${inviterName}</strong> has invited you to bid on a job:</p>
+              <div class="job-box">
+                <div class="job-title">${jobTitle}</div>
+                <div class="job-meta">
+                  <strong>Job Number:</strong> ${jobNumber}
+                </div>
+              </div>
+              <p>Click the link below to view the job details:</p>
+              <a href="${deepLink}" class="button">View Job Details</a>
+              <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                Or copy and paste this link into your browser:<br>
+                <a href="${webFallback}" style="color: #0a7ea4; word-break: break-all;">${webFallback}</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(inviteeEmail, subject, html);
+  }
 }
 
 export default new EmailService();

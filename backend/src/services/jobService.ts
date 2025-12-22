@@ -26,8 +26,12 @@ class JobService {
     ): Promise<IPaginatedResponse<IJobAttributes>> {
         const filters: any = {};
         
-        if (status && status !== 'all') {
+        // Always exclude pending jobs from contractor searches (pending jobs are private/invite-only)
+        if (status && status !== 'all' && status !== 'pending') {
             filters.status = status;
+        } else {
+            // If status is 'all', 'pending', or not provided, exclude pending jobs
+            filters.status = { $ne: 'pending' };
         }
 
         if (excludeContractorId) {
@@ -67,6 +71,8 @@ class JobService {
         if (province) {
             filters['location.province'] = province;
         }
+
+        
 
         // Count total matching documents (before exclusion for pagination calculation)
         const totalCount = await Job.countDocuments(filters).exec();
@@ -281,6 +287,33 @@ class JobService {
      */
     async closeJob(id: string, homeownerId: string): Promise<IJobDocument | null> {
         return this.updateJob(id, homeownerId, { status: 'closed' });
+    }
+
+    /**
+     * Post job to market (change status from pending to open)
+     */
+    async postJobToMarket(id: string, homeownerId: string): Promise<IJobDocument | null> {
+        const job = await Job.findOne({
+            _id: id,
+            homeownerId: new Types.ObjectId(homeownerId),
+        }).exec();
+
+        if (!job) {
+            throw new CustomError('Job not found', 404);
+        }
+
+        if (job.status !== 'pending') {
+            throw new CustomError('Only pending jobs can be posted to market', 400);
+        }
+
+        const updated = await Job.findByIdAndUpdate(
+            id,
+            { status: 'open' },
+            { new: true }
+        )
+            .populate('homeowner', 'firstName lastName email')
+            .exec();
+        return updated;
     }
 
     /**

@@ -22,6 +22,13 @@ export const createJobSchema = Joi.object({
       'any.only': 'Job size must be one of: micro, small, big, very_big',
       'any.required': 'Job size is required',
     }),
+  structureType: Joi.string()
+    .valid('single_detached_house', 'semi_detached_house', 'townhouse', 'low_rise_building', 'high_rise_building')
+    .required()
+    .messages({
+      'any.only': 'Structure type must be one of: single_detached_house, semi_detached_house, townhouse, low_rise_building, high_rise_building',
+      'any.required': 'Structure type is required',
+    }),
   description: Joi.string()
     .min(10)
     .max(5000)
@@ -155,6 +162,12 @@ export const updateJobSchema = Joi.object({
     .optional()
     .messages({
       'any.only': 'Job size must be one of: micro, small, big, very_big',
+    }),
+  structureType: Joi.string()
+    .valid('single_detached_house', 'semi_detached_house', 'townhouse', 'low_rise_building', 'high_rise_building')
+    .optional()
+    .messages({
+      'any.only': 'Structure type must be one of: single_detached_house, semi_detached_house, townhouse, low_rise_building, high_rise_building',
     }),
   description: Joi.string()
     .min(10)

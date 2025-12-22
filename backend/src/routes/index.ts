@@ -7,6 +7,7 @@ import chatRoutes from './chatRoutes';
 import uploadRoutes from './uploadRoutes';
 import paymentRoutes from './paymentRoutes';
 import jobRoutes from './jobRoutes';
+import invitationRoutes from './invitationRoutes';
 
 import { isAuthenticated } from '@/middlewares/auth';
 
@@ -35,6 +36,9 @@ router.use('/upload', isAuthenticated, uploadRoutes);
 
 // Payment routes
 router.use('/payments', isAuthenticated, paymentRoutes);
+
+// Invitation routes
+router.use('/invitations', invitationRoutes);
 
 // Health check route
 router.get('/health', (req, res) => {

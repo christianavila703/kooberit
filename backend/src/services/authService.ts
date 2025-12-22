@@ -10,6 +10,11 @@ import { ILoginRequest, IRegisterRequest, IAuthResponse } from '@/types';
 import userService from '@/services/userService';
 import otpService from '@/services/otpService';
 import emailService from '@/services/emailService';
+import invitationService from '@/services/invitationService';
+import chatService from '@/services/chatService';
+import jobService from '@/services/jobService';
+import logger from '@/utils/logger';
+import { Types } from 'mongoose';
 
 /**
  * Auth Service
@@ -50,6 +55,25 @@ class AuthService {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(registerData.password, saltRounds);
 
+    // Handle invite code if provided
+    if (registerData.inviteCode && registerData.inviteCode.trim()) {
+      const invitation = await invitationService.findInvitationByCode(registerData.inviteCode.trim().toUpperCase());
+      if (invitation) {
+        // Verify email matches invitation
+        if (invitation.inviteeEmail.toLowerCase() !== registerData.email.toLowerCase()) {
+          throw new CustomError('Invitation email does not match registration email', 400);
+        }
+        // Use invite type as role if not specified
+        if (!registerData.role) {
+          registerData.role = invitation.inviteType === 'contractor' ? 'contractor' : 'homeowner';
+        }
+      } else {
+        // Invite code provided but not found - this is okay, just log it
+        // Don't fail registration if invite code is invalid
+        logger.warn(`Invite code ${registerData.inviteCode} not found during registration`);
+      }
+    }
+
     // Create user (email not verified yet)
     const role = registerData.role || DEFAULT_USER_ROLE;
     const status = registerData.status || USER_ALLOW_STATUS.PENDING_VERIFICATION;
@@ -78,7 +102,7 @@ class AuthService {
   /**
    * Verify email with OTP and complete registration
    */
-  async verifyEmailOTP(email: string, otpCode: string): Promise<IAuthResponse> {
+  async verifyEmailOTP(email: string, otpCode: string, inviteCode?: string): Promise<IAuthResponse> {
     // Verify OTP
     await otpService.verifyOTP(email, otpCode, 'email_verification');
 
@@ -98,6 +122,66 @@ class AuthService {
       emailVerified: true,
       status: USER_ALLOW_STATUS.ALLOW,
     });
+
+    // Handle invitation if invite code is provided
+    if (inviteCode) {
+      try {
+        const invitation = await invitationService.acceptInvitation(inviteCode, user.id!);
+        
+        // For external invitations (no jobId), create a 1-to-1 chat
+        // Since Chat model requires jobId, we'll create a placeholder/system job for external invitation chats
+        if (!invitation.jobId) {
+          // Create a system job for external invitation chats
+          // This is a workaround since Chat model requires jobId
+          // In production, you might want to make jobId optional in Chat model
+          const inviter = await userService.findUserById(invitation.inviterUserId.toString());
+          if (inviter) {
+            const systemJob = await jobService.createJob({
+              homeownerId: invitation.inviterUserId as any,
+              jobTitle: 'Direct Message',
+              jobSize: 'micro',
+              structureType: 'single_detached_house', // Default value
+              description: 'Direct message chat',
+              categories: [],
+              contractorLimit: 1,
+              location: {
+                address: 'N/A',
+                coordinates: {
+                  latitude: 0,
+                  longitude: 0, // Default coordinates
+                },
+                cityName: 'N/A',
+                province: 'ON',
+              },
+            } as any);
+            
+            // Create chat between inviter and invitee
+            // Determine homeowner and contractor based on roles
+            const homeownerId = inviter.role === 'homeowner' ? invitation.inviterUserId.toString() : user.id!;
+            const contractorId = inviter.role === 'contractor' ? invitation.inviterUserId.toString() : user.id!;
+            
+            await chatService.createOrGetChat({
+              jobId: systemJob._id as any,
+              homeownerId: new Types.ObjectId(homeownerId) as any,
+              contractorId: new Types.ObjectId(contractorId) as any,
+            });
+          }
+        } else {
+          // For internal invitations, create chat with the job
+          const inviter = await userService.findUserById(invitation.inviterUserId.toString());
+          if (inviter) {
+            await chatService.createOrGetChat({
+              jobId: invitation.jobId as any,
+              homeownerId: (inviter.role === 'homeowner' ? invitation.inviterUserId : new Types.ObjectId(user.id!)) as any,
+              contractorId: (inviter.role === 'contractor' ? invitation.inviterUserId : new Types.ObjectId(user.id!)) as any,
+            });
+          }
+        }
+      } catch (invitationError: any) {
+        // Log error but don't fail registration if invitation handling fails
+        console.error('Failed to handle invitation:', invitationError);
+      }
+    }
 
     // Generate token
     const token = generateToken({

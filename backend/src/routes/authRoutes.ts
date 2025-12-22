@@ -98,6 +98,17 @@ const verifyEmailOTPSchema = Joi.object({
       'string.pattern.base': 'OTP code must contain only numbers',
       'any.required': 'OTP code is required',
     }),
+  inviteCode: Joi.string()
+    .min(6)
+    .max(20)
+    .optional()
+    .trim()
+    .uppercase()
+    .allow('')
+    .messages({
+      'string.min': 'Invite code must be at least 6 characters long',
+      'string.max': 'Invite code must not exceed 20 characters',
+    }),
 });
 router.post('/verify-email-otp', validate(verifyEmailOTPSchema, 'body'), authController.verifyEmailOTP);
 

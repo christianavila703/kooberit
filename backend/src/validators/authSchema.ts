@@ -72,6 +72,17 @@ export const registerSchema = Joi.object({
     .messages({
       'any.only': 'Status must be either allow or block',
     }),
+  inviteCode: Joi.string()
+    .min(6)
+    .max(20)
+    .optional()
+    .trim()
+    .uppercase()
+    .allow('')
+    .messages({
+      'string.min': 'Invite code must be at least 6 characters long',
+      'string.max': 'Invite code must not exceed 20 characters',
+    }),
 });
 
 /**

@@ -43,6 +43,12 @@ router.put('/:id', validate(updateJobSchema, 'body'), jobController.updateJob);
 router.patch('/:id/close', jobController.closeJob);
 
 /**
+ * @route   POST /api/jobs/:id/post
+ * @desc    Post job to market (change status from pending to open)
+ */
+router.post('/:id/post', jobController.postJobToMarket);
+
+/**
  * @route   DELETE /api/jobs/:id
  * @desc    Delete job
  */

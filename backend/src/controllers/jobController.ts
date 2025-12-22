@@ -66,9 +66,12 @@ export const getContractorJobs = async (req: Request, res: Response) => {
         if (search) {
             const searchLower = String(search).toLowerCase();
             filteredPosts = data.filter(
-            (post) =>
-                post.description.toLowerCase().includes(searchLower) ||
-                post.categories.some((cat) => cat.toLowerCase().includes(searchLower))
+            (post: any) =>
+                post.id.toString().includes(searchLower) ||
+                post.jobNumber.toString().includes(searchLower) ||
+                post.jobTitle.toLowerCase().includes(searchLower) ||
+                post.description?.toLowerCase().includes(searchLower) ||
+                post.categories?.some((cat: string) => cat.toLowerCase().includes(searchLower))
             );
         }
     

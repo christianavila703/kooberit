@@ -136,7 +136,7 @@ class JobService {
      */
     async findJobsByHomeowner(
         homeownerId: string,
-        status?: 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled',
+        status?: IJobStatus,
         page: number = 1,
         limit: number = 20
     ): Promise<IPaginatedResponse<IJobAttributes>> {

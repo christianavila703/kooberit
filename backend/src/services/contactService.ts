@@ -1,11 +1,13 @@
 import { Types } from 'mongoose';
 import CustomError from '@/utils/customError';
-import { Contact, Chat } from '@/models';
+import { Contact, Chat, User } from '@/models';
 import {
   IContactCreationAttributes,
   IContactDocument,
 } from '@/types';
 import jobService from './jobService';
+import emailService from './emailService';
+import logger from '@/utils/logger';
 
 /**
  * Contact Service
@@ -71,6 +73,52 @@ class ContactService {
 
     // Increment contractor contacts count
     await jobService.incrementContractorContactsCount(contactData.jobId.toString());
+
+    // Send email notification to homeowner
+    try {
+      // Get homeowner - try from populated field first, then fetch directly if needed
+      let homeowner = (job as any).homeowner;
+      
+      // If homeowner is not populated or is null, fetch it directly
+      if (!homeowner || !homeowner.email) {
+        if (job.homeownerId) {
+          homeowner = await User.findById(job.homeownerId)
+            .select('firstName lastName email')
+            .exec();
+        }
+      }
+
+      // Get contractor information
+      let contractor = await User.findById(contactData.contractorId)
+        .select('firstName lastName email')
+        .exec();
+
+      // Validate homeowner, contractor, and email before sending
+      if (homeowner && homeowner.email && homeowner.email.trim() && contractor) {
+        const homeownerName = homeowner.firstName && homeowner.lastName
+          ? `${homeowner.firstName} ${homeowner.lastName}`
+          : homeowner.firstName || homeowner.lastName || 'Homeowner';
+        
+        const contractorName = contractor.firstName && contractor.lastName
+          ? `${contractor.firstName} ${contractor.lastName}`
+          : contractor.firstName || contractor.lastName || 'Contractor';
+        
+        await emailService.sendContractorContactNotification(
+          homeowner.email.trim(),
+          homeownerName,
+          contractorName,
+          job.jobTitle || job.description || 'Your Job Post',
+          job.jobNumber || 'N/A',
+          job.description || ''
+        );
+        logger.info(`Email notification sent to homeowner ${homeowner.email} for contact ${contact._id}`);
+      } else {
+        logger.warn(`Cannot send email notification: homeowner email is missing for job ${contactData.jobId}, homeownerId: ${job.homeownerId}, contractorId: ${contactData.contractorId}`);
+      }
+    } catch (emailError) {
+      logger.error('Failed to send email notification:', emailError);
+      // Don't fail the request if email fails
+    }
 
     return contact;
   }

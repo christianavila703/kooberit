@@ -283,7 +283,7 @@ export default function JobDetailsScreen() {
                 )}
               </View>
             ) : (
-              currentJob.status === 'open' && currentJob.contractorContactsCount < currentJob.contractorLimit
+              currentJob.status !== 'closed' && currentJob.contractorContactsCount < currentJob.contractorLimit
               ? (
               <TouchableOpacity
                 style={[styles.contactButton, { backgroundColor: colors.tint }]}

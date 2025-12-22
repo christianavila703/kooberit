@@ -31,7 +31,7 @@ class JobService {
         }
 
         if (excludeContractorId) {
-            filters['contractorId'] = { $ne: excludeContractorId };
+            filters['homeownerId'] = { $ne: excludeContractorId };
         }
 
         // Only apply radius filter if radiusKm > 0 and coordinates are provided

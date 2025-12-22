@@ -10,15 +10,7 @@ import { IContactDocument } from '@/types';
  */
 export const getContactsByJob = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
     const { jobId } = req.params;
-
-    if (user.role !== 'homeowner') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only homeowners can view contractor contacts',
-      });
-    }
 
     const contacts = await contactService.findContactsByJob(jobId);
 

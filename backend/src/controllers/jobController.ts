@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { User } from '@/models';
+import emailService from '@/services/emailService';
 import jobService from '@/services/jobService';
 import userService from '@/services/userService';
 import logger from '@/utils/logger';
@@ -139,13 +141,7 @@ export const getHomeownerJobs = async (req: Request, res: Response) => {
 export const createJob = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (user.role !== 'homeowner') {
-            return res.status(403).json({
-            success: false,
-            message: 'Only homeowners can create jobs',
-            });
-        }
-    
+
         // Convert coordinates to GeoJSON format
         const locationData = {
             ...req.body.location,
@@ -170,14 +166,12 @@ export const createJob = async (req: Request, res: Response) => {
     
         // Send notifications to contractors within radius
         try {
-            const { User } = await import('@/models');
-            const emailService = (await import('@/services/emailService')).default;
             
             // Find contractors with notifications enabled within radius
             const contractors = await User.find({
-            role: 'contractor',
-            notificationEnabled: true,
-            'contractorAddress.coordinates': { $exists: true },
+                role: 'contractor',
+                notificationEnabled: true,
+                'contractorAddress.coordinates': { $exists: true },
             }).exec();
     
             // Calculate distance and send notifications

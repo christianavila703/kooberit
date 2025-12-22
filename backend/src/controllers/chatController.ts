@@ -8,12 +8,24 @@ import logger from '@/utils/logger';
 export const getUserChats = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const role = user.role as 'homeowner' | 'contractor';
+    // Get role from query parameter (mode from frontend) or fallback to user's actual role
+    const requestedRole = (req.query.role as 'homeowner' | 'contractor') || user.role;
+    const role = requestedRole as 'homeowner' | 'contractor';
 
+    // Validate role
     if (role !== 'homeowner' && role !== 'contractor') {
       return res.status(403).json({
         success: false,
         message: 'Invalid user role',
+      });
+    }
+
+    // For contractors, allow switching to homeowner mode
+    // For homeowners, only allow homeowner mode
+    if (user.role === 'homeowner' && role !== 'homeowner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Homeowners can only access homeowner mode',
       });
     }
 
@@ -274,12 +286,24 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
 export const getUnreadCount = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const role = user.role as 'homeowner' | 'contractor';
+    // Get role from query parameter (mode from frontend) or fallback to user's actual role
+    const requestedRole = (req.query.role as 'homeowner' | 'contractor') || user.role;
+    const role = requestedRole as 'homeowner' | 'contractor';
 
+    // Validate role
     if (role !== 'homeowner' && role !== 'contractor') {
       return res.status(403).json({
         success: false,
         message: 'Invalid user role',
+      });
+    }
+
+    // For contractors, allow switching to homeowner mode
+    // For homeowners, only allow homeowner mode
+    if (user.role === 'homeowner' && role !== 'homeowner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Homeowners can only access homeowner mode',
       });
     }
 

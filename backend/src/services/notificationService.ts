@@ -128,6 +128,8 @@ class NotificationService {
           continue;
         }
 
+        if (job.homeownerId.toString() === contractor.id.toString()) continue;
+
         // Calculate distance
         const distance = calculateDistance(
           jobLatitude,

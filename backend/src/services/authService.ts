@@ -137,7 +137,7 @@ class AuthService {
           const inviter = await userService.findUserById(invitation.inviterUserId.toString());
           if (inviter) {
             const systemJob = await jobService.createJob({
-              homeownerId: invitation.inviterUserId as any,
+              homeownerId: new Types.ObjectId(user.id),
               jobTitle: 'Direct Message',
               jobSize: 'micro',
               structureType: 'single_detached_house', // Default value
@@ -157,25 +157,24 @@ class AuthService {
             
             // Create chat between inviter and invitee
             // Determine homeowner and contractor based on roles
-            const homeownerId = inviter.role === 'homeowner' ? invitation.inviterUserId.toString() : user.id!;
-            const contractorId = inviter.role === 'contractor' ? invitation.inviterUserId.toString() : user.id!;
+            const homeownerId = user.id
+            const contractorId = invitation.inviterUserId;
             
             await chatService.createOrGetChat({
-              jobId: systemJob._id as any,
-              homeownerId: new Types.ObjectId(homeownerId) as any,
-              contractorId: new Types.ObjectId(contractorId) as any,
+              jobId: systemJob._id,
+              homeownerId: new Types.ObjectId(homeownerId),
+              contractorId: new Types.ObjectId(contractorId),
             });
           }
         } else {
-          // For internal invitations, create chat with the job
-          const inviter = await userService.findUserById(invitation.inviterUserId.toString());
-          if (inviter) {
-            await chatService.createOrGetChat({
-              jobId: invitation.jobId as any,
-              homeownerId: (inviter.role === 'homeowner' ? invitation.inviterUserId : new Types.ObjectId(user.id!)) as any,
-              contractorId: (inviter.role === 'contractor' ? invitation.inviterUserId : new Types.ObjectId(user.id!)) as any,
-            });
-          }
+          const homeownerId = user.id
+          const contractorId = invitation.inviterUserId;
+
+          await chatService.createOrGetChat({
+            jobId: invitation.jobId,
+            homeownerId: new Types.ObjectId(homeownerId),
+            contractorId: new Types.ObjectId(contractorId),
+          });
         }
       } catch (invitationError: any) {
         // Log error but don't fail registration if invitation handling fails

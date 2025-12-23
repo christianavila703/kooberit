@@ -211,7 +211,8 @@ class NotificationService {
         job.categories || [],
         job.jobSize,
         job.location?.address || 'Location not specified',
-        distance
+        distance,
+        job.structureType
       );
       logger.info(`Email notification sent to contractor ${contractor._id}`);
     } catch (error: any) {

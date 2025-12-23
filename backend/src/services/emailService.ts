@@ -73,7 +73,8 @@ class EmailService {
     categories: string[],
     jobSize: string,
     location: string,
-    distance: number
+    distance: number,
+    type: string
   ): Promise<void> {
     const subject = 'New Job Available Near You';
     
@@ -85,6 +86,16 @@ class EmailService {
       very_big: 'Very Big'
     };
     const formattedJobSize = jobSizeLabels[jobSize] || jobSize;
+    
+    // Format structure type for display
+    const structureTypeLabels: Record<string, string> = {
+      single_detached_house: 'Single Detached House',
+      semi_detached_house: 'Semi-Detached House',
+      townhouse: 'Townhouse',
+      low_rise_building: 'Low-Rise Building',
+      high_rise_building: 'High-Rise Building'
+    };
+    const formattedType = structureTypeLabels[type] || type;
     
     // Format distance similar to frontend formatDistance function
     // Round to nearest 25km increment, but minimum 25km
@@ -126,6 +137,7 @@ class EmailService {
                   <div class="job-meta">
                     <strong>Job Number:</strong> ${jobNumber}<br>
                     <strong>Job Size:</strong> ${formattedJobSize}<br>
+                    <strong>Structure Type:</strong> ${formattedType}<br>
                     <strong>Location:</strong> ${formattedDistance} (contact to view full address)
                   </div>
                 </div>

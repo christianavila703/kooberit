@@ -82,12 +82,6 @@ export const createInternalInvitation = async (req: Request, res: Response) => {
       });
     }
 
-    const invitation = await invitationService.createInternalInvitation(
-      user.id,
-      inviteeEmail,
-      jobId
-    );
-
     // Get invitee user
     const invitee = await userService.findUserByEmail(inviteeEmail);
     if (!invitee) {
@@ -104,6 +98,12 @@ export const createInternalInvitation = async (req: Request, res: Response) => {
     if (!job) {
       throw new CustomError('Job not found', 404);
     }
+
+    const invitation = await invitationService.createInternalInvitation(
+      user.id,
+      inviteeEmail,
+      jobId
+    );
 
     // Send email notification
     try {

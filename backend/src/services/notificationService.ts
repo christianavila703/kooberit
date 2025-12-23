@@ -59,7 +59,7 @@ class NotificationService {
       const uncheckedJobs = await Job.find({
         status: 'open',
         notificationsChecked: { $ne: true },
-      }).populate('homeownerId', 'firstName lastName email');
+      }).populate('homeowner', 'firstName lastName email');
 
       if (uncheckedJobs.length === 0) {
         logger.info('No unchecked jobs found');
@@ -178,7 +178,7 @@ class NotificationService {
     distance: number
   ): Promise<void> {
     const contractorName = `${contractor.firstName} ${contractor.lastName}`;
-    const homeowner = job.homeownerId;
+    const homeowner = job.homeowner;
     const homeownerName = homeowner
       ? `${homeowner.firstName} ${homeowner.lastName}`
       : 'A homeowner';

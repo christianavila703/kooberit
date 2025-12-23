@@ -693,7 +693,7 @@ export default function CreateJobScreen() {
       <Modal visible={showPostJobPopup} onClose={handlePopupClose}>
         <View style={styles.popupContainer}>
           <View style={styles.popupHeader}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Job Posted Successfully</Text>
+            <Text style={[styles.popupTitle, { color: colors.text }]}>Job Created Successfully</Text>
           </View>
           <View style={styles.popupContent}>
             <Text style={[styles.popupMessage, { color: colors.text }]}>

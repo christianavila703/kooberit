@@ -45,10 +45,10 @@ export default function JobDetailsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor' && mode === 'contractor';
 
-  
+  const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
 
   useEffect(() => {
-    if (id) {
+    if (id && isAuthenticated) {
       loadJob();
       if (!isContractor) {
         loadContractorContacts();
@@ -180,9 +180,9 @@ export default function JobDetailsScreen() {
 
       await Promise.all(promises);
       notification.success('Success', `Invitations sent to ${emails.length} contractor(s)`);
-      
-      // Reload invitation count
-      await loadInvitationCount();
+
+      setShowInviteModal(false);
+      setInviteEmails('');
       
       // Automatically post job to market after sending invitations
       if (currentJob?.status === 'pending') {
@@ -194,9 +194,7 @@ export default function JobDetailsScreen() {
           notification.error('Error', error.message || 'Failed to post job to market');
         }
       }
-      
-      setShowInviteModal(false);
-      setInviteEmails('');
+        
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to send invitations');
     } finally {
@@ -425,7 +423,7 @@ export default function JobDetailsScreen() {
               </TouchableOpacity>
               ) : (
                 <View style={styles.contactButtonDisabled}>
-                  <IconSymbol name="lock.fill" size={20} color="#FFFFFF" />
+                  <IconSymbol name="lock.fill" size={20} color={colors.icon} />
                   {currentJob.contractorContactsCount >= currentJob.contractorLimit ? (
                     <Text style={styles.contactButtonTextDisabled}>Contact Limit Reached</Text>
                   ) : (

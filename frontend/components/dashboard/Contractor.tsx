@@ -55,6 +55,7 @@ export default function ContractorDashboard() {
   const { settings: profileSettings, isSaving } = useAppSelector(
     (state: IRootState) => state.profile
   );
+  const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
 
   const [showFilters, setShowFilters] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -70,7 +71,10 @@ export default function ContractorDashboard() {
 
   // fetch profile on mount
   useEffect(() => {
-    dispatch(fetchProfileSettings());
+    // Only fetch profile if user is authenticated
+    if (isAuthenticated) {
+      dispatch(fetchProfileSettings());
+    }
   }, [dispatch]);
 
   // When profile is loaded, set categories and fetch job posts
@@ -85,6 +89,11 @@ export default function ContractorDashboard() {
 
   // Handle search changes with debounce
   useEffect(() => {
+    // Don't fetch jobs if user is not authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }

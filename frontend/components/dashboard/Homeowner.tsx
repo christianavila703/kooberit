@@ -20,6 +20,7 @@ export default function HomeownerDashboard() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { jobs, isLoading } = useAppSelector((state) => state.job.homeowner);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [refreshing, setRefreshing] = useState(false);
@@ -37,9 +38,14 @@ export default function HomeownerDashboard() {
 
   useEffect(() => {
     loadjobs(true);
-  }, []);
+  }, [dispatch]);
 
   const loadjobs = async (reset: boolean = false) => {
+    // Don't load jobs if user is not authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+
     if (reset) {
       setPage(1);
       setHasMore(true);

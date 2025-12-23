@@ -426,7 +426,11 @@ export default function JobDetailsScreen() {
               ) : (
                 <View style={styles.contactButtonDisabled}>
                   <IconSymbol name="lock.fill" size={20} color="#FFFFFF" />
-                  <Text style={styles.contactButtonTextDisabled}>Contact Limit Reached</Text>
+                  {currentJob.contractorContactsCount >= currentJob.contractorLimit ? (
+                    <Text style={styles.contactButtonTextDisabled}>Contact Limit Reached</Text>
+                  ) : (
+                    <Text style={styles.contactButtonTextDisabled}>Job Closed</Text>
+                  )}
                 </View>
               )
             )}

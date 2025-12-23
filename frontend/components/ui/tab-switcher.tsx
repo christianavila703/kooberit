@@ -88,7 +88,7 @@ export const TabSwitcher = React.memo(function TabSwitcher({
               color: value === 'homeowner' ? '#fff' : colors.text,
             },
           ]}>
-          Homeowner
+          Sub-Contract
         </Text>
       </TouchableOpacity>
     </View>

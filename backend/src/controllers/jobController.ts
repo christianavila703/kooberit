@@ -180,64 +180,6 @@ export const createJob = async (req: Request, res: Response) => {
     
         logger.info(`Job created: ${job._id} by homeowner: ${user.id}`);
     
-        // Send notifications to contractors within radius
-        try {
-            
-            // Find contractors with notifications enabled within radius
-            const contractors = await User.find({
-                role: 'contractor',
-                notificationEnabled: true,
-                'contractorAddress.coordinates': { $exists: true },
-            }).exec();
-    
-            // Calculate distance and send notifications
-            for (const contractor of contractors) {
-            if (!contractor.contractorAddress?.coordinates) continue;
-    
-            const contractorLat = contractor.contractorAddress.coordinates.latitude;
-            const contractorLng = contractor.contractorAddress.coordinates.longitude;
-            // Extract coordinates from GeoJSON format
-            const jobCoords = job.location.coordinates as any;
-            const jobLat = jobCoords.coordinates ? jobCoords.coordinates[1] : jobCoords.latitude;
-            const jobLng = jobCoords.coordinates ? jobCoords.coordinates[0] : jobCoords.longitude;
-    
-            // Calculate distance (Haversine formula)
-            const R = 6371; // Earth's radius in km
-            const dLat = (jobLat - contractorLat) * Math.PI / 180;
-            const dLng = (jobLng - contractorLng) * Math.PI / 180;
-            const a =
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(contractorLat * Math.PI / 180) *
-                Math.cos(jobLat * Math.PI / 180) *
-                Math.sin(dLng / 2) * Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
-    
-            const notificationRadius = contractor.notificationRadius || 50;
-            if (distance <= notificationRadius) {
-                // Check if categories match (if contractor has category preferences, implement here)
-                try {
-                await emailService.sendNewJobNotification(
-                    contractor.email,
-                    `${contractor.firstName} ${contractor.lastName}`,
-                    job.jobTitle,
-                    job.jobNumber,
-                    job.description,
-                    job.categories,
-                    job.jobSize,
-                    job.location?.address || 'Location not specified',
-                    distance
-                );
-                } catch (emailError) {
-                logger.error('Failed to send notification email:', emailError);
-                }
-            }
-            }
-        } catch (notificationError) {
-            logger.error('Error sending job notifications:', notificationError);
-            // Don't fail the request if notifications fail
-        }
-    
         return res.status(201).json({
             success: true,
             message: 'Job created successfully',

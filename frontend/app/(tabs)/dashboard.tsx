@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Colors } from "@/constants/theme";
@@ -10,7 +10,7 @@ import { TabSwitcher } from "@/components/ui/tab-switcher";
 
 import ContractorDashboard from "@/components/dashboard/Contractor";
 import HomeownerDashboard from "@/components/dashboard/Homeowner";
-
+import { fetchProfileSettings } from "@/store/slices/profileSlice";
 
 export default function DashboardScreen() {
     const dispatch = useAppDispatch();
@@ -18,6 +18,7 @@ export default function DashboardScreen() {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
 
+    const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
     const isDark = useMemo(() => colorScheme === 'dark', [colorScheme]);
     const isContractor = useMemo(() => user?.role === 'contractor', [user?.role]);
     const showToggle = isContractor;
@@ -40,6 +41,12 @@ export default function DashboardScreen() {
         }
         return fullName;
     }, [user?.firstName, user?.lastName]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            dispatch(fetchProfileSettings());
+        }
+    }, [dispatch]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>

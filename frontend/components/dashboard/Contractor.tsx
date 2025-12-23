@@ -22,9 +22,6 @@ import {
   resetFilters,
   setRefreshing,
 } from '@/store/slices/jobSlice';
-import {
-  fetchProfileSettings,
-} from '@/store/slices/profileSlice';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -68,14 +65,6 @@ export default function ContractorDashboard() {
   const [tempProvince, setTempProvince] = useState<IProvince>('ON');
   const [cityInput, setCityInput] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // fetch profile on mount
-  useEffect(() => {
-    // Only fetch profile if user is authenticated
-    if (isAuthenticated) {
-      dispatch(fetchProfileSettings());
-    }
-  }, [dispatch]);
 
   // When profile is loaded, set categories and fetch job posts
   useEffect(() => {

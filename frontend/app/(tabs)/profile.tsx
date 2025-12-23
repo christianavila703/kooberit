@@ -14,7 +14,6 @@ import { useRouter } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logoutUser, setUser } from '@/store/slices/authSlice';
 import {
-  fetchProfileSettings,
   updateProfileSettings,
 } from '@/store/slices/profileSlice';
 import { Colors } from '@/constants/theme';
@@ -57,11 +56,6 @@ export default function ProfileScreen() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [notificationRadius, setNotificationRadius] = useState(50);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-
-  // Load settings from Redux on mount and sync local form state
-  useEffect(() => {
-    dispatch(fetchProfileSettings());
-  }, [dispatch]);
 
   // Sync local form state with Redux state when settings are loaded/updated
   useEffect(() => {

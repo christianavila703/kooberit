@@ -182,7 +182,11 @@ export default function MessagesScreen() {
           <Text style={[styles.emptyText, { color: colors.icon }]}>No messages yet</Text>
           <Text style={[styles.emptySubtext, { color: colors.icon }]}>
             {!isContractor 
-              ? 'Start a conversation with a contractor'
+              ? (
+                user?.role === 'contractor'
+                  ? 'Start a conversation with a Sub-Contractor'
+                  : 'Start a conversation with a contractor'
+              )
               : 'Start a conversation with a homeowner'}
           </Text>
         </View>

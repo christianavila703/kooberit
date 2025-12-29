@@ -28,10 +28,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Modal } from '@/components/ui/modal';
 import { CONSTRUCTION_CATEGORIES } from '@/constants/config';
 import { IRootState } from '@/store';
-import { arraysEqual, calculateDistance, formatDistance } from '@/utils/helper';
+import { arraysEqual } from '@/utils/helper';
 import { IProvince } from '@/types';
 import invitationService from '@/services/invitation';
 import notification from '@/services/notification';
+import { fetchProfileSettings } from '@/store/slices/profileSlice';
 
 export default function ContractorDashboard() {
   const router = useRouter();
@@ -49,10 +50,13 @@ export default function ContractorDashboard() {
   } = useAppSelector((state: IRootState) => state.job.contractor);
   
   const { radius, categories, cities, province, searchQuery } = filters;
-  const { settings: profileSettings, isSaving } = useAppSelector(
+  const { settings: profileSettings, isSaving, isLoading: isLoadingSettings, lastFetched } = useAppSelector(
     (state: IRootState) => state.profile
   );
   const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
+  
+  // Check if settings have been loaded
+  const areSettingsLoaded = !isLoadingSettings && lastFetched !== null;
 
   const [showFilters, setShowFilters] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -66,7 +70,14 @@ export default function ContractorDashboard() {
   const [cityInput, setCityInput] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // When profile is loaded, set categories and fetch job posts
+  // Fetch settings first when component mounts and user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoadingSettings && lastFetched === null) {
+      dispatch(fetchProfileSettings());
+    }
+  }, [isAuthenticated, isLoadingSettings, lastFetched, dispatch]);
+
+  // When profile is loaded, set categories
   useEffect(() => {
     if (profileSettings.constructionCategories === undefined) return;
 
@@ -77,9 +88,15 @@ export default function ContractorDashboard() {
   }, [profileSettings.constructionCategories, dispatch]);
 
   // Handle search changes with debounce
+  // Lock job fetching until settings are loaded
   useEffect(() => {
     // Don't fetch jobs if user is not authenticated
     if (!isAuthenticated) {
+      return;
+    }
+
+    // Lock: Don't fetch jobs if settings are still loading or haven't been loaded yet
+    if (!areSettingsLoaded) {
       return;
     }
 
@@ -108,7 +125,7 @@ export default function ContractorDashboard() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, radius, categories, cities, province, dispatch]);
+  }, [searchQuery, radius, categories, cities, province, isAuthenticated, areSettingsLoaded, profileSettings.constructionCategories, dispatch]);
 
   // Sync temp filters when modal opens
   useEffect(() => {
@@ -121,6 +138,11 @@ export default function ContractorDashboard() {
   }, [showFilters, radius, categories, cities, province]);
 
   const onRefresh = async () => {
+    // Lock: Don't refresh jobs if settings are still loading or haven't been loaded yet
+    if (!areSettingsLoaded) {
+      return;
+    }
+
     dispatch(setRefreshing(true));
     const profileCategories = profileSettings.constructionCategories || [];
     await dispatch(
@@ -137,6 +159,11 @@ export default function ContractorDashboard() {
   };
 
   const handleLoadMore = useCallback(() => {
+    // Lock: Don't load more if settings are still loading or haven't been loaded yet
+    if (!areSettingsLoaded) {
+      return;
+    }
+
     if (!isLoadingMore && pagination?.hasNextPage && !isLoading) {
       const profileCategories = profileSettings.constructionCategories || [];
       dispatch(
@@ -151,7 +178,7 @@ export default function ContractorDashboard() {
         })
       );
     }
-  }, [isLoadingMore, pagination, isLoading, searchQuery, radius, categories, cities, province, dispatch]);
+  }, [isLoadingMore, pagination, isLoading, searchQuery, radius, categories, cities, province, areSettingsLoaded, profileSettings.constructionCategories, dispatch]);
 
   const handleToggleCategory = (category: string) => {
     if (tempCategories.includes(category)) {
@@ -230,36 +257,6 @@ export default function ContractorDashboard() {
     } finally {
       setIsInviting(false);
     }
-  };
-
-  const getLocationText = (job: any): string => {
-    // If contractor has contacted, show full address
-    if (job.hasContacted) {
-      return job.location?.address || 'Location not specified';
-    }
-
-    // Calculate distance if we have both profile address and job location coordinates
-    if (
-      profileSettings.contractorAddress?.coordinates?.latitude &&
-      profileSettings.contractorAddress?.coordinates?.longitude &&
-      job.location?.coordinates?.latitude &&
-      job.location?.coordinates?.longitude
-    ) {
-      const distance = calculateDistance(
-        profileSettings.contractorAddress.coordinates.latitude,
-        profileSettings.contractorAddress.coordinates.longitude,
-        job.location.coordinates.latitude,
-        job.location.coordinates.longitude
-      );
-      return formatDistance(distance);
-    }
-
-    // Fallback to radius display if available
-    if (radius) {
-      return `Within ${radius} km radius`;
-    }
-
-    return 'Location hidden - contact to view';
   };
 
   const isDark = colorScheme === 'dark';
@@ -485,7 +482,7 @@ export default function ContractorDashboard() {
         <View style={styles.inviteModalContainer}>
           <View style={styles.inviteModalHeader}>
             <Text style={[styles.inviteModalTitle, { color: colors.text }]}>
-              Invite Homeowner
+              Invite Homeowner onto App
             </Text>
             <TouchableOpacity
               onPress={() => setShowInviteModal(false)}
@@ -635,8 +632,6 @@ export default function ContractorDashboard() {
                   <IconSymbol name="location.fill" size={14} color={colors.icon} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.locationText, { color: colors.icon }]}>
-                      {getLocationText(job)} {'  '}
-
                       {job.location?.cityName && job.location?.province && (
                       <Text style={[styles.cityProvinceText, { color: colors.icon }]}>
                         {job.location.cityName}, {job.location.province}

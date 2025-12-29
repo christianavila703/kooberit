@@ -72,7 +72,23 @@ class JobService {
             filters['location.province'] = province;
         }
 
-        
+        // Filter invitation jobs: jobs with invitedByContractorId should only be visible to that contractor
+        // Jobs created from contractor invitations are private and should only be shown to the inviter contractor
+        if (excludeContractorId) {
+            // Show invitation jobs only if the requesting contractor is the inviter
+            // Otherwise, only show normal jobs (jobs without invitedByContractorId)
+            filters.$or = [
+                { invitedByContractorId: { $exists: false } }, // Normal jobs (no invitation field)
+                { invitedByContractorId: null }, // Normal jobs (null invitation field)
+                { invitedByContractorId: new Types.ObjectId(excludeContractorId) }, // Invitation jobs where this contractor is the inviter
+            ];
+        } else {
+            // If no contractor ID provided, exclude all invitation jobs (they're private)
+            filters.$or = [
+                { invitedByContractorId: { $exists: false } },
+                { invitedByContractorId: null },
+            ];
+        }
 
         // Count total matching documents (before exclusion for pagination calculation)
         const totalCount = await Job.countDocuments(filters).exec();

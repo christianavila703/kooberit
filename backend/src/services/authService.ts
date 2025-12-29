@@ -13,6 +13,7 @@ import emailService from '@/services/emailService';
 import invitationService from '@/services/invitationService';
 import chatService from '@/services/chatService';
 import jobService from '@/services/jobService';
+import { Contact, User } from '@/models';
 import logger from '@/utils/logger';
 import { Types } from 'mongoose';
 
@@ -128,57 +129,125 @@ class AuthService {
       try {
         const invitation = await invitationService.acceptInvitation(inviteCode, user.id!);
         
-        // For external invitations (no jobId), create a 1-to-1 chat
-        // Since Chat model requires jobId, we'll create a placeholder/system job for external invitation chats
-        if (!invitation.jobId) {
-          // Create a system job for external invitation chats
-          // This is a workaround since Chat model requires jobId
-          // In production, you might want to make jobId optional in Chat model
-          const inviter = await userService.findUserById(invitation.inviterUserId.toString());
-          if (inviter) {
-            const systemJob = await jobService.createJob({
-              homeownerId: new Types.ObjectId(user.id),
-              jobTitle: 'Direct Message',
-              jobSize: 'micro',
-              structureType: 'single_detached_house', // Default value
-              description: 'Direct message chat',
-              categories: [],
-              contractorLimit: 1,
-              location: {
-                address: 'N/A',
-                coordinates: {
-                  latitude: 0,
-                  longitude: 0, // Default coordinates
-                },
-                cityName: 'N/A',
-                province: 'ON',
-              },
-            } as any);
-            
-            // Create chat between inviter and invitee
-            // Determine homeowner and contractor based on roles
-            const homeownerId = user.id
-            const contractorId = invitation.inviterUserId;
-            
-            await chatService.createOrGetChat({
-              jobId: systemJob._id,
-              homeownerId: new Types.ObjectId(homeownerId),
-              contractorId: new Types.ObjectId(contractorId),
-            });
-          }
-        } else {
-          const homeownerId = user.id
-          const contractorId = invitation.inviterUserId;
+        // Get inviter user to determine roles
+        const inviter = await userService.findUserById(invitation.inviterUserId.toString());
+        if (!inviter) {
+          logger.warn(`Inviter not found for invitation ${invitation.inviteCode}`);
+          return {
+            user: {
+              id: user.id!,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              phone: user.phone || '',
+              companyName: user.companyName,
+              role: user.role,
+              status: user.status,
+              uniqueId: user.uniqueId,
+            },
+            token: generateToken({
+              id: user.id!,
+              email: user.email,
+            }),
+          };
+        }
 
-          await chatService.createOrGetChat({
-            jobId: invitation.jobId,
+        // Determine homeowner and contractor based on invitation type and roles
+        let homeownerId: string;
+        let contractorId: string;
+        let jobId: Types.ObjectId;
+
+        if (!invitation.jobId) {
+          // External invitation: determine roles based on invitation type
+          // If contractor invites homeowner: inviter is contractor, invitee is homeowner
+          // If homeowner invites contractor: inviter is homeowner, invitee is contractor
+          if (invitation.inviteType === 'homeowner') {
+            // Contractor is inviting a homeowner
+            contractorId = invitation.inviterUserId.toString();
+            homeownerId = user.id!;
+          } else {
+            // Homeowner is inviting a contractor
+            homeownerId = invitation.inviterUserId.toString();
+            contractorId = user.id!;
+          }
+
+          // Create a system job for external invitation chats
+          // This job should only be visible to the inviter contractor (if contractor invited)
+          const systemJob = await jobService.createJob({
             homeownerId: new Types.ObjectId(homeownerId),
+            jobTitle: 'Direct Message',
+            jobSize: 'micro',
+            structureType: 'single_detached_house', // Default value
+            description: 'Direct message chat',
+            categories: [],
+            contractorLimit: 1,
+            location: {
+              address: 'N/A',
+              coordinates: {
+                latitude: 0,
+                longitude: 0, // Default coordinates
+              },
+              cityName: 'N/A',
+              province: 'N/A',
+            },
+            status: 'open',
+            // Mark this job as created by contractor invitation only if contractor is the inviter
+            invitedByContractorId: invitation.inviteType === 'homeowner' ? invitation.inviterUserId : undefined,
+          } as any);
+          
+          jobId = systemJob._id;
+        } else {
+          // Internal invitation (with jobId) - inviter is homeowner, invitee is contractor
+          homeownerId = invitation.inviterUserId.toString();
+          contractorId = user.id!;
+          jobId = invitation.jobId;
+        }
+
+        // Create chat between homeowner and contractor
+        const chat = await chatService.createOrGetChat({
+          jobId: jobId,
+          homeownerId: new Types.ObjectId(homeownerId),
+          contractorId: new Types.ObjectId(contractorId),
+        });
+
+        // Create contact (contract) between homeowner and contractor
+        try {
+          const existingContact = await Contact.findOne({
+            jobId: new Types.ObjectId(jobId),
             contractorId: new Types.ObjectId(contractorId),
-          });
+          }).exec();
+
+          if (!existingContact) {
+            // Check if job has reached contractor limit
+            const job = await jobService.findJobById(jobId.toString());
+            if (job && job.contractorContactsCount < job.contractorLimit) {
+              // Create contact with existing chat
+              await Contact.create({
+                jobId: new Types.ObjectId(jobId),
+                contractorId: new Types.ObjectId(contractorId),
+                homeownerId: new Types.ObjectId(homeownerId),
+                paymentAmount: 0,
+                paymentStatus: 'completed', // For invitations, payment is considered completed
+                chatRoomId: chat._id,
+                contactInfoRevealed: true,
+              });
+
+              // Increment contractor contacts count
+              await jobService.incrementContractorContactsCount(jobId.toString());
+
+            } else if (job) {
+              logger.warn(`Job ${jobId} has reached contractor limit, skipping contact creation`);
+            }
+          } else {
+            logger.info(`Contact already exists for job ${jobId} between homeowner ${homeownerId} and contractor ${contractorId}`);
+          }
+        } catch (contactError: any) {
+          logger.error('Failed to create contact after invitation acceptance:', contactError);
+          // Don't fail registration if contact creation fails
         }
       } catch (invitationError: any) {
         // Log error but don't fail registration if invitation handling fails
-        console.error('Failed to handle invitation:', invitationError);
+        logger.error('Failed to handle invitation:', invitationError);
       }
     }
 

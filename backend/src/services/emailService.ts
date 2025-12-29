@@ -405,9 +405,6 @@ class EmailService {
     inviteType: 'homeowner' | 'contractor'
   ): Promise<void> {
     const subject = 'You\'ve been invited to Kooberit';
-    const appScheme = 'kooberit';
-    const deepLink = `${appScheme}://sign-up?inviteCode=${inviteCode}`;
-    const webFallback = `${process.env.FRONTEND_URL || 'https://kooberit.com'}/sign-up?inviteCode=${inviteCode}`;
     
     const html = `
       <!DOCTYPE html>
@@ -434,12 +431,6 @@ class EmailService {
               <p>Hi there,</p>
               <p><strong>${inviterCompanyName}</strong> has invited you to join Kooberit, the home renovation app.</p>
               <div class="invite-box">
-                <p>Click the link below to sign up and get started:</p>
-                <a href="${deepLink}" class="button">Sign Up on Kooberit</a>
-                <p style="margin-top: 20px; font-size: 14px; color: #666;">
-                  Or copy and paste this link into your browser:<br>
-                  <a href="${webFallback}" style="color: #0a7ea4; word-break: break-all;">${webFallback}</a>
-                </p>
                 <p style="margin-top: 15px; font-size: 14px; color: #666;">
                   Your invite code: <strong>${inviteCode}</strong>
                 </p>
@@ -469,9 +460,6 @@ class EmailService {
     jobId: string
   ): Promise<void> {
     const subject = `Job Invitation: ${jobTitle}`;
-    const appScheme = 'kooberit';
-    const deepLink = `${appScheme}://job/${jobId}?inviteCode=${inviteCode}`;
-    const webFallback = `${process.env.FRONTEND_URL || 'https://kooberit.com'}/job/${jobId}?inviteCode=${inviteCode}`;
     
     const html = `
       <!DOCTYPE html>
@@ -504,12 +492,6 @@ class EmailService {
                   <strong>Job Number:</strong> ${jobNumber}
                 </div>
               </div>
-              <p>Click the link below to view the job details:</p>
-              <a href="${deepLink}" class="button">View Job Details</a>
-              <p style="margin-top: 20px; font-size: 14px; color: #666;">
-                Or copy and paste this link into your browser:<br>
-                <a href="${webFallback}" style="color: #0a7ea4; word-break: break-all;">${webFallback}</a>
-              </p>
             </div>
             <div class="footer">
               <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>

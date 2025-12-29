@@ -162,6 +162,7 @@ export interface IJobAttributes {
   status: IJobStatus;
   contractorContactsCount: number;
   notificationsChecked?: boolean;
+  invitedByContractorId?: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 }

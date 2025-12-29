@@ -110,6 +110,12 @@ const jobSchema = new Schema<IJobDocument>(
       default: false,
       index: true,
     },
+    invitedByContractorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

@@ -97,7 +97,7 @@ const jobSchema = new Schema<IJobDocument>(
     },
     status: {
       type: String,
-      enum: ['pending', 'closed', 'open', 'awaiting', 'accepted', 'completed', 'cancelled'],
+      enum: ['pending', 'closed', 'open', 'awaiting', 'accepted', 'awarded', 'completed', 'cancelled'],
       default: 'pending',
       index: true,
     },

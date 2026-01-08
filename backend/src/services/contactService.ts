@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import CustomError from '@/utils/customError';
-import { Contact, Chat, User } from '@/models';
+import { Contact, Chat, User, Message } from '@/models';
 import {
   IContactCreationAttributes,
   IContactDocument,
@@ -49,7 +49,6 @@ class ContactService {
     });
 
     // Create system message with disclaimer
-    const { Message } = await import('@/models');
     const systemMessageContent = "The purpose of this chat is to set up a site visit and communicate any other project details such as cost and deadline. It is recommended that all relevant project communication occur on the app. The communication creates a written record that can be used in cases of dispute.";
     
     await Message.create({
@@ -58,6 +57,7 @@ class ContactService {
       content: systemMessageContent,
       type: 'system',
       isRead: false,
+      visibleTo: 'both',
     });
 
     // Create contractor contact

@@ -8,6 +8,7 @@ import uploadRoutes from './uploadRoutes';
 import paymentRoutes from './paymentRoutes';
 import jobRoutes from './jobRoutes';
 import invitationRoutes from './invitationRoutes';
+import bidRoutes from './bidRoutes';
 
 import { isAuthenticated } from '@/middlewares/auth';
 
@@ -39,6 +40,9 @@ router.use('/payments', isAuthenticated, paymentRoutes);
 
 // Invitation routes
 router.use('/invitations', invitationRoutes);
+
+// Bid routes
+router.use('/bids', isAuthenticated, bidRoutes);
 
 // Health check route
 router.get('/health', (req, res) => {

@@ -6,10 +6,12 @@ import PaymentLog from './PaymentLog';
 import OTP from './OTP';
 import Job from './Job';
 import Invitation from './Invitation';
+import Bid from './Bid';
+import ExtensionRequest from './ExtensionRequest';
 
 // Define associations here if needed
 
-export { User, Contact, Chat, Message, PaymentLog, OTP, Job, Invitation };
+export { User, Contact, Chat, Message, PaymentLog, OTP, Job, Invitation, Bid, ExtensionRequest };
 
 // Export a default object with all models
 export default {
@@ -21,5 +23,7 @@ export default {
   OTP,
   Job,
   Invitation,
+  Bid,
+  ExtensionRequest,
 };
 

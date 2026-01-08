@@ -6,6 +6,7 @@ export * from './jobSchema'; // Keep filename for now, but exports renamed schem
 export * from './chatSchema';
 export * from './paymentSchema';
 export * from './profileSchema';
+export * from './bidSchema';
 
 /**
  * Global

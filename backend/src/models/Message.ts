@@ -1,5 +1,4 @@
 import { Schema, model } from 'mongoose';
-import { Types } from 'mongoose';
 import { IMessageDocument } from '@/types';
 
 const messageSchema = new Schema<IMessageDocument>(
@@ -36,6 +35,11 @@ const messageSchema = new Schema<IMessageDocument>(
     },
     readAt: {
       type: Date,
+    },
+    visibleTo: {
+      type: String,
+      enum: ['both', 'contractor', 'homeowner'],
+      default: 'both',
     },
   },
   {

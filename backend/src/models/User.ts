@@ -160,6 +160,22 @@ const userSchema = new Schema<IUserDocument>(
       type: Boolean,
       default: false,
     },
+    // Efficiency tracking fields
+    onTimeEfficiencyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    onBudgetEfficiencyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    efficiencyRatioValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

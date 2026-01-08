@@ -503,6 +503,138 @@ class EmailService {
 
     await this.sendEmail(inviteeEmail, subject, html);
   }
+
+  /**
+   * Send bid award notification to contractor
+   */
+  async sendBidAwardNotification(
+    contractorEmail: string,
+    contractorName: string,
+    jobNumber: string,
+    jobTitle: string,
+    bidValue: number,
+    projectDueDate: Date,
+    passFeeToHomeowner: boolean,
+    awardFee: number
+  ): Promise<void> {
+    const subject = 'Congratulations! Your Bid Has Been Awarded';
+    const formattedDueDate = new Date(projectDueDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    
+    let feeMessage = '';
+    if (passFeeToHomeowner) {
+      feeMessage = `
+        <p><strong>Important:</strong> The award fee of $${awardFee.toFixed(2)} (2.5% of the bid value) is included in your bid amount and will be paid by the homeowner. The contract amount already excludes this fee.</p>
+      `;
+    } else {
+      feeMessage = `
+        <p><strong>Important:</strong> You must pay the award fee of $${awardFee.toFixed(2)} (2.5% of the bid value) before you can send messages to the homeowner. Once payment is made, messaging will be enabled.</p>
+      `;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .message-box { background-color: white; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #4CAF50; }
+            .info-box { background-color: #e8f5e9; padding: 15px; margin: 15px 0; border-radius: 5px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: 600; color: #2e7d32; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Bid Awarded!</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${contractorName},</p>
+              <div class="message-box">
+                <p><strong>Congratulations!</strong> Your bid has been awarded for the following project:</p>
+              </div>
+              <div class="info-box">
+                <div class="info-row">
+                  <span class="info-label">Project Number:</span> ${jobNumber}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Project Title:</span> ${jobTitle}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Bid Value:</span> $${bidValue.toFixed(2)}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Project Due Date:</span> ${formattedDueDate}
+                </div>
+              </div>
+              ${feeMessage}
+              <p>Please log in to your Kooberit account to view the project details and proceed with the next steps.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(contractorEmail, subject, html);
+  }
+
+  /**
+   * Send bid rejection notification to contractor
+   */
+  async sendBidRejectionNotification(
+    contractorEmail: string,
+    contractorName: string,
+    jobNumber: string
+  ): Promise<void> {
+    const subject = 'Bid Update - Project Selection';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0a7ea4; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .message-box { background-color: white; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #0a7ea4; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Bid Update</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${contractorName},</p>
+              <div class="message-box">
+                <p>Thank you for bidding on project number ${jobNumber}. At this time, the Homeowner has chosen to move forward with another bid.</p>
+              </div>
+              <p>We appreciate your interest and encourage you to continue bidding on other projects.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kooberit. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await this.sendEmail(contractorEmail, subject, html);
+  }
 }
 
 export default new EmailService();

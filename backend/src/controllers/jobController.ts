@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
-import { User } from '@/models';
-import emailService from '@/services/emailService';
 import jobService from '@/services/jobService';
 import userService from '@/services/userService';
 import invitationService from '@/services/invitationService';
 import logger from '@/utils/logger';
 import { IJobStatus, IProvince } from '@/types';
+import { USER_ROLES } from '@enums';
 
 /**
  * Get all jobs for contractor
@@ -128,7 +127,7 @@ export const getHomeownerJobs = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
     
-        const status = req.query.status as 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled' | undefined;
+        const status = req.query.status as IJobStatus;
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
     
@@ -192,13 +191,14 @@ export const createJob = async (req: Request, res: Response) => {
             message: error.message,
         });
     }
-  };
+};
   
-  /**
-   * Get job by ID
-   */
-  export const getJobById = async (req: Request, res: Response) => {
+/**
+ * Get job by ID
+ */
+export const getJobById = async (req: Request, res: Response) => {
     try {
+        const user = (req as any).user;
         const { id } = req.params;
         const job = await jobService.findJobById(id);
     
@@ -208,11 +208,32 @@ export const createJob = async (req: Request, res: Response) => {
             message: 'Job not found',
             });
         }
+
+        let hasInvitation = false;
+        let hasContacted = false;
+
+        if (user.role === USER_ROLES.CONTRACTOR) {
+            hasInvitation = await invitationService.checkInvitationByJobAndContractor(
+                job.id,
+                user.email
+            );
+
+            const contact = await jobService.findContactByJobAndContractor(
+                job.id,
+                user.id
+            );
+
+            hasContacted = !!contact;
+        }
     
         return res.status(200).json({
             success: true,
             message: 'Job retrieved successfully',
-            data: job,
+            data: {
+                ...job.toObject({ getters: true }),
+                hasInvitation: hasInvitation,
+                hasContacted: hasContacted,
+            },
         });
     } catch (error: any) {
         logger.error('Get job error:', error);
@@ -221,7 +242,7 @@ export const createJob = async (req: Request, res: Response) => {
             message: error.message,
         });
     }
-  };
+};
   
 /**
  * Update job

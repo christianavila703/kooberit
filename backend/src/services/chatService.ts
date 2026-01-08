@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import CustomError from '@/utils/customError';
-import { Chat, Message } from '@/models';
+import { Chat, Message, Bid } from '@/models';
 import {
   IChatAttributes,
   IChatCreationAttributes,
@@ -8,7 +8,9 @@ import {
   IMessageAttributes,
   IMessageCreationAttributes,
   IMessageDocument,
+  UserRole,
 } from '@/types';
+import { USER_ROLES } from '@enums';
 
 /**
  * Chat Service
@@ -33,8 +35,8 @@ class ChatService {
       jobId: new Types.ObjectId(chatData.jobId),
       homeownerId: new Types.ObjectId(chatData.homeownerId),
       contractorId: new Types.ObjectId(chatData.contractorId),
-      homeownerUnreadCount: 0,
-      contractorUnreadCount: 0,
+      homeownerUnreadCount: 1,
+      contractorUnreadCount: 1,
     });
 
     // Create system message with disclaimer
@@ -68,8 +70,8 @@ class ChatService {
   /**
    * Find all chats for a user
    */
-  async findChatsByUser(userId: string, role: 'homeowner' | 'contractor'): Promise<IChatDocument[]> {
-    const filter: any = role === 'homeowner' 
+  async findChatsByUser(userId: string, role: UserRole): Promise<IChatDocument[]> {
+    const filter: any = role === USER_ROLES.HOMEOWNER 
       ? { homeownerId: new Types.ObjectId(userId) }
       : { contractorId: new Types.ObjectId(userId) };
 
@@ -109,6 +111,7 @@ class ChatService {
       chatId: new Types.ObjectId(messageData.chatId),
       senderId: new Types.ObjectId(messageData.senderId),
       isRead: false,
+      visibleTo: 'both',
     });
 
     // Populate sender before returning
@@ -182,18 +185,212 @@ class ChatService {
   /**
    * Get unread count for user
    */
-  async getUnreadCount(userId: string, role: 'homeowner' | 'contractor'): Promise<number> {
+  async getUnreadCount(userId: string, role: UserRole): Promise<number> {
     const chats = await Chat.find(
-      role === 'homeowner'
+      role === USER_ROLES.HOMEOWNER
         ? { homeownerId: new Types.ObjectId(userId) }
         : { contractorId: new Types.ObjectId(userId) }
     ).exec();
 
     return chats.reduce(
       (total, chat) =>
-        total + (role === 'homeowner' ? chat.homeownerUnreadCount : chat.contractorUnreadCount),
+        total + (role === USER_ROLES.HOMEOWNER ? chat.homeownerUnreadCount : chat.contractorUnreadCount),
       0
     );
+  }
+
+  /**
+   * Create system message when a bid is submitted
+   */
+  async createBidSubmittedMessage(chatId: string, contractorId: string, homeownerId: string): Promise<void> {
+    const chat = await this.findChatById(chatId);
+    if (!chat || !chat.jobId) {
+      return;
+    }
+
+    const bid = await Bid.findOne({
+      jobId: chat.jobId,
+      contractorId: new Types.ObjectId(contractorId),
+    }).exec();
+
+    if (!bid) {
+      return;
+    }
+
+    // Message for contractor
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(homeownerId),
+      content: 'Your bid has been submitted successfully. The homeowner will review it and notify you of their decision.',
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.CONTRACTOR,
+    });
+
+    // Message for homeowner
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(contractorId),
+      content: `A new bid has been submitted for this job. You can review it in the Contractors tab.`,
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.HOMEOWNER,
+    });
+
+    // Increment unread counts
+    await Chat.findByIdAndUpdate(chatId, {
+      $inc: {
+        contractorUnreadCount: 1,
+        homeownerUnreadCount: 1,
+      },
+    }).exec();
+  }
+
+  /**
+   * Create system message when a bid is awarded
+   */
+  async createBidAwardedMessage(chatId: string, contractorId: string, homeownerId: string): Promise<void> {
+    const chat = await this.findChatById(chatId);
+    if (!chat || !chat.jobId) {
+      return;
+    }
+
+    const bid = await Bid.findOne({
+      jobId: chat.jobId,
+      contractorId: new Types.ObjectId(contractorId),
+    }).exec();
+
+    if (!bid || bid.bidStatus !== 'awarded') {
+      return;
+    }
+
+    // Message for contractor
+    let contractorContent = '';
+    if (bid.passFeeToHomeowner) {
+      contractorContent = '🎉 Your Bid Has Been Awarded! The homeowner will pay the award fee. You can continue messaging.';
+    } else if (bid.awardFeeStatus === 'completed') {
+      contractorContent = '🎉 Your Bid Has Been Awarded! Award fee paid. You can continue messaging.';
+    } else {
+      contractorContent = '🎉 Your Bid Has Been Awarded! Please pay the award fee to continue messaging. Go to the Bid tab on the job page to pay.';
+    }
+
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(homeownerId),
+      content: contractorContent,
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.CONTRACTOR,
+    });
+
+    // Message for homeowner
+    let homeownerContent = '';
+    if (bid.passFeeToHomeowner) {
+      homeownerContent = `You have awarded this bid. The award fee of $${bid.awardFee.toFixed(2)} (2.5% of the bid value) is included in the bid amount and must be paid before the project can proceed.`;
+    } else {
+      homeownerContent = `You have awarded this bid. The contractor must pay the award fee of $${bid.awardFee.toFixed(2)} (2.5% of the bid value) before they can send messages.`;
+    }
+
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(contractorId),
+      content: homeownerContent,
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.HOMEOWNER,
+    });
+
+    // Increment unread counts
+    await Chat.findByIdAndUpdate(chatId, {
+      $inc: {
+        contractorUnreadCount: 1,
+        homeownerUnreadCount: 1,
+      },
+    }).exec();
+  }
+
+  /**
+   * Create system message when a bid is rejected
+   */
+  async createBidRejectedMessage(chatId: string, contractorId: string, homeownerId: string): Promise<void> {
+    const chat = await this.findChatById(chatId);
+    if (!chat || !chat.jobId) {
+      return;
+    }
+
+    // Message for contractor
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(homeownerId),
+      content: 'Your Bid Was Not Selected. The homeowner has chosen to move forward with another bid. You can still view the job details.',
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.CONTRACTOR,
+    });
+
+    // Message for homeowner
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(contractorId),
+      content: 'You have chosen to move forward with another bid for this job.',
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.HOMEOWNER,
+    });
+
+    // Increment unread counts
+    await Chat.findByIdAndUpdate(chatId, {
+      $inc: {
+        contractorUnreadCount: 1,
+        homeownerUnreadCount: 1,
+      },
+    }).exec();
+  }
+
+  /**
+   * Create system message when award fee is paid
+   */
+  async createAwardFeePaidMessage(chatId: string, contractorId: string, homeownerId: string, payerRole: UserRole, awardFeeAmount: number): Promise<void> {
+    const chat = await this.findChatById(chatId);
+    if (!chat || !chat.jobId) {
+      return;
+    } 
+
+    // Message for contractor
+    const contractorContent = payerRole === USER_ROLES.CONTRACTOR
+      ? `The award fee of $${awardFeeAmount.toFixed(2)} has been paid. Messaging is now enabled.`
+      : `The homeowner has paid the award fee of $${awardFeeAmount.toFixed(2)}. The project can now proceed.`;
+
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(homeownerId),
+      content: contractorContent,
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.CONTRACTOR,
+    });
+
+    // Message for homeowner
+    const homeownerContent = payerRole === USER_ROLES.HOMEOWNER
+      ? `You have paid the award fee of $${awardFeeAmount.toFixed(2)}. The project can now proceed.`
+      : `The contractor has paid the award fee of $${awardFeeAmount.toFixed(2)}. Messaging is now enabled.`;
+
+    await Message.create({
+      chatId: new Types.ObjectId(chatId),
+      senderId: new Types.ObjectId(contractorId),
+      content: homeownerContent,
+      type: 'system',
+      isRead: false,
+      visibleTo: USER_ROLES.HOMEOWNER,
+    });
+
+    // Increment unread counts
+    await Chat.findByIdAndUpdate(chatId, {
+      $inc: {
+        contractorUnreadCount: 1,
+        homeownerUnreadCount: 1,
+      },
+    }).exec();
   }
 }
 

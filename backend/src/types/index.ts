@@ -5,7 +5,7 @@ export type IProvince = 'ON' | 'AB' | 'BC' | 'MB' | 'NB' | 'NL' | 'NS' | 'PE' | 
 
 export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 
-export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled';
+export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'awarded' | 'completed' | 'cancelled';
 
 export type IStructureType = 'single_detached_house' | 'semi_detached_house' | 'townhouse' | 'low_rise_building' | 'high_rise_building';
 
@@ -117,6 +117,10 @@ export interface IUserAttributes {
   companyName?: string;
   constructionCategories?: string[];
   emailVerified?: boolean;
+  // Efficiency tracking fields
+  onTimeEfficiencyPoints?: number;
+  onBudgetEfficiencyPoints?: number;
+  efficiencyRatioValue?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -226,6 +230,7 @@ export interface IMessageAttributes {
   fileUrl?: string;
   isRead: boolean;
   readAt?: Date;
+  visibleTo?: 'both' | 'contractor' | 'homeowner';
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -294,3 +299,62 @@ export interface IInvitationAttributes {
 
 export type IInvitationCreationAttributes = Omit<IInvitationAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'status' | 'acceptedAt' | 'acceptedUserId'>;
 export type IInvitationDocument = IInvitationAttributes & Document<Types.ObjectId>;
+
+/**
+ * Bid types
+ */
+export type BidStatus = 'pending' | 'awarded' | 'rejected';
+
+export interface IBidAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  jobId: Types.ObjectId;
+  contractorId: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  bidValue: number;
+  projectDueDate: Date;
+  awardFee: number;
+  awardFeeStatus: IPaymentStatus;
+  bidStatus: BidStatus;
+  awardedAt?: Date;
+  awardFeePaymentIntentId?: string;
+  awardFeePaymentMethodId?: string;
+  awardFeeTransactionId?: string;
+  completionPrompted?: boolean;
+  completedOnTime?: boolean;
+  completedWithinBudget?: boolean;
+  onTimeEfficiencyPoints?: number;
+  onBudgetEfficiencyPoints?: number;
+  passFeeToHomeowner?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IBidCreationAttributes = Omit<IBidAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'awardFeeStatus' | 'bidStatus' | 'completionPrompted' | 'onTimeEfficiencyPoints' | 'onBudgetEfficiencyPoints' | 'awardFee'>;
+export type IBidDocument = IBidAttributes & Document<Types.ObjectId>;
+
+/**
+ * Extension Request types
+ */
+export type ExtensionRequestType = 'date_extension' | 'budget_change';
+export type ExtensionRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface IExtensionRequestAttributes {
+  id?: string;
+  _id?: Types.ObjectId;
+  bidId: Types.ObjectId;
+  jobId: Types.ObjectId;
+  contractorId: Types.ObjectId;
+  homeownerId: Types.ObjectId;
+  requestType: ExtensionRequestType;
+  newDate?: Date;
+  newBudget?: number;
+  explanation: string;
+  status: ExtensionRequestStatus;
+  respondedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IExtensionRequestCreationAttributes = Omit<IExtensionRequestAttributes, 'id' | '_id' | 'createdAt' | 'updatedAt' | 'status' | 'respondedAt'>;
+export type IExtensionRequestDocument = IExtensionRequestAttributes & Document<Types.ObjectId>;

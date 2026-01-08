@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import chatService from '@/services/chatService';
 import logger from '@/utils/logger';
+import { Bid } from '@/models';
+import socketService from '@/socket/socket';
+import { USER_ROLES, UserRole } from '@enums';
 
 /**
  * Get all chats for user
@@ -9,23 +12,14 @@ export const getUserChats = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     // Get role from query parameter (mode from frontend) or fallback to user's actual role
-    const requestedRole = (req.query.role as 'homeowner' | 'contractor') || user.role;
-    const role = requestedRole as 'homeowner' | 'contractor';
+    const requestedRole = (req.query.role as UserRole) || user.role;
+    const role = requestedRole as UserRole;
 
     // Validate role
-    if (role !== 'homeowner' && role !== 'contractor') {
+    if (role !== USER_ROLES.HOMEOWNER && role !== USER_ROLES.CONTRACTOR) {
       return res.status(403).json({
         success: false,
         message: 'Invalid user role',
-      });
-    }
-
-    // For contractors, allow switching to homeowner mode
-    // For homeowners, only allow homeowner mode
-    if (user.role === 'homeowner' && role !== 'homeowner') {
-      return res.status(403).json({
-        success: false,
-        message: 'Homeowners can only access homeowner mode',
       });
     }
 
@@ -124,9 +118,24 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
     const messages = await chatService.findMessagesByChatId(chatId, limit, before);
 
+    // Filter messages based on visibility
+    const filteredMessages = messages.filter((message) => {
+      const msg = message.toObject({ virtuals: true });
+      if (!msg.visibleTo || msg.visibleTo === 'both') {
+        return true;
+      }
+      if (msg.visibleTo === USER_ROLES.CONTRACTOR && isContractor) {
+        return true;
+      }
+      if (msg.visibleTo === USER_ROLES.HOMEOWNER && isHomeowner) {
+        return true;
+      }
+      return false;
+    });
+
     // Mongoose automatically converts ObjectIds to strings in JSON
     // Serialize with virtuals included
-    const messagesData = messages.map((message) => 
+    const messagesData = filteredMessages.map((message) => 
       message.toObject({ virtuals: true })
     );
 
@@ -172,6 +181,22 @@ export const sendMessage = async (req: Request, res: Response) => {
       });
     }
 
+    // Check if contractor is trying to send message but award fee is not paid
+    if (isContractor && chat.jobId) {
+      const bid = await Bid.findOne({
+        jobId: chat.jobId,
+        contractorId: user.id,
+        bidStatus: 'awarded',
+      }).exec();
+
+      if (bid && bid.awardFeeStatus !== 'completed') {
+        return res.status(403).json({
+          success: false,
+          message: 'You cannot send messages until the award fee is paid. Please pay the award fee to continue messaging.',
+        });
+      }
+    }
+
     const message = await chatService.createMessage({
       chatId: chatId as any,
       senderId: user.id as any,
@@ -185,7 +210,6 @@ export const sendMessage = async (req: Request, res: Response) => {
     const messageData = message.toObject({ virtuals: true });
 
     // Broadcast to other users via socket (sender gets message from API response)
-    const { default: socketService } = await import('@/socket/socket');
     const io = socketService.getIO();
     if (io) {
       // Get the recipient user ID (the other person in the chat)
@@ -247,7 +271,6 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
     await chatService.markMessagesAsRead(chatId, user.id);
 
     // Broadcast to other users via socket
-    const { default: socketService } = await import('@/socket/socket');
     const io = socketService.getIO();
     if (io) {
       // Get the recipient user ID (the other person in the chat)
@@ -287,23 +310,14 @@ export const getUnreadCount = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     // Get role from query parameter (mode from frontend) or fallback to user's actual role
-    const requestedRole = (req.query.role as 'homeowner' | 'contractor') || user.role;
-    const role = requestedRole as 'homeowner' | 'contractor';
+    const requestedRole = (req.query.role as UserRole) || user.role;
+    const role = requestedRole as UserRole;
 
     // Validate role
-    if (role !== 'homeowner' && role !== 'contractor') {
+    if (role !== USER_ROLES.HOMEOWNER && role !== USER_ROLES.CONTRACTOR) {
       return res.status(403).json({
         success: false,
         message: 'Invalid user role',
-      });
-    }
-
-    // For contractors, allow switching to homeowner mode
-    // For homeowners, only allow homeowner mode
-    if (user.role === 'homeowner' && role !== 'homeowner') {
-      return res.status(403).json({
-        success: false,
-        message: 'Homeowners can only access homeowner mode',
       });
     }
 

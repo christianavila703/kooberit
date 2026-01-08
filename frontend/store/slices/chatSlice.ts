@@ -10,7 +10,6 @@ import type {
 interface IChatState {
   contractor: {
     chats: IChat[];
-    currentChat: IChat | null;
     messages: { [chatId: string]: IMessage[] };
     unreadCount: number;
     isLoading: boolean;
@@ -18,7 +17,6 @@ interface IChatState {
   };
   homeowner: {
     chats: IChat[];
-    currentChat: IChat | null;
     messages: { [chatId: string]: IMessage[] };
     unreadCount: number;
     isLoading: boolean;
@@ -29,7 +27,6 @@ interface IChatState {
 const initialState: IChatState = {
   contractor: {
     chats: [],
-    currentChat: null,
     messages: {},
     unreadCount: 0,
     isLoading: false,
@@ -37,7 +34,6 @@ const initialState: IChatState = {
   },
   homeowner: {
     chats: [],
-    currentChat: null,
     messages: {},
     unreadCount: 0,
     isLoading: false,
@@ -146,10 +142,6 @@ const chatSlice = createSlice({
       const mode = action.payload;
       state[mode].error = null;
     },
-    setCurrentChat: (state, action: PayloadAction<{ mode: IMode; chat: IChat | null }>) => {
-      const { mode, chat } = action.payload;
-      state[mode].currentChat = chat;
-    },
     addMessage: (state, action: PayloadAction<{ mode: IMode; chatId: string; message: IMessage }>) => {
       const { mode, chatId, message } = action.payload;
       if (!state[mode].messages[chatId]) {
@@ -181,10 +173,6 @@ const chatSlice = createSlice({
       if (chatIndex !== -1) {
         modeState.chats[chatIndex].homeownerUnreadCount = 0;
         modeState.chats[chatIndex].contractorUnreadCount = 0;
-      }
-      if (modeState.currentChat?.id === chatId) {
-        modeState.currentChat.homeownerUnreadCount = 0;
-        modeState.currentChat.contractorUnreadCount = 0;
       }
     },
   },
@@ -218,7 +206,6 @@ const chatSlice = createSlice({
       .addCase(fetchChatById.fulfilled, (state, action) => {
         const { mode, chat } = action.payload;
         state[mode].isLoading = false;
-        state[mode].currentChat = chat;
         // Update in list if exists
         const index = state[mode].chats.findIndex((c) => c.id === chat.id);
         if (index !== -1) {
@@ -278,10 +265,6 @@ const chatSlice = createSlice({
           modeState.chats[chatIndex].lastMessage = message.content;
           modeState.chats[chatIndex].lastMessageAt = message.createdAt;
         }
-        if (modeState.currentChat?.id === chatId) {
-          modeState.currentChat.lastMessage = message.content;
-          modeState.currentChat.lastMessageAt = message.createdAt;
-        }
         modeState.error = null;
       })
       .addCase(sendMessage.rejected, (state, action) => {
@@ -309,10 +292,6 @@ const chatSlice = createSlice({
           modeState.chats[chatIndex].homeownerUnreadCount = 0;
           modeState.chats[chatIndex].contractorUnreadCount = 0;
         }
-        if (modeState.currentChat?.id === chatId) {
-          modeState.currentChat.homeownerUnreadCount = 0;
-          modeState.currentChat.contractorUnreadCount = 0;
-        }
       });
 
     // Fetch unread count
@@ -324,6 +303,6 @@ const chatSlice = createSlice({
   },
 });
 
-export const { clearError, setCurrentChat, addMessage, clearMessages, markMessagesAsReadInChat } = chatSlice.actions;
+export const { clearError, addMessage, clearMessages, markMessagesAsReadInChat } = chatSlice.actions;
 export default chatSlice.reducer;
 

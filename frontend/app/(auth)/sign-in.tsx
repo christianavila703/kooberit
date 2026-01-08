@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,12 +35,16 @@ export default function SignInScreen() {
   // Navigation is handled by AuthProvider
 
   // Show error notification (but not for email verification required)
-  React.useEffect(() => {
+  useEffect(() => {
     if (error && error !== 'EMAIL_VERIFICATION_REQUIRED' && !error.includes('verify your email')) {
       notification.error('Sign In Failed', error);
       dispatch(clearError());
     }
   }, [error, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'auth/reset' });
+  }, [dispatch]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

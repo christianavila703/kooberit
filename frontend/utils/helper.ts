@@ -55,3 +55,29 @@ export function formatDistance(distanceKm: number): string {
   const rounded = Math.max(25, Math.round(distanceKm / 25) * 25);
   return `Within ${rounded} km`;
 }
+
+/**
+ * Format date for display (Today, Yesterday, or full date)
+ */
+export function formatDateSeparator(date: Date): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const messageDate = new Date(date);
+  messageDate.setHours(0, 0, 0, 0);
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else {
+    // Format as "Month Day" (e.g., "November 26")
+    return messageDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+}

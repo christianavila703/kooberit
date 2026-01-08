@@ -556,31 +556,43 @@ export default function ContractorDashboard() {
               <View style={styles.jobCardTitleContainer}>
                 <View style={styles.jobCardTitleRow}>
                   <Text style={[styles.jobCardTitle, { color: colors.text }]} numberOfLines={2}>
-                    {job.jobTitle || job.description
-                      ? (job.jobTitle || job.description).length > 60
-                        ? (job.jobTitle || job.description).substring(0, 60) + '...'
-                        : (job.jobTitle || job.description)
+                    {job.jobTitle
+                      ? (job.jobTitle).length > 50
+                        ? (job.jobTitle).substring(0, 50) + '...'
+                        : (job.jobTitle)
                       : 'No title'}
                   </Text>
                   <View style={styles.badgesContainer}>
-                    {job.hasInvitation && (
+                    <View
+                      style={[
+                        styles.badge,
+                        {
+                          backgroundColor:
+                            job.status === 'closed' ? '#9E9E9E' : '#4CAF50',
+                        },
+                      ]}>
+                      <Text style={styles.badgeText}>
+                        {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                      </Text>
+                    </View>
+                    {job.hasInvitation && !job.hasContacted && (
                       <View
                         style={[
-                          styles.invitedBadge,
+                          styles.badge,
                           { backgroundColor: isDark ? '#1976D2' : '#2196F3' },
                         ]}>
                         <IconSymbol name="envelope.fill" size={12} color="#FFFFFF" />
-                        <Text style={styles.invitedBadgeText}>Invited</Text>
+                        <Text style={styles.badgeText}>Invited</Text>
                       </View>
                     )}
                     {job.hasContacted && (
                       <View
                         style={[
-                          styles.contactedBadge,
+                          styles.badge,
                           { backgroundColor: isDark ? '#2E7D32' : '#4CAF50' },
                         ]}>
                         <IconSymbol name="checkmark.circle.fill" size={14} color="#FFFFFF" />
-                        <Text style={styles.contactedBadgeText}>Contacted</Text>
+                        <Text style={styles.badgeText}>Contacted</Text>
                       </View>
                     )}
                   </View>
@@ -916,7 +928,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginLeft: 8,
   },
-  invitedBadge: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -924,20 +936,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  invitedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  contactedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  contactedBadgeText: {
+  badgeText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',

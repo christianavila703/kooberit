@@ -103,7 +103,7 @@ export interface IPagination {
 }
 
 // Job Types
-export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'completed' | 'cancelled';
+export type IJobStatus = 'all' | 'pending' | 'closed' | 'open' | 'awaiting' | 'accepted' | 'awarded' | 'completed' | 'cancelled';
 
 export type IJobSize = 'micro' | 'small' | 'big' | 'very_big';
 
@@ -291,5 +291,112 @@ export interface ISendMessageRequest {
   content: string;
   type?: IMessageType;
   fileUrl?: string;
+}
+
+// Bid Types
+export type IBidStatus = 'pending' | 'awarded' | 'rejected';
+
+export interface IBid {
+  id: string;
+  jobId: string;
+  contractorId: string;
+  homeownerId: string;
+  bidValue: number;
+  projectDueDate: string;
+  awardFee: number;
+  awardFeeStatus: IPaymentStatus;
+  bidStatus: IBidStatus;
+  awardedAt?: string;
+  awardFeePaymentIntentId?: string;
+  awardFeePaymentMethodId?: string;
+  awardFeeTransactionId?: string;
+  completionPrompted?: boolean;
+  completedOnTime?: boolean;
+  completedWithinBudget?: boolean;
+  onTimeEfficiencyPoints?: number;
+  onBudgetEfficiencyPoints?: number;
+  passFeeToHomeowner?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  contractor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    companyName?: string;
+  };
+  homeowner?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  job?: {
+    id: string;
+    jobTitle: string;
+    jobNumber: string;
+    description: string;
+  };
+}
+
+export interface ICreateBidRequest {
+  jobId: string;
+  bidValue: number;
+  projectDueDate: string;
+  passFeeToHomeowner?: boolean;
+}
+
+// Extension Request Types
+export type IExtensionRequestType = 'date_extension' | 'budget_change';
+export type IExtensionRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface IExtensionRequest {
+  id: string;
+  bidId: string;
+  jobId: string;
+  contractorId: string;
+  homeownerId: string;
+  requestType: IExtensionRequestType;
+  newDate?: string;
+  newBudget?: number;
+  explanation: string;
+  status: IExtensionRequestStatus;
+  respondedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  contractor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    companyName?: string;
+  };
+  bid?: {
+    id: string;
+    bidValue: number;
+    projectDueDate: string;
+  };
+  job?: {
+    id: string;
+    jobTitle: string;
+    jobNumber: string;
+  };
+}
+
+export interface ICreateExtensionRequestRequest {
+  bidId: string;
+  requestType: IExtensionRequestType;
+  newDate?: string;
+  newBudget?: number;
+  explanation: string;
+}
+
+export interface IRespondToExtensionRequestRequest {
+  status: 'approved' | 'rejected';
+}
+
+export interface IUpdateCompletionStatusRequest {
+  completedOnTime: boolean;
+  completedWithinBudget: boolean;
 }
 

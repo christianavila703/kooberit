@@ -23,7 +23,6 @@ interface IJobState {
     };
     homeowner: {
         jobs: IJob[];
-        currentJob: IJob | null;
         filters: {
             status: IJobStatus;
         };
@@ -54,7 +53,6 @@ const initialState: IJobState = {
     },
     homeowner: {
         jobs: [],
-        currentJob: null,
         filters: {
             status: 'all',
         },
@@ -169,10 +167,12 @@ export const createJob = createAsyncThunk(
  */
 export const fetchJobById = createAsyncThunk(
     'job/fetchById',
-    async (id: string, { rejectWithValue }) => {
+    async (id: string, { getState, rejectWithValue }) => {
         try {
             const job = await jobService.getJobById(id);
-            return job;
+            const state = getState() as IRootState;
+            const isContractor = state.auth.user?.role === 'contractor' && state.auth.mode === 'contractor';
+            return { job, isContractor };
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to fetch job');
         }
@@ -246,9 +246,6 @@ const jobSlice = createSlice({
         clearError: (state) => {
             state.contractor.error = null;
             state.homeowner.error = null;
-        },
-        setCurrentJob: (state, action: PayloadAction<IJob | null>) => {
-            state.homeowner.currentJob = action.payload;
         },
         setContractorFilters: (state, action: PayloadAction<Partial<IJobState['contractor']['filters']>>) => {
             state.contractor.filters = { ...state.contractor.filters, ...action.payload };
@@ -360,7 +357,6 @@ const jobSlice = createSlice({
             .addCase(createJob.fulfilled, (state, action) => {
                 state.homeowner.isLoading = false;
                 state.homeowner.jobs.unshift(action.payload);
-                state.homeowner.currentJob = action.payload;
                 state.homeowner.error = null;
             })
             .addCase(createJob.rejected, (state, action) => {
@@ -372,21 +368,41 @@ const jobSlice = createSlice({
         builder
             .addCase(fetchJobById.pending, (state) => {
                 state.homeowner.isLoading = true;
+                state.contractor.isLoading = true;
                 state.homeowner.error = null;
+                state.contractor.error = null;
             })
             .addCase(fetchJobById.fulfilled, (state, action) => {
                 state.homeowner.isLoading = false;
-                state.homeowner.currentJob = action.payload;
-                // Update in list if exists
-                const index = state.homeowner.jobs.findIndex((j) => j.id === action.payload.id);
-                if (index !== -1) {
-                    state.homeowner.jobs[index] = action.payload;
+                state.contractor.isLoading = false;
+                const { job, isContractor } = action.payload;
+                
+                // Update in appropriate list based on user type
+                if (isContractor) {
+                    const index = state.contractor.jobs.findIndex((j) => j.id === job.id);
+                    if (index !== -1) {
+                        state.contractor.jobs[index] = job;
+                    } else {
+                        // Add to list if not found
+                        state.contractor.jobs.unshift(job);
+                    }
+                } else {
+                    const index = state.homeowner.jobs.findIndex((j) => j.id === job.id);
+                    if (index !== -1) {
+                        state.homeowner.jobs[index] = job;
+                    } else {
+                        // Add to list if not found
+                        state.homeowner.jobs.unshift(job);
+                    }
                 }
                 state.homeowner.error = null;
+                state.contractor.error = null;
             })
             .addCase(fetchJobById.rejected, (state, action) => {
                 state.homeowner.isLoading = false;
+                state.contractor.isLoading = false;
                 state.homeowner.error = action.payload as string;
+                state.contractor.error = action.payload as string;
             });
 
         // Update job
@@ -400,9 +416,6 @@ const jobSlice = createSlice({
                 const index = state.homeowner.jobs.findIndex((j) => j.id === action.payload.id);
                 if (index !== -1) {
                     state.homeowner.jobs[index] = action.payload;
-                }
-                if (state.homeowner.currentJob?.id === action.payload.id) {
-                    state.homeowner.currentJob = action.payload;
                 }
                 state.homeowner.error = null;
             })
@@ -423,9 +436,6 @@ const jobSlice = createSlice({
                 if (index !== -1) {
                     state.homeowner.jobs[index] = action.payload;
                 }
-                if (state.homeowner.currentJob?.id === action.payload.id) {
-                    state.homeowner.currentJob = action.payload;
-                }
                 state.homeowner.error = null;
             })
             .addCase(closeJob.rejected, (state, action) => {
@@ -445,9 +455,6 @@ const jobSlice = createSlice({
                 if (index !== -1) {
                     state.homeowner.jobs[index] = action.payload;
                 }
-                if (state.homeowner.currentJob?.id === action.payload.id) {
-                    state.homeowner.currentJob = action.payload;
-                }
                 state.homeowner.error = null;
             })
             .addCase(postJobToMarket.rejected, (state, action) => {
@@ -464,9 +471,6 @@ const jobSlice = createSlice({
             .addCase(deleteJob.fulfilled, (state, action) => {
                 state.homeowner.isLoading = false;
                 state.homeowner.jobs = state.homeowner.jobs.filter((j) => j.id !== action.payload);
-                if (state.homeowner.currentJob?.id === action.payload) {
-                    state.homeowner.currentJob = null;
-                }
                 state.homeowner.error = null;
             })
             .addCase(deleteJob.rejected, (state, action) => {
@@ -478,7 +482,6 @@ const jobSlice = createSlice({
 
 export const {
     clearError,
-    setCurrentJob,
     setContractorFilters,
     setRadius,
     toggleCategory,

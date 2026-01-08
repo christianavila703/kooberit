@@ -26,6 +26,7 @@ import ProvinceSelect from '@/components/ProvinceSelect';
 import { IRootState } from '@/store';
 
 import { statusBarHeight } from '@/constants/resources';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isContractor = user?.role === 'contractor';
-
+  const navigation = useNavigation();
   // Local form state for editing (synced with Redux on load)
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -272,7 +273,12 @@ export default function ProfileScreen() {
         onPress: async () => {
           try {
             await dispatch(logoutUser()).unwrap();
-            router.replace('/(auth)/sign-in' as any);
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: '(auth)' }],
+              })
+            );  
           } catch (error: any) {
             // Handle error
           }

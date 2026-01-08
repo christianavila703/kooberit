@@ -41,6 +41,7 @@ const endpoints = {
     },
     payments: {
         process: '/payments/process',
+        processAwardFee: '/payments/award-fee',
         getStatus: (paymentIntentId: string) => `/payments/status/${paymentIntentId}`,
     },
     invitations: {
@@ -49,6 +50,21 @@ const endpoints = {
         validate: (code: string) => `/invitations/validate/${code}`,
         myInvitations: '/invitations/my-invitations',
         countByJob: (jobId: string) => `/invitations/job/${jobId}/count`,
+    },
+    bids: {
+        create: '/bids',
+        getByContractor: '/bids/contractor',
+        getByHomeowner: '/bids/homeowner',
+        getByJob: (jobId: string) => `/bids/job/${jobId}`,
+        getByChat: (chatId: string) => `/bids/chat/${chatId}`,
+        getById: (id: string) => `/bids/${id}`,
+        award: (id: string) => `/bids/${id}/award`,
+        reject: (id: string) => `/bids/${id}/reject`,
+        createExtensionRequest: '/bids/extension-request',
+        respondToExtensionRequest: (id: string) => `/bids/extension-request/${id}/respond`,
+        getPendingExtensionRequests: '/bids/extension-request/pending',
+        getExtensionRequestsByBid: (bidId: string) => `/bids/${bidId}/extension-request`,
+        updateCompletionStatus: (bidId: string) => `/bids/${bidId}/completion-status`,
     },
 }
 

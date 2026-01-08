@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  BackHandler,
+  BackHandler
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,6 +30,9 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as DocumentPicker from 'expo-document-picker';
 import chatService from '@/services/chat';
 import fileDownloadService from '@/services/fileDownload';
+import bidService from '@/services/bid';
+import { formatDateSeparator } from '@/utils/helper';
+import ProjectMilestoneActions from '@/components/project/ProjectMilestoneActions';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -37,7 +40,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const { user, mode } = useAppSelector((state) => state.auth);
-  const { currentChat, messages, isLoading } = useAppSelector((state) => state.chat[mode]);
+  const { chats, messages, isLoading } = useAppSelector((state) => state.chat[mode]);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -49,20 +52,26 @@ export default function ChatScreen() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const isNavigatingToMessagesRef = useRef(false);
+  const hasCheckedBidRef = useRef(false);
+  
+  // Bid status state
+  const [existingBid, setExistingBid] = useState<any>(null);
+  const [canSendMessage, setCanSendMessage] = useState(true);
+  const [initialMilestoneAction, setInitialMilestoneAction] = useState<'date_extension' | 'budget_change' | 'completion' | null>(null);
 
   const isContractor = user?.role === 'contractor' && mode === 'contractor';
 
-  useEffect(() => {
-    // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
-    if (chatId) {
-      loadChat();
-      loadMessages();
-      connectSocket();
-    }
+  // Ensure id is a string (ha  ndle array case from useLocalSearchParams)
+  const chatId = id;
+  const currentChat = useMemo(() => chats.find((chat: any) => chat.id === chatId), [chats, chatId]);
+  const chatMessages = useMemo(() => (chatId && typeof chatId === 'string' && messages[chatId]) ? messages[chatId] : [], [messages, chatId]);
+  const isDark = colorScheme === 'dark';
 
+  useEffect(() => {
+    connectSocket();
+    
     return () => {
-      const chatId = Array.isArray(id) ? id[0] : id;
+      const chatId = id;
       if (chatId) {
         socketService.leaveChat(chatId);
       }
@@ -73,10 +82,52 @@ export default function ChatScreen() {
     };
   }, [id]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      loadChat();
+      loadMessages();
+
+      hasCheckedBidRef.current = false;
+    }, [id])
+  )
+  
+  useEffect(() => {
+    if (currentChat && !hasCheckedBidRef.current) {
+      hasCheckedBidRef.current = true;
+      checkExistingBid();
+    }
+  }, [currentChat]);
+
+  const checkExistingBid = async () => {
+    if (!chatId || !currentChat || !currentChat.contractor) return;
+    try {
+      console.log('chatId', chatId);
+      const bids = await bidService.getBidsByChat(chatId);
+      let myBid = null;
+      if (isContractor) {
+        myBid = bids.find((bid: any) => bid.contractorId === user?.id);
+      } else {
+        myBid = bids.find((bid: any) => bid.contractorId === currentChat?.contractor?.id);
+      }
+      setExistingBid(myBid || null);
+      if (myBid && myBid.bidStatus === 'awarded' && myBid.awardFeeStatus !== 'completed') {
+        setCanSendMessage(false);
+      } else {
+        setCanSendMessage(true);
+      }
+    } catch (error: any) {
+      // Silently fail - bid might not exist
+    }
+  };
+
+  const handleSystemPromptAction = (action: 'date_extension' | 'budget_change' | 'completion') => {
+    setInitialMilestoneAction(action);
+  };
+
   const connectSocket = async () => {
     try {
       // Ensure id is a string (handle array case from useLocalSearchParams)
-      const chatId = Array.isArray(id) ? id[0] : id;
+      const chatId = id;
       await socketService.connect();
       if (chatId && typeof chatId === 'string') {
         socketService.joinChat(chatId);
@@ -121,7 +172,7 @@ export default function ChatScreen() {
   // Mark messages as read when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      const chatId = Array.isArray(id) ? id[0] : id;
+      const chatId = id;
       if (!chatId || typeof chatId !== 'string' || !user) return;
 
       // Get current messages for this chat
@@ -129,7 +180,7 @@ export default function ChatScreen() {
       
       // Only mark as read if there are unread messages from the other person
       const hasUnreadMessages = chatMessages.some(
-        (msg) => msg.senderId !== user.id && !msg.isRead
+        (msg: any) => msg.senderId !== user?.id && !msg.isRead
       );
 
       if (hasUnreadMessages) {
@@ -146,7 +197,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
+    const chatId = id;
     // Scroll to bottom when new messages arrive
     if (chatId && messages[chatId] && messages[chatId].length > 0) {
       setTimeout(() => {
@@ -156,9 +207,7 @@ export default function ChatScreen() {
   }, [messages, id, dispatch]);
 
   const loadChat = useCallback(async () => {
-    // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
-    if (!chatId || typeof chatId !== 'string') return;
+    const chatId = id;
     try {
       await dispatch(fetchChatById({ id: chatId, mode })).unwrap();
     } catch (error: any) {
@@ -168,9 +217,7 @@ export default function ChatScreen() {
   }, [id, dispatch, router]);
 
   const loadMessages = useCallback(async () => {
-    // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
-    if (!chatId || typeof chatId !== 'string') return;
+    const chatId = id;
     try {
       await dispatch(fetchChatMessages({ chatId: chatId, mode })).unwrap();
     } catch (error: any) {
@@ -179,8 +226,14 @@ export default function ChatScreen() {
   }, [id, dispatch]);
 
   const handleSendMessage = async () => {
+
+    if (!canSendMessage) {
+      notification.error('Error', 'You cannot send messages until the award fee is paid. Please pay the award fee to continue messaging.');
+      return;
+    }
+
     // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
+    const chatId = id;
     if (!messageText.trim() || !chatId || typeof chatId !== 'string') return;
 
     const text = messageText.trim();
@@ -211,7 +264,7 @@ export default function ChatScreen() {
   const handlePickFile = async () => {
     try {
       // Ensure id is a string (handle array case from useLocalSearchParams)
-      const chatId = Array.isArray(id) ? id[0] : id;
+      const chatId = id;
       if (!chatId || typeof chatId !== 'string') return;
 
       // Show action sheet to choose between image and document
@@ -309,7 +362,7 @@ export default function ChatScreen() {
 
   const handleTextChange = (text: string) => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
-    const chatId = Array.isArray(id) ? id[0] : id;
+    const chatId = id;
     if (!chatId || typeof chatId !== 'string') return;
     
     setMessageText(text);
@@ -340,29 +393,6 @@ export default function ChatScreen() {
     return currentChat.homeowner;
   };
 
-  // Format date for display (Today, Yesterday, or full date)
-  const formatDateSeparator = (date: Date): string => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const messageDate = new Date(date);
-    messageDate.setHours(0, 0, 0, 0);
-    
-    if (messageDate.getTime() === today.getTime()) {
-      return 'Today';
-    } else if (messageDate.getTime() === yesterday.getTime()) {
-      return 'Yesterday';
-    } else {
-      // Format as "Month Day" (e.g., "November 26")
-      return messageDate.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-      });
-    }
-  };
 
   // Check if two dates are on different days
   const isDifferentDay = (date1: Date, date2: Date): boolean => {
@@ -373,31 +403,26 @@ export default function ChatScreen() {
     return d1.getTime() !== d2.getTime();
   };
 
-  // Prepare messages with date separators
+  // Prepare messages with date separators (chronologically sorted)
   const prepareMessagesWithDates = () => {
-    const chatId = Array.isArray(id) ? id[0] : id;
+    const chatId = id;
     const chatMessages = (chatId && typeof chatId === 'string') ? messages[chatId] || [] : [];
     
     if (chatMessages.length === 0) return [];
     
-    // Separate system messages from regular messages
-    const systemMessages = chatMessages.filter((msg): msg is typeof msg & { type: 'system' } => msg.type === 'system');
-    const regularMessages = chatMessages.filter(msg => msg.type !== 'system');
+    // Sort all messages chronologically by createdAt
+    const sortedMessages = [...chatMessages].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
     
     const items: Array<{ type: 'message' | 'date' | 'system'; data: any }> = [];
     
-    // Add system messages at the top
-    systemMessages.forEach((message) => {
-      items.push({
-        type: 'system',
-        data: message,
-      });
-    });
-    
-    // Add regular messages with date separators
-    regularMessages.forEach((message, index) => {
+    // Add messages with date separators (including system messages)
+    sortedMessages.forEach((message, index) => {
       // Add date separator before first message or when date changes
-      const prevMessage = index > 0 ? regularMessages[index - 1] : null;
+      const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
       const shouldShowDate = index === 0 || 
         (message.createdAt && prevMessage?.createdAt && 
           isDifferentDay(new Date(message.createdAt), new Date(prevMessage.createdAt)));
@@ -412,21 +437,25 @@ export default function ChatScreen() {
         });
       }
       
-      items.push({
-        type: 'message',
-        data: message,
-      });
+      // Add message (system or regular)
+      if (message.type === 'system') {
+        items.push({
+          type: 'system',
+          data: message,
+        });
+      } else {
+        items.push({
+          type: 'message',
+          data: message,
+        });
+      }
     });
     
     return items;
   };
 
-  // Ensure id is a string (handle array case from useLocalSearchParams)
-  const chatId = Array.isArray(id) ? id[0] : id;
-  const chatMessages = (chatId && typeof chatId === 'string') ? messages[chatId] || [] : [];
   const messagesWithDates = prepareMessagesWithDates();
   const partner = getChatPartner();
-  const isDark = colorScheme === 'dark';
 
   // Set header title based on chat partner
   useLayoutEffect(() => {
@@ -604,6 +633,20 @@ export default function ChatScreen() {
           )}
         </View>
       )}
+      
+
+      {/* Project Milestones Section */}
+      {currentChat?.jobId && existingBid && existingBid.bidStatus === 'awarded' && (
+        <ProjectMilestoneActions
+          bid={existingBid}
+          role={isContractor ? 'contractor' : 'homeowner'}
+          renderMode="card"
+          isShow={false}
+          initialAction={initialMilestoneAction}
+          onInitialActionConsumed={() => setInitialMilestoneAction(null)}
+          onBidShouldRefresh={checkExistingBid}
+        />
+      )}
 
       {/* Messages */}
       {isLoading && chatMessages.length === 0 ? (
@@ -618,7 +661,7 @@ export default function ChatScreen() {
           onScrollToIndexFailed={() => {}}
           onScroll={(event) => {
             // Mark messages as read when user scrolls near the bottom
-            const chatId = Array.isArray(id) ? id[0] : id;
+            const chatId = id;
             if (!chatId || typeof chatId !== 'string' || !user) return;
 
             const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -631,7 +674,7 @@ export default function ChatScreen() {
             if (isNearBottom && chatMessages.length > 0) {
               // Only mark as read if there are unread messages from the other person
               const hasUnreadMessages = chatMessages.some(
-                (msg) => msg.senderId !== user.id && !msg.isRead
+                (msg: any) => msg.senderId !== user.id && !msg.isRead
               );
               
               if (hasUnreadMessages) {
@@ -645,12 +688,113 @@ export default function ChatScreen() {
             // Render system message
             if (item.type === 'system') {
               const message = item.data;
+              const isExtensionPrompt =
+                typeof message.content === 'string' &&
+                message.content ===
+                  'Would you like to ask the homeowner for an extension on the project due date?';
+              const isBudgetPrompt =
+                typeof message.content === 'string' &&
+                message.content ===
+                  'Would you like to ask the homeowner for a change in the value of bid?';
+              const isCompletionPrompt =
+                typeof message.content === 'string' &&
+                (message.content === 'Has the Contractor completed the work by the project due date?' ||
+                  message.content === 'Has the Contractor completed the work within value of bid?');
+
+              // Detect bid status messages by content patterns
+              const isBidStatusMessage = message.content && (
+                message.content.startsWith('🎉 Your Bid Has Been Awarded') ||
+                message.content.startsWith('Your Bid Was Not Selected') ||
+                message.content.startsWith('Your Bid Is Pending') ||
+                message.content.startsWith('No Bid Submitted') ||
+                message.content.includes('You have awarded this bid')
+              );
+              
+              // Determine bid status from content
+              let bidStatus: 'awarded' | 'rejected' | 'pending' | null = null;
+              if (isBidStatusMessage) {
+                if (message.content.startsWith('🎉 Your Bid Has Been Awarded') || message.content.includes('You have awarded this bid')) {
+                  bidStatus = 'awarded';
+                } else if (message.content.startsWith('Your Bid Was Not Selected')) {
+                  bidStatus = 'rejected';
+                } else if (message.content.startsWith('Your Bid Is Pending')) {
+                  bidStatus = 'pending';
+                }
+              }
+              
+              // Check if we should show pay button (awarded but fee not paid)
+              const showPayButton = isBidStatusMessage && 
+                bidStatus === 'awarded' && 
+                existingBid && 
+                existingBid.bidStatus === 'awarded' &&
+                existingBid.awardFeeStatus !== 'completed' &&
+                ((!existingBid.passFeeToHomeowner && message.content.includes('Please pay the award fee'))
+                  || (existingBid.passFeeToHomeowner && message.content.includes('before the project can proceed.')));
+              
+              const backgroundColor = isBidStatusMessage
+                ? bidStatus === 'awarded'
+                  ? isDark ? 'rgba(76, 175, 80, 0.15)' : 'rgba(76, 175, 80, 0.1)'
+                  : bidStatus === 'rejected'
+                  ? isDark ? 'rgba(244, 67, 54, 0.15)' : 'rgba(244, 67, 54, 0.1)'
+                  : bidStatus === 'pending'
+                  ? isDark ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.1)'
+                  : isDark ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.1)'
+                : isDark ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.1)';
+              
+              const borderColor = isBidStatusMessage
+                ? bidStatus === 'awarded'
+                  ? 'rgba(76, 175, 80, 0.3)'
+                  : bidStatus === 'rejected'
+                  ? 'rgba(244, 67, 54, 0.3)'
+                  : bidStatus === 'pending'
+                  ? 'rgba(255, 152, 0, 0.3)'
+                  : 'rgba(255, 152, 0, 0.3)'
+                : 'rgba(255, 152, 0, 0.3)';
+              
               return (
                 <View style={styles.systemMessageContainer}>
-                  <View style={[styles.systemMessageBubble, { backgroundColor: isDark ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.1)' }]}>
-                    <Text style={[styles.systemMessageText, { color: isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)' }]}>
+                  <View style={[styles.systemMessageBubble, { backgroundColor, borderColor }]}>
+                    <Text style={[
+                      styles.systemMessageText, 
+                      { color: isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)' },
+                      showPayButton && { marginBottom: 8 }
+                    ]}>
                       {message.content}
                     </Text>
+                    {/* Action shortcuts for milestone prompts */}
+                    {isContractor && isExtensionPrompt && (
+                      <TouchableOpacity
+                        style={[styles.payFeeButtonSystem, { backgroundColor: colors.tint }]}
+                        onPress={() => handleSystemPromptAction('date_extension')}
+                      >
+                        <Text style={styles.payFeeButtonSystemText}>Request Extension</Text>
+                      </TouchableOpacity>
+                    )}
+                    {isContractor && isBudgetPrompt && (
+                      <TouchableOpacity
+                        style={[styles.payFeeButtonSystem, { backgroundColor: colors.tint }]}
+                        onPress={() => handleSystemPromptAction('budget_change')}
+                      >
+                        <Text style={styles.payFeeButtonSystemText}>Request Budget Change</Text>
+                      </TouchableOpacity>
+                    )}
+                    {!isContractor && isCompletionPrompt && (
+                      <TouchableOpacity
+                        style={[styles.payFeeButtonSystem, { backgroundColor: colors.tint }]}
+                        onPress={() => handleSystemPromptAction('completion')}
+                      >
+                        <Text style={styles.payFeeButtonSystemText}>Answer</Text>
+                      </TouchableOpacity>
+                    )}
+                    {showPayButton && existingBid && (
+                      <TouchableOpacity
+                        style={[styles.payFeeButtonSystem, { backgroundColor: colors.tint }]}
+                        onPress={() => router.push(`/payment/award-fee/${existingBid.id}` as any)}>
+                        <Text style={styles.payFeeButtonSystemText}>
+                          Pay Award Fee (${existingBid.awardFee.toFixed(2)})
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );
@@ -792,10 +936,10 @@ export default function ChatScreen() {
           style={[
             styles.sendButton,
             { backgroundColor: colors.tint },
-            (!messageText.trim() || sending) && styles.sendButtonDisabled,
+            (!messageText.trim() || sending || !canSendMessage) && styles.sendButtonDisabled,
           ]}
           onPress={handleSendMessage}
-          disabled={!messageText.trim() || sending}>
+          disabled={!messageText.trim() || sending || !canSendMessage}>
           {sending ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
@@ -803,6 +947,19 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Message Restriction Warning for Contractors */}
+      {!canSendMessage && existingBid && (
+        <View style={[styles.restrictionBanner, { backgroundColor: '#FF3B30' }]}>
+          <IconSymbol name="lock.fill" size={20} color="#FFFFFF" />
+          <View style={styles.restrictionTextContainer}>
+            <Text style={styles.restrictionText}>
+              You cannot send messages until the award fee is paid
+            </Text>
+          </View>
+        </View>
+      )}
+
     </KeyboardAvoidingView>
   );
 }
@@ -1004,13 +1161,283 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 152, 0, 0.3)',
   },
   systemMessageText: {
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
     fontWeight: '400',
+  },
+  payFeeButtonSystem: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 8,
+  },
+  payFeeButtonSystemText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bidButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  bidButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  bidButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bidStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  bidStatusText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  payAwardFeeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  payAwardFeeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    padding: 24,
+    marginBottom: 100,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  modalContent: {
+    
+  },
+  warningBox: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 152, 0, 0.3)',
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  currencyInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  currencyInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  awardFeePreview: {
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  dateInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+    fontSize: 16,
+  },
+  dateHint: {
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  modalButtonPrimary: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextPrimary: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  checkboxContainer: {
+    marginBottom: 20,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 8,
+  },
+  checkboxBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  checkboxHint: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 36,
+    fontStyle: 'italic',
+  },
+  warningTextSmall: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    marginLeft: 8,
+  },
+  restrictionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  restrictionTextContainer: {
+    flex: 1,
+  },
+  restrictionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  payFeeButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  payFeeButtonText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bidStatusBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  bidStatusBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  bidStatusBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  bidStatusBannerText: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  payFeeButtonBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  payFeeButtonBannerText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  viewJobButtonBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  viewJobButtonBannerText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

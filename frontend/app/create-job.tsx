@@ -26,7 +26,6 @@ import ProvinceSelect from '@/components/ProvinceSelect';
 export default function CreateJobScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { currentJob } = useAppSelector((state) => state.job.homeowner);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -50,6 +49,7 @@ export default function CreateJobScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPostJobPopup, setShowPostJobPopup] = useState(false);
+  const [createdJob, setCreatedJob] = useState<{ id: string; jobNumber?: string } | null>(null);
 
   const handleGeocode = async () => {
     // Validate required fields
@@ -193,7 +193,8 @@ export default function CreateJobScreen() {
         })
       ).unwrap();
 
-      // Show popup after successful job creation
+      // Store created job and show popup
+      setCreatedJob(job);
       setShowPostJobPopup(true);
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to create job');
@@ -204,8 +205,8 @@ export default function CreateJobScreen() {
   const handlePopupClose = () => {
     setShowPostJobPopup(false);
     setIsLoading(false);
-    if (currentJob?.id) {
-      router.replace(`/job/${currentJob.id}` as any);
+    if (createdJob?.id) {
+      router.replace(`/job/${createdJob.id}` as any);
     } else {
       router.back();
     }
@@ -699,11 +700,11 @@ export default function CreateJobScreen() {
             <Text style={[styles.popupMessage, { color: colors.text }]}>
               Please note we are in initial stages of app deployment, it may take a few days for contractors to contact you. At full app deployment we expect instantaneous responses.
             </Text>
-            {currentJob?.jobNumber && (
+            {createdJob?.jobNumber && (
               <View style={[styles.jobNumberContainer, { backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5' }]}>
                 <Text style={[styles.jobNumberLabel, { color: colors.icon }]}>Job Number</Text>
                 <Text style={[styles.jobNumber, { color: colors.tint }]}>
-                  {currentJob.jobNumber}
+                  {createdJob.jobNumber}
                 </Text>
               </View>
             )}

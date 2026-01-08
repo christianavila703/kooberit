@@ -64,6 +64,11 @@ const MAPPING = {
   'clock.fill': 'access-time',
   'mappin': 'place',
   'envelope.fill': 'mail',
+  'dollarsign.circle.fill': 'attach-money',
+  'dollarsign.circle': 'attach-money',
+  'info.circle.fill': 'info',
+  'calendar': 'event',
+  'calendar.badge.plus': 'event-available',
 } as IconMapping;
 
 /**

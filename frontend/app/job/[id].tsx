@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  TextInput,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchJobById,
@@ -18,53 +17,190 @@ import {
   postJobToMarket,
 } from '@/store/slices/jobSlice';
 import invitationService from '@/services/invitation';
-import { Modal } from '@/components/ui/modal';
 import contactService from '@/services/contact';
+import bidService from '@/services/bid';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import notification from '@/services/notification';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IRootState } from '@/store';
+import JobDetails from '@/components/job/JobDetails';
+import ContractorsTab from '@/components/job/ContractorsTab';
+import BidTab from '@/components/job/BidTab';
 
 export default function JobDetailsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
-  const { currentJob, isLoading } = useAppSelector((state) => state.job.homeowner);
   const { user, mode } = useAppSelector((state: IRootState) => state.auth);
+  const isContractor = user?.role === 'contractor' && mode === 'contractor';
+  
+  // Get jobs from appropriate array based on user type
+  const contractorJobs = useAppSelector((state) => state.job.contractor.jobs);
+  const homeownerJobs = useAppSelector((state) => state.job.homeowner.jobs);
+  const contractorIsLoading = useAppSelector((state) => state.job.contractor.isLoading);
+  const homeownerIsLoading = useAppSelector((state) => state.job.homeowner.isLoading);
+  
+  // Filter job by ID from appropriate array
+  const currentJob = isContractor 
+    ? contractorJobs.find((job) => job.id === id)
+    : homeownerJobs.find((job) => job.id === id);
+  const isLoading = isContractor ? contractorIsLoading : homeownerIsLoading;
   const [contractorContacts, setContractorContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [hasContacted, setHasContacted] = useState(false);
   const [contactData, setContactData] = useState<any>(null);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmails, setInviteEmails] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [invitationCount, setInvitationCount] = useState(0);
+  const [bids, setBids] = useState<any[]>([]);
+  const [loadingBids, setLoadingBids] = useState(false);
+  const [awardingBid, setAwardingBid] = useState<string | null>(null);
+  const [rejectingBid, setRejectingBid] = useState<string | null>(null);
+  const [myBid, setMyBid] = useState<any>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const isContractor = user?.role === 'contractor' && mode === 'contractor';
+  const [activeTab, setActiveTab] = useState<'details' | 'contractors' | 'bid'>('details');
 
   const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
+
+  // Update header title with job number
+  useLayoutEffect(() => {
+    if (currentJob?.jobNumber) {
+      navigation.setOptions({
+        title: `Job #${currentJob.jobNumber}`,
+      });
+    } else {
+      navigation.setOptions({
+        title: 'Job Details',
+      });
+    }
+  }, [currentJob?.jobNumber, navigation]);
 
   useEffect(() => {
     if (id && isAuthenticated) {
       loadJob();
       if (!isContractor) {
         loadContractorContacts();
+        loadBids();
       } else {
         checkIfContacted();
       }
     }
-  }, [id, isContractor]);
+  }, [id]);
+
+  useEffect(() => {
+    // Load bid when contractor has contacted
+    if (isContractor && hasContacted && id) {
+      loadMyBid();
+    }
+    // Redirect to details tab if contractor tries to access bid tab without contacting
+    if (isContractor && !hasContacted && activeTab === 'bid') {
+      setActiveTab('details');
+    }
+  }, [hasContacted, id, activeTab]);
+
+  const loadBids = async () => {
+    if (!id || isContractor) return;
+    setLoadingBids(true);
+    try {
+      const bidsData = await bidService.getBidsByJob(id);
+      setBids(bidsData);
+    } catch (error: any) {
+      notification.error('Error', error.message || 'Failed to load bids');
+    } finally {
+      setLoadingBids(false);
+    }
+  };
+
+  const handleAwardBid = async (bid: any) => {
+    const bidId = bid.id;
+    let message = 'Are you sure you want to award this bid? All other bids will be automatically rejected.';
+    
+    if (bid.passFeeToHomeowner) {
+      message += `\n\nThe award fee of $${bid.awardFee.toFixed(2)} (2.5% of the bid value) is included in the bid amount and must be paid by you before the project can proceed. The contract amount already excludes this fee.`;
+    } else {
+      message += `\n\nThe contractor must pay the award fee of $${bid.awardFee.toFixed(2)} (2.5% of the bid value) before they can send messages. Once payment is made, messaging will be enabled.`;
+    }
+
+    Alert.alert(
+      'Award Bid',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Award',
+          style: 'default',
+          onPress: async () => {
+            setAwardingBid(bidId);
+            try {
+              await bidService.awardBid(bidId);
+              notification.success('Success', 'Bid awarded successfully');
+              await loadBids();
+              
+              // If homeowner needs to pay, show payment option
+              if (bid.passFeeToHomeowner) {
+                Alert.alert(
+                  'Pay Award Fee',
+                  `The award fee of $${bid.awardFee.toFixed(2)} must be paid before the project can proceed. Would you like to pay now?`,
+                  [
+                    { text: 'Later', style: 'cancel' },
+                    {
+                      text: 'Pay Now',
+                      onPress: () => {
+                        router.push(`/payment/award-fee/${bidId}` as any);
+                      },
+                    },
+                  ]
+                );
+              }
+            } catch (error: any) {
+              notification.error('Error', error.message || 'Failed to award bid');
+            } finally {
+              setAwardingBid(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectBid = async (bid: any) => {
+    const bidId = bid.id;
+    Alert.alert(
+      'Reject Bid',
+      'Are you sure you want to reject this bid?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            setRejectingBid(bidId);
+            try {
+              await bidService.rejectBid(bidId);
+              notification.success('Success', 'Bid rejected successfully');
+              await loadBids();
+            } catch (error: any) {
+              notification.error('Error', error.message || 'Failed to reject bid');
+            } finally {
+              setRejectingBid(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const loadJob = async () => {
     try {
-      await dispatch(fetchJobById(id!)).unwrap();
+      const result = await dispatch(fetchJobById(id!)).unwrap();
       await loadInvitationCount();
+      return result;
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load job');
       router.back();
+      return null;
     }
   };
 
@@ -108,66 +244,42 @@ export default function JobDetailsScreen() {
     }
   };
 
+  const loadMyBid = async () => {
+    if (!id || !user || !isContractor) return;
+    try {
+      const bidsData = await bidService.getBidsByJob(id);
+      const myBidData = bidsData.find((bid) => bid.contractorId === user.id);
+      setMyBid(myBidData || null);
+    } catch (error: any) {
+      // Silently fail - bid might not exist
+      setMyBid(null);
+    } finally {
+    }
+  };
+
+  const handleBidSubmitted = async () => {
+    await loadMyBid();
+  };
+
   const handleContactHomeowner = () => {
     router.push(`/payment/${id}` as any);
   };
 
   const handlePostJobToMarket = async () => {
     if (!id) return;
-    Alert.alert(
-      'Post Job to Market',
-      'Are you sure you want to post this job to the marketplace? Once posted, you cannot invite specific contractors anymore.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Post',
-          style: 'default',
-          onPress: async () => {
-            setIsPosting(true);
-            try {
-              await dispatch(postJobToMarket(id)).unwrap();
-              notification.success('Success', 'Job posted to market successfully');
-              await loadJob();
-            } catch (error: any) {
-              notification.error('Error', error.message || 'Failed to post job to market');
-            } finally {
-              setIsPosting(false);
-            }
-          },
-        },
-      ]
-    );
+    setIsPosting(true);
+    try {
+      await dispatch(postJobToMarket(id)).unwrap();
+      await loadJob();
+    } catch (error: any) {
+      throw error;
+    } finally {
+      setIsPosting(false);
+    }
   };
 
-  const handleInviteContractors = () => {
-    setShowInviteModal(true);
-  };
-
-  const handleSendInvitations = async () => {
-    if (!id || !inviteEmails.trim()) {
-      notification.error('Error', 'Please enter at least one email address');
-      return;
-    }
-
-    // Parse emails (split by comma, newline, or semicolon)
-    const emails = inviteEmails
-      .split(/[,\n;]/)
-      .map((email) => email.trim())
-      .filter((email) => email.length > 0);
-
-    if (emails.length === 0) {
-      notification.error('Error', 'Please enter at least one valid email address');
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = emails.filter((email) => !emailRegex.test(email));
-    if (invalidEmails.length > 0) {
-      notification.error('Error', `Invalid email addresses: ${invalidEmails.join(', ')}`);
-      return;
-    }
-
+  const handleInviteContractors = async (emails: string[]) => {
+    if (!id) return;
     setIsInviting(true);
     try {
       // Send invitations to all emails
@@ -180,12 +292,11 @@ export default function JobDetailsScreen() {
 
       await Promise.all(promises);
       notification.success('Success', `Invitations sent to ${emails.length} contractor(s)`);
-
-      setShowInviteModal(false);
-      setInviteEmails('');
       
       // Automatically post job to market after sending invitations
-      if (currentJob?.status === 'pending') {
+      // Reload job to get latest status
+      const result = await loadJob();
+      if (result?.job?.status === 'pending') {
         try {
           await dispatch(postJobToMarket(id!)).unwrap();
           notification.success('Success', 'Job automatically posted to market');
@@ -194,9 +305,8 @@ export default function JobDetailsScreen() {
           notification.error('Error', error.message || 'Failed to post job to market');
         }
       }
-        
     } catch (error: any) {
-      notification.error('Error', error.message || 'Failed to send invitations');
+      throw error;
     } finally {
       setIsInviting(false);
     }
@@ -204,49 +314,21 @@ export default function JobDetailsScreen() {
 
   const handleCloseJob = async () => {
     if (!id) return;
-    Alert.alert(
-      'Close Job',
-      'Are you sure you want to close this job? Contractors will no longer be able to contact you.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Close',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await dispatch(closeJob(id)).unwrap();
-              notification.success('Success', 'Job closed successfully');
-            } catch (error: any) {
-              notification.error('Error', error.message || 'Failed to close job');
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await dispatch(closeJob(id)).unwrap();
+    } catch (error: any) {
+      throw error;
+    }
   };
 
   const handleDeleteJob = async () => {
     if (!id) return;
-    Alert.alert(
-      'Delete Job',
-      'Are you sure you want to delete this job? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await dispatch(deleteJob(id)).unwrap();
-              notification.success('Success', 'Job deleted successfully');
-              router.back();
-            } catch (error: any) {
-              notification.error('Error', error.message || 'Failed to delete job');
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await dispatch(deleteJob(id)).unwrap();
+      router.back();
+    } catch (error: any) {
+      throw error;
+    }
   };
 
   const handleChatPress = (chatRoomId: string) => {
@@ -265,345 +347,112 @@ export default function JobDetailsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Status Badge */}
-        <View style={styles.statusContainer}>
-          <View
+      {/* Tab Bar */}
+      <View style={[styles.tabBar, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'details' && [styles.activeTab, { backgroundColor: colors.tint }],
+          ]}
+          onPress={() => setActiveTab('details')}>
+          <Text
             style={[
-              styles.statusBadge,
-              {
-                backgroundColor: currentJob.status === 'closed' ? '#9E9E9E' : '#4CAF50',
-              },
+              styles.tabText,
+              { color: activeTab === 'details' ? '#FFFFFF' : colors.text },
             ]}>
-            <Text style={styles.statusText}>
-              {currentJob.status.charAt(0).toUpperCase() + currentJob.status.slice(1)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Job Title */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Job Title</Text>
-          <Text style={[styles.jobTitle, { color: colors.text }]}>
-            {currentJob.jobTitle || 'No title'}
+            Details
           </Text>
-        </View>
-
-        {/* Job Number & Job Size */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <View style={styles.infoRow}>
-            {currentJob.jobNumber && (
-              <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Number</Text>
-                <Text style={[styles.infoValue, { color: colors.tint }]}>
-                  #{currentJob.jobNumber}
-                </Text>
-              </View>
-            )}
-            {currentJob.jobSize && (
-              <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.icon }]}>Job Size</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {currentJob.jobSize === 'micro' && 'Micro Job ($0 - $2,500)'}
-                  {currentJob.jobSize === 'small' && 'Small Job ($2,500 - $10,000)'}
-                  {currentJob.jobSize === 'big' && 'Big Job ($10,000 - $50,000)'}
-                  {currentJob.jobSize === 'very_big' && 'Very Big Job ($50,000+)'}
-                </Text>
-              </View>
-            )}
-          </View>
-          {currentJob.structureType && (
-            <View style={[styles.infoItem, { marginTop: 16 }]}>
-              <Text style={[styles.infoLabel, { color: colors.icon }]}>Type of Structure</Text>
-              <Text style={[styles.infoValue, { color: colors.text }]}>
-                {currentJob.structureType === 'single_detached_house' && 'Single Detached House'}
-                {currentJob.structureType === 'semi_detached_house' && 'Semi Detached House'}
-                {currentJob.structureType === 'townhouse' && 'Townhouse'}
-                {currentJob.structureType === 'low_rise_building' && 'Low Rise Building'}
-                {currentJob.structureType === 'high_rise_building' && 'High Rise Building'}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Description */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Description</Text>
-          <Text style={[styles.description, { color: colors.text }]}>
-            {currentJob.description}
-          </Text>
-        </View>
-
-        {/* Categories */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Categories</Text>
-          <View style={styles.categoriesContainer}>
-            {currentJob.categories.map((category) => (
-              <View
-                key={`${currentJob.id}-${category}`}
-                style={[
-                  styles.categoryTag,
-                  { backgroundColor: isDark ? '#2E2E2E' : '#E0E0E0' },
-                ]}>
-                <Text style={[styles.categoryText, { color: colors.text }]}>{category}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Location */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-          <View style={styles.locationRow}>
-            <IconSymbol name="location.fill" size={20} color={colors.icon} />
-            <Text style={[styles.locationText, { color: colors.text }]}>
-              {isContractor && !hasContacted
-                ? (
-                  <>
-                    {/* City and Province - Always visible */}
-                    {(currentJob.location.cityName || currentJob.location.province) && (
-                      <Text style={[styles.cityProvinceText, { color: colors.text }]}>
-                        {currentJob.location.cityName}
-                        {currentJob.location.cityName && currentJob.location.province && ', '}
-                        {currentJob.location.province}
-                      </Text>
-                    )}
-                  </>
-                )
-                : currentJob.location.address}
+        </TouchableOpacity>
+        {isContractor && hasContacted ? (
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'bid' && [styles.activeTab, { backgroundColor: colors.tint }],
+            ]}
+            onPress={() => setActiveTab('bid')}>
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'bid' ? '#FFFFFF' : colors.text },
+              ]}>
+              Bid
             </Text>
-          </View>
-          
-        </View>
-
-        {/* Contractor Limit Info */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contractor Contacts</Text>
-          <Text style={[styles.infoText, { color: colors.icon }]}>
-            {currentJob.contractorContactsCount} / {currentJob.contractorLimit} contractors
-            have contacted you
-          </Text>
-          {invitationCount > 0 && (
-            <Text style={[styles.infoText, { color: colors.tint, marginTop: 8 }]}>
-              {invitationCount} contractor{invitationCount !== 1 ? 's' : ''} invited
+          </TouchableOpacity>
+        ) : !isContractor ? (
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'contractors' && [styles.activeTab, { backgroundColor: colors.tint }],
+            ]}
+            onPress={() => setActiveTab('contractors')}>
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'contractors' ? '#FFFFFF' : colors.text },
+              ]}>
+              Contractors
             </Text>
-          )}
-        </View>
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
-        {/* Contractor View - Contact Button */}
-        {isContractor && (
-          <View style={styles.section}>
-            {loadingContacts ? (
-              <ActivityIndicator color={colors.tint} />
-            ) : hasContacted ? (
-              <View>
-                <View style={[styles.contactedCard, { backgroundColor: '#4CAF50' + '20' }]}>
-                  <IconSymbol name="checkmark.circle.fill" size={24} color="#4CAF50" />
-                  <Text style={[styles.contactedText, { color: '#4CAF50' }]}>
-                    You have already contacted this homeowner
-                  </Text>
-                </View>
-                {contactData?.chatRoomId && (
-                  <TouchableOpacity
-                    style={[styles.chatButtonFull, { backgroundColor: colors.tint }]}
-                    onPress={() => handleChatPress(contactData.chatRoomId)}>
-                    <IconSymbol name="message.fill" size={20} color="#FFFFFF" />
-                    <Text style={styles.chatButtonText}>Open Chat</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : (
-              currentJob.status !== 'closed' && currentJob.contractorContactsCount < currentJob.contractorLimit
-              ? (
-              <TouchableOpacity
-                style={[styles.contactButton, { backgroundColor: colors.tint }]}
-                onPress={handleContactHomeowner}>
-                <IconSymbol name="creditcard.fill" size={20} color="#FFFFFF" />
-                <Text style={styles.contactButtonText}>Contact Homeowner ($19.99)</Text>
-              </TouchableOpacity>
-              ) : (
-                <View style={styles.contactButtonDisabled}>
-                  <IconSymbol name="lock.fill" size={20} color={colors.icon} />
-                  {currentJob.contractorContactsCount >= currentJob.contractorLimit ? (
-                    <Text style={styles.contactButtonTextDisabled}>Contact Limit Reached</Text>
-                  ) : (
-                    <Text style={styles.contactButtonTextDisabled}>Job Closed</Text>
-                  )}
-                </View>
-              )
-            )}
-          </View>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Job Details Tab Content */}
+        {activeTab === 'details' && (
+          <JobDetails
+            job={currentJob}
+            isContractor={isContractor}
+            hasContacted={hasContacted}
+            contactData={contactData}
+            loadingContacts={loadingContacts}
+            onContactPress={handleContactHomeowner}
+            onChatPress={handleChatPress}
+            invitationCount={invitationCount}
+            onInviteContractors={!isContractor ? handleInviteContractors : undefined}
+            onPostJobToMarket={!isContractor ? handlePostJobToMarket : undefined}
+            onCloseJob={!isContractor ? handleCloseJob : undefined}
+            onDeleteJob={!isContractor ? handleDeleteJob : undefined}
+            isInviting={isInviting}
+            isPosting={isPosting}
+            isInvited={currentJob.hasInvitation || false}
+          />
         )}
 
-        {/* Homeowner View - Contractor Contacts */}
-        {!isContractor && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 12 }]}>
-              Contractor Contacts
-            </Text>
-          {loadingContacts ? (
-            <ActivityIndicator color={colors.tint} />
-          ) : contractorContacts.length === 0 ? (
-            <View style={[styles.emptyContacts, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
-              <IconSymbol name="person.2" size={32} color={colors.icon} />
-              <Text style={[styles.emptyText, { color: colors.icon }]}>
-                No contractors have contacted you yet
-              </Text>
-            </View>
-          ) : (
-            contractorContacts.map((contact) => {
-              // Use contractor virtual field (backend now uses virtuals)
-              const contractor = contact.contractor;
-              const contractorName = contractor?.firstName && contractor?.lastName
-                ? `${contractor.firstName} ${contractor.lastName}`
-                : contractor?.firstName || contractor?.lastName || 'Contractor';
-              const contractorEmail = contractor?.email || '';
-              const contractorInitials = (contractor?.firstName?.[0] || 'C') + (contractor?.lastName?.[0] || '');
-
-              return (
-              <TouchableOpacity
-                key={contact.id}
-                style={[styles.contactCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
-                onPress={() => contact.chatRoomId && handleChatPress(contact.chatRoomId)}
-                activeOpacity={0.7}>
-                <View style={styles.contactHeader}>
-                  <View style={styles.contactInfo}>
-                    <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
-                      <Text style={styles.avatarText}>
-                        {contractorInitials}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={[styles.contactName, { color: colors.text }]}>
-                        {contractorName}
-                      </Text>
-                    </View>
-                  </View>
-                  {contact.chatRoomId && (
-                    <TouchableOpacity
-                      style={[styles.chatButton, { backgroundColor: colors.tint }]}
-                      onPress={() => handleChatPress(contact.chatRoomId)}>
-                      <IconSymbol name="message.fill" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </TouchableOpacity>
-              );
-            })
-          )}
-          </View>
+        {/* Bid Tab Content (Contractors) */}
+        {isContractor && hasContacted && activeTab === 'bid' && (
+          <BidTab
+            jobId={id!}
+            existingBid={myBid}
+            onBidSubmitted={handleBidSubmitted}
+            jobStatus={currentJob?.status}
+            onBidShouldRefresh={loadMyBid}
+            onJobShouldRefresh={async () => {
+              await loadJob();
+            }}
+          />
         )}
 
-        {/* Actions - Homeowner Only */}
-        {!isContractor && (
-          <View style={styles.actionsContainer}>
-            {currentJob.status === 'pending' && (
-              <>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: colors.tint }]}
-                  onPress={handleInviteContractors}
-                  disabled={isInviting}>
-                  <IconSymbol name="person.2.fill" size={18} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Invite Contractors</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
-                  onPress={handlePostJobToMarket}
-                  disabled={isPosting}>
-                  {isPosting ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <IconSymbol name="arrow.up.circle.fill" size={18} color="#FFFFFF" />
-                      <Text style={styles.actionButtonText}>Post to Market</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-            {currentJob.status === 'open' && (
-              <>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#FF9500' }]}
-                  onPress={handleCloseJob}>
-                  <Text style={styles.actionButtonText}>Close Job</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#FF3B30' }]}
-                  onPress={handleDeleteJob}>
-                  <Text style={styles.actionButtonText}>Delete Job</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+        {/* Contractors Tab Content */}
+        {!isContractor && activeTab === 'contractors' && (
+          <ContractorsTab
+            bids={bids}
+            contractorContacts={contractorContacts}
+            loadingBids={loadingBids}
+            loadingContacts={loadingContacts}
+            awardingBid={awardingBid}
+            rejectingBid={rejectingBid}
+            onAwardBid={handleAwardBid}
+            onRejectBid={handleRejectBid}
+            onChatPress={handleChatPress}
+            onPayAwardFee={(bidId) => router.push(`/payment/award-fee/${bidId}` as any)}
+            router={router}
+            onBidsShouldRefresh={loadBids}
+            onJobShouldRefresh={async () => {
+              await loadJob();
+            }}
+          />
         )}
       </ScrollView>
-
-      {/* Invite Contractors Modal */}
-      <Modal visible={showInviteModal} onClose={() => setShowInviteModal(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Invite Contractors to Bid
-            </Text>
-            <TouchableOpacity
-              onPress={() => setShowInviteModal(false)}
-              disabled={isInviting}>
-              <IconSymbol name="xmark.circle.fill" size={24} color={colors.icon} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.modalContent}>
-            <Text style={[styles.modalLabel, { color: colors.text }]}>
-              Enter contractor email addresses (one per line or separated by commas)
-            </Text>
-            <TextInput
-              style={[
-                styles.modalTextInput,
-                {
-                  backgroundColor: isDark ? '#1E1E1E' : '#F5F5F5',
-                  color: colors.text,
-                },
-              ]}
-              placeholder="contractor1@example.com, contractor2@example.com"
-              placeholderTextColor={colors.icon}
-              value={inviteEmails}
-              onChangeText={setInviteEmails}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-              editable={!isInviting}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <Text style={[styles.modalHint, { color: colors.icon }]}>
-              You can enter multiple emails separated by commas, semicolons, or new lines
-            </Text>
-          </View>
-          <View style={styles.modalActions}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonCancel]}
-              onPress={() => setShowInviteModal(false)}
-              disabled={isInviting}>
-              <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modalButton,
-                styles.modalButtonPrimary,
-                { backgroundColor: colors.tint },
-                isInviting && styles.modalButtonDisabled,
-              ]}
-              onPress={handleSendInvitations}
-              disabled={isInviting || !inviteEmails.trim()}>
-              {isInviting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.modalButtonTextPrimary}>Send Invitations</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -616,6 +465,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8
+  },
+  tab: {
+    width: 120,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
     paddingTop: 20
@@ -623,299 +501,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-  },
-  statusContainer: {
-    marginBottom: 20,
-    alignItems: 'flex-start',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  section: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  jobTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 26,
-  },
-  infoRow: {
-    gap: 16,
-  },
-  infoItem: {
-    gap: 4,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  locationText: {
-    fontSize: 15,
-    flex: 1,
-  },
-  cityProvinceRow: {
-    marginTop: 8,
-  },
-  cityProvinceText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  infoText: {
-    fontSize: 14,
-  },
-  emptyContacts: {
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  contactCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  contactHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  contactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactEmail: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  chatButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  contactButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  contactedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  contactedText: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  chatButtonFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 12,
-  },
-  chatButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  contactButtonDisabled: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  contactButtonTextDisabled: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    padding: 24,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-  },
-  modalContent: {
-    marginBottom: 24,
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  modalTextInput: {
-    minHeight: 120,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginBottom: 8,
-  },
-  modalHint: {
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: '#F5F5F5',
-  },
-  modalButtonPrimary: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  modalButtonDisabled: {
-    opacity: 0.6,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonTextPrimary: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

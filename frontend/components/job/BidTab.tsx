@@ -62,8 +62,15 @@ export default function BidTab({ jobId, existingBid, onBidSubmitted, jobStatus, 
       return;
     }
 
-    if (selectedDate <= new Date()) {
-      notification.error('Error', 'Project due date must be in the future');
+    // Normalize dates to midnight for date-only comparison
+    const dueDate = new Date(selectedDate);
+    dueDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Project due date cannot be later than current date (must be today or in the past)
+    if (dueDate.getTime() > today.getTime()) {
+      notification.error('Error', 'Project due date cannot be later than the current date');
       return;
     }
 

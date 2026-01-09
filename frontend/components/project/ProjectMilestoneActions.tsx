@@ -212,8 +212,16 @@ export default function ProjectMilestoneActions({
         notification.error('Error', 'Please enter a valid date (YYYY-MM-DD).');
         return;
       }
-      if (d <= new Date()) {
-        notification.error('Error', 'New date must be in the future.');
+      
+      // Normalize dates to midnight for date-only comparison
+      const newDateNormalized = new Date(d);
+      newDateNormalized.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Extension date must be in the future (after today)
+      if (newDateNormalized.getTime() <= today.getTime()) {
+        notification.error('Error', 'Extension date must be a future date.');
         return;
       }
       newDate = d.toISOString();

@@ -53,6 +53,18 @@ class BidService {
       throw new CustomError('You must contact the homeowner before submitting a bid', 400);
     }
 
+    // Validate projectDueDate: cannot be later than current date
+    if (bidData.projectDueDate) {
+      const dueDate = new Date(bidData.projectDueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (dueDate.getTime() > today.getTime()) {
+        throw new CustomError('Project due date cannot be later than the current date', 400);
+      }
+    }
+
     // Calculate award fee (2.5% of bid value)
     // If passFeeToHomeowner is true, the bid value already includes the fee
     // If false, the fee is separate and contractor pays
@@ -469,6 +481,18 @@ class BidService {
 
     if (existingRequest) {
       throw new CustomError('You already have a pending request of this type', 409);
+    }
+
+    // Validate newDate for date extension: must be a future date
+    if (requestData.requestType === 'date_extension' && requestData.newDate) {
+      const newDate = new Date(requestData.newDate);
+      newDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (newDate.getTime() <= today.getTime()) {
+        throw new CustomError('Extension date must be a future date', 400);
+      }
     }
 
     const request = await ExtensionRequest.create({

@@ -60,8 +60,8 @@ class BidService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      if (dueDate.getTime() > today.getTime()) {
-        throw new CustomError('Project due date cannot be later than the current date', 400);
+      if (dueDate.getTime() < today.getTime()) {
+        throw new CustomError('Project due date cannot be in the past', 400);
       }
     }
 

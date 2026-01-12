@@ -11,6 +11,7 @@ import {
   UserRole,
 } from '@/types';
 import { USER_ROLES } from '@enums';
+import socketService from '@/socket/socket';
 
 /**
  * Chat Service
@@ -105,29 +106,79 @@ class ChatService {
   /**
    * Create a new message
    */
-  async createMessage(messageData: IMessageCreationAttributes): Promise<IMessageDocument> {
+  async createMessage(
+    messageData: IMessageCreationAttributes,
+    options?: { broadcast?: boolean }
+  ): Promise<IMessageDocument> {
+    const visibleTo = (messageData as any).visibleTo ?? 'both';
+
     const message = await Message.create({
       ...messageData,
       chatId: new Types.ObjectId(messageData.chatId),
       senderId: new Types.ObjectId(messageData.senderId),
       isRead: false,
-      visibleTo: 'both',
+      visibleTo,
     });
 
     // Populate sender before returning
     await message.populate('sender', 'firstName lastName email phone');
 
-    // Update chat's last message
+    // Update chat metadata + unread counts
     const chat = await Chat.findById(messageData.chatId).exec();
     if (chat) {
-      const isHomeowner = chat.homeownerId.toString() === messageData.senderId.toString();
-      await Chat.findByIdAndUpdate(messageData.chatId, {
-        lastMessage: messageData.content,
-        lastMessageAt: new Date(),
-        ...(isHomeowner
-          ? { contractorUnreadCount: chat.contractorUnreadCount + 1 }
-          : { homeownerUnreadCount: chat.homeownerUnreadCount + 1 }),
-      }).exec();
+      const senderId = messageData.senderId.toString();
+      const homeownerId = chat.homeownerId.toString();
+      const contractorId = chat.contractorId.toString();
+      const isSenderHomeowner = homeownerId === senderId;
+
+      // Determine the intended recipient for unread counting (avoid incrementing the sender)
+      let recipientId: string | null = null;
+      if (visibleTo === 'both') {
+        recipientId = isSenderHomeowner ? contractorId : homeownerId;
+      } else if (visibleTo === USER_ROLES.HOMEOWNER || visibleTo === 'homeowner') {
+        recipientId = homeownerId;
+      } else if (visibleTo === USER_ROLES.CONTRACTOR || visibleTo === 'contractor') {
+        recipientId = contractorId;
+      }
+
+      const update: any = {};
+
+      // Only update shared lastMessage fields when message is visible to both users
+      if (visibleTo === 'both') {
+        update.lastMessage = messageData.content;
+        update.lastMessageAt = new Date();
+      }
+
+      // Unread count only increments for the recipient (and only when recipient != sender)
+      if (recipientId && recipientId !== senderId) {
+        if (recipientId === homeownerId) {
+          update.homeownerUnreadCount = chat.homeownerUnreadCount + 1;
+        } else if (recipientId === contractorId) {
+          update.contractorUnreadCount = chat.contractorUnreadCount + 1;
+        }
+      }
+
+      if (Object.keys(update).length > 0) {
+        await Chat.findByIdAndUpdate(messageData.chatId, update).exec();
+      }
+
+      // Broadcast (used for system messages created outside the chat sendMessage API flow)
+      if (options?.broadcast) {
+        const messageDataOut = message.toObject({ virtuals: true });
+
+        if (visibleTo === 'both') {
+          // Emit to chat room (for users currently in the chat)
+          socketService.emitToChat(chat._id.toString(), 'new_message', messageDataOut);
+
+          // Also emit to the recipient's personal room (so they receive it even when not in the chat)
+          if (recipientId) {
+            socketService.emitToUser(recipientId, 'new_message', messageDataOut);
+          }
+        } else if (recipientId) {
+          // Role-specific visibility: only emit to the target user's personal room
+          socketService.emitToUser(recipientId, 'new_message', messageDataOut);
+        }
+      }
     }
 
     return message;
@@ -218,32 +269,28 @@ class ChatService {
     }
 
     // Message for contractor
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(homeownerId),
-      content: 'Your bid has been submitted successfully. The homeowner will review it and notify you of their decision.',
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.CONTRACTOR,
-    });
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: homeownerId as any,
+        content: 'Your bid has been submitted successfully. The homeowner will review it and notify you of their decision.',
+        type: 'system',
+        visibleTo: USER_ROLES.CONTRACTOR as any,
+      } as any,
+      { broadcast: true }
+    );
 
     // Message for homeowner
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(contractorId),
-      content: `A new bid has been submitted for this job. You can review it in the Contractors tab.`,
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.HOMEOWNER,
-    });
-
-    // Increment unread counts
-    await Chat.findByIdAndUpdate(chatId, {
-      $inc: {
-        contractorUnreadCount: 1,
-        homeownerUnreadCount: 1,
-      },
-    }).exec();
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: contractorId as any,
+        content: `A new bid has been submitted for this job. You can review it in the Contractors tab.`,
+        type: 'system',
+        visibleTo: USER_ROLES.HOMEOWNER as any,
+      } as any,
+      { broadcast: true }
+    );
   }
 
   /**
@@ -274,14 +321,16 @@ class ChatService {
       contractorContent = '🎉 Your Bid Has Been Awarded! Please pay the award fee to continue messaging. Go to the Bid tab on the job page to pay.';
     }
 
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(homeownerId),
-      content: contractorContent,
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.CONTRACTOR,
-    });
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: homeownerId as any,
+        content: contractorContent,
+        type: 'system',
+        visibleTo: USER_ROLES.CONTRACTOR as any,
+      } as any,
+      { broadcast: true }
+    );
 
     // Message for homeowner
     let homeownerContent = '';
@@ -291,22 +340,16 @@ class ChatService {
       homeownerContent = `You have awarded this bid. The contractor must pay the award fee of $${bid.awardFee.toFixed(2)} (2.5% of the bid value) before they can send messages.`;
     }
 
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(contractorId),
-      content: homeownerContent,
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.HOMEOWNER,
-    });
-
-    // Increment unread counts
-    await Chat.findByIdAndUpdate(chatId, {
-      $inc: {
-        contractorUnreadCount: 1,
-        homeownerUnreadCount: 1,
-      },
-    }).exec();
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: contractorId as any,
+        content: homeownerContent,
+        type: 'system',
+        visibleTo: USER_ROLES.HOMEOWNER as any,
+      } as any,
+      { broadcast: true }
+    );
   }
 
   /**
@@ -319,32 +362,28 @@ class ChatService {
     }
 
     // Message for contractor
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(homeownerId),
-      content: 'Your Bid Was Not Selected. The homeowner has chosen to move forward with another bid. You can still view the job details.',
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.CONTRACTOR,
-    });
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: homeownerId as any,
+        content: 'Your Bid Was Not Selected. The homeowner has chosen to move forward with another bid. You can still view the job details.',
+        type: 'system',
+        visibleTo: USER_ROLES.CONTRACTOR as any,
+      } as any,
+      { broadcast: true }
+    );
 
     // Message for homeowner
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(contractorId),
-      content: 'You have chosen to move forward with another bid for this job.',
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.HOMEOWNER,
-    });
-
-    // Increment unread counts
-    await Chat.findByIdAndUpdate(chatId, {
-      $inc: {
-        contractorUnreadCount: 1,
-        homeownerUnreadCount: 1,
-      },
-    }).exec();
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: contractorId as any,
+        content: 'You have chosen to move forward with another bid for this job.',
+        type: 'system',
+        visibleTo: USER_ROLES.HOMEOWNER as any,
+      } as any,
+      { broadcast: true }
+    );
   }
 
   /**
@@ -361,36 +400,32 @@ class ChatService {
       ? `The award fee of $${awardFeeAmount.toFixed(2)} has been paid. Messaging is now enabled.`
       : `The homeowner has paid the award fee of $${awardFeeAmount.toFixed(2)}. The project can now proceed.`;
 
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(homeownerId),
-      content: contractorContent,
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.CONTRACTOR,
-    });
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: homeownerId as any,
+        content: contractorContent,
+        type: 'system',
+        visibleTo: USER_ROLES.CONTRACTOR as any,
+      } as any,
+      { broadcast: true }
+    );
 
     // Message for homeowner
     const homeownerContent = payerRole === USER_ROLES.HOMEOWNER
       ? `You have paid the award fee of $${awardFeeAmount.toFixed(2)}. The project can now proceed.`
       : `The contractor has paid the award fee of $${awardFeeAmount.toFixed(2)}. Messaging is now enabled.`;
 
-    await Message.create({
-      chatId: new Types.ObjectId(chatId),
-      senderId: new Types.ObjectId(contractorId),
-      content: homeownerContent,
-      type: 'system',
-      isRead: false,
-      visibleTo: USER_ROLES.HOMEOWNER,
-    });
-
-    // Increment unread counts
-    await Chat.findByIdAndUpdate(chatId, {
-      $inc: {
-        contractorUnreadCount: 1,
-        homeownerUnreadCount: 1,
-      },
-    }).exec();
+    await this.createMessage(
+      {
+        chatId: chatId as any,
+        senderId: contractorId as any,
+        content: homeownerContent,
+        type: 'system',
+        visibleTo: USER_ROLES.HOMEOWNER as any,
+      } as any,
+      { broadcast: true }
+    );
   }
 }
 

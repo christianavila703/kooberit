@@ -525,7 +525,7 @@ class BidService {
           content: summary,
           type: 'system',
           visibleTo: 'homeowner',
-        });
+        }, { broadcast: true });
       }
     } catch (error) {
       logger.error(`Failed to send extension request chat message for request ${request._id}:`, error);
@@ -598,7 +598,7 @@ class BidService {
           content: msgToContractor,
           type: 'system',
           visibleTo: 'contractor',
-        });
+        }, { broadcast: true });
 
         const msgToHomeowner = `You ${decisionLine} the contractor's change request.\n${details}`;
         await chatService.createMessage({
@@ -607,7 +607,7 @@ class BidService {
           content: msgToHomeowner,
           type: 'system',
           visibleTo: 'homeowner',
-        });
+        }, { broadcast: true });
       }
     } catch (error) {
       logger.error(`Failed to send extension request response chat message for request ${requestId}:`, error);
@@ -742,7 +742,7 @@ class BidService {
             content: msg,
             type: 'system',
             visibleTo: 'contractor',
-          });
+          }, { broadcast: true });
         }
       }
     } catch (error) {

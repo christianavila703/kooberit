@@ -4,7 +4,7 @@ import logger from '@/utils/logger';
 import notificationService from '@/services/notificationService';
 import bidService from '@/services/bidService';
 import chatService from '@/services/chatService';
-import { Chat, Message } from '@/models';
+import { Message } from '@/models';
 import { USER_ROLES } from './enums';
 
 let agenda: Agenda | null = null;
@@ -67,32 +67,29 @@ export const initializeAgenda = async (): Promise<void> => {
               if (!existingMessage) {
                 // Send extension prompt message
                 const extensionPrompt = 'Would you like to ask the homeowner for an extension on the project due date?';
-                await Message.create({
-                  chatId: chat._id,
-                  senderId: bid.homeownerId,
-                  content: extensionPrompt,
-                  type: 'system',
-                  isRead: false,
-                  visibleTo: USER_ROLES.CONTRACTOR,
-                });
+                await chatService.createMessage(
+                  {
+                    chatId: chat._id as any,
+                    senderId: bid.homeownerId as any,
+                    content: extensionPrompt,
+                    type: 'system',
+                    visibleTo: USER_ROLES.CONTRACTOR as any,
+                  } as any,
+                  { broadcast: true }
+                );
 
                 // Send budget change prompt
                 const budgetPrompt = 'Would you like to ask the homeowner for a change in the value of bid?';
-                await Message.create({
-                  chatId: chat._id,
-                  senderId: bid.homeownerId,
-                  content: budgetPrompt,
-                  type: 'system',
-                  isRead: false,
-                  visibleTo: USER_ROLES.CONTRACTOR,
-                });
-
-                // Increment unread counts
-                await Chat.findByIdAndUpdate(chat._id, {
-                  $inc: {
-                    contractorUnreadCount: 1,
-                  },
-                }).exec();
+                await chatService.createMessage(
+                  {
+                    chatId: chat._id as any,
+                    senderId: bid.homeownerId as any,
+                    content: budgetPrompt,
+                    type: 'system',
+                    visibleTo: USER_ROLES.CONTRACTOR as any,
+                  } as any,
+                  { broadcast: true }
+                );
 
                 logger.info(`Extension prompts sent for bid: ${bid._id}`);
               }
@@ -135,30 +132,27 @@ export const initializeAgenda = async (): Promise<void> => {
                 const onTimePrompt = 'Has the Contractor completed the work by the project due date?';
                 const onBudgetPrompt = 'Has the Contractor completed the work within value of bid?';
                 
-                await Message.create({
-                  chatId: chat._id,
-                  senderId: bid.contractorId,
-                  content: onTimePrompt,
-                  type: 'system',
-                  isRead: false,
-                  visibleTo: USER_ROLES.HOMEOWNER,
-                });
+                await chatService.createMessage(
+                  {
+                    chatId: chat._id as any,
+                    senderId: bid.contractorId as any,
+                    content: onTimePrompt,
+                    type: 'system',
+                    visibleTo: USER_ROLES.HOMEOWNER as any,
+                  } as any,
+                  { broadcast: true }
+                );
 
-                await Message.create({
-                  chatId: chat._id,
-                  senderId: bid.contractorId,
-                  content: onBudgetPrompt,
-                  type: 'system',
-                  isRead: false,
-                  visibleTo: USER_ROLES.HOMEOWNER,
-                });
-
-                // Increment unread counts
-                await Chat.findByIdAndUpdate(chat._id, {
-                  $inc: { 
-                    homeownerUnreadCount: 1,
-                  },
-                }).exec();
+                await chatService.createMessage(
+                  {
+                    chatId: chat._id as any,
+                    senderId: bid.contractorId as any,
+                    content: onBudgetPrompt,
+                    type: 'system',
+                    visibleTo: USER_ROLES.HOMEOWNER as any,
+                  } as any,
+                  { broadcast: true }
+                );
 
                 logger.info(`Completion prompts sent for bid: ${bid._id}`);
               }

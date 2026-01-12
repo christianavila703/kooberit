@@ -2,7 +2,6 @@ import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { verifyToken } from '@/utils/jwt';
 import authService from '@/services/authService';
-import chatService from '@/services/chatService';
 import logger from '@/utils/logger';
 import { CORS_ALLOWED_ORIGINS } from '@/config/constants';
 
@@ -118,6 +117,8 @@ class SocketService {
             return;
           }
 
+          // Lazy import to avoid circular dependency with chatService -> socketService
+          const chatService = (await import('@/services/chatService')).default;
           await chatService.markMessagesAsRead(data.chatId, socket.userId);
 
           // Notify other user

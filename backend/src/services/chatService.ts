@@ -76,12 +76,28 @@ class ChatService {
       ? { homeownerId: new Types.ObjectId(userId) }
       : { contractorId: new Types.ObjectId(userId) };
 
-    return Chat.find(filter)
+    const chats = await Chat.find(filter)
       .populate('homeowner', 'firstName lastName email phone')
       .populate('contractor', 'firstName lastName email phone')
       .populate('job', 'description categories status')
-      .sort({ lastMessageAt: -1 })
       .exec();
+
+    // Sort by "activityAt" so new chats with no messages (no lastMessageAt) still appear first.
+    // activityAt = lastMessageAt ?? createdAt
+    chats.sort((a, b) => {
+      const aActivity = (a.lastMessageAt ?? a.createdAt ?? new Date(0)).getTime();
+      const bActivity = (b.lastMessageAt ?? b.createdAt ?? new Date(0)).getTime();
+      if (bActivity !== aActivity) return bActivity - aActivity;
+
+      const aCreated = (a.createdAt ?? new Date(0)).getTime();
+      const bCreated = (b.createdAt ?? new Date(0)).getTime();
+      if (bCreated !== aCreated) return bCreated - aCreated;
+
+      // Final deterministic tie-breaker
+      return b._id.toString().localeCompare(a._id.toString());
+    });
+
+    return chats;
   }
 
   /**

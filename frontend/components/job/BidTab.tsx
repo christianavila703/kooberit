@@ -184,6 +184,7 @@ export default function BidTab({ jobId, existingBid, onBidSubmitted, jobStatus, 
               bid={existingBid}
               role="contractor"
               renderMode="embedded"
+              isJobCompleted={jobStatus === 'completed'}
               onBidShouldRefresh={onBidShouldRefresh}
               onJobShouldRefresh={onJobShouldRefresh}
             />

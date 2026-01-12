@@ -642,6 +642,7 @@ export default function ChatScreen() {
           role={isContractor ? 'contractor' : 'homeowner'}
           renderMode="card"
           isShow={false}
+          isJobCompleted={currentChat?.job?.status === 'completed'}
           initialAction={initialMilestoneAction}
           onInitialActionConsumed={() => setInitialMilestoneAction(null)}
           onBidShouldRefresh={checkExistingBid}

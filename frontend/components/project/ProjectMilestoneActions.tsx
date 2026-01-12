@@ -21,6 +21,11 @@ type ProjectMilestoneActionsProps = {
   bid: IBid | null | undefined;
   role: 'contractor' | 'homeowner';
   /**
+   * If true, hides all milestone actions (extension, budget change, completion prompts/sections).
+   * Note: We also treat `bid.completionPrompted === true` as completed.
+   */
+  isJobCompleted?: boolean;
+  /**
    * - card: full card with its own container styling (default)
    * - embedded: render without outer card container (for placing inside existing cards/sections)
    * - modalsOnly: render nothing visible, but still provides the modals driven by initialAction
@@ -48,6 +53,7 @@ function startOfDay(d: Date) {
 export default function ProjectMilestoneActions({
   bid,
   role,
+  isJobCompleted = false,
   renderMode = 'card',
   isShow = true,
   initialAction = null,
@@ -76,6 +82,10 @@ export default function ProjectMilestoneActions({
   const [completedOnTime, setCompletedOnTime] = useState<boolean | null>(null);
   const [completedWithinBudget, setCompletedWithinBudget] = useState<boolean | null>(null);
 
+  const jobCompleted = useMemo(() => {
+    return Boolean(isJobCompleted || bid?.completionPrompted);
+  }, [isJobCompleted, bid?.completionPrompted]);
+
   const awardedAndReady = useMemo(() => {
     if (!bid) return false;
     return bid.bidStatus === 'awarded' && bid.awardFeeStatus === 'completed';
@@ -100,16 +110,18 @@ export default function ProjectMilestoneActions({
   const needsCompletionResponse = useMemo(() => {
     if (!bid || role !== 'homeowner') return false;
     if (!awardedAndReady) return false;
+    if (jobCompleted) return false;
     if (!dueDateInfo) return false;
     return dueDateInfo.isPastOneDay && !bid.completionPrompted;
-  }, [bid, role, awardedAndReady, dueDateInfo]);
+  }, [bid, role, awardedAndReady, dueDateInfo, jobCompleted]);
 
   const canRequestChanges = useMemo(() => {
     if (!bid || role !== 'contractor') return false;
     if (!awardedAndReady) return false;
+    if (jobCompleted) return false;
     if (!dueDateInfo) return false;
     return dueDateInfo.isDueOrPast;
-  }, [bid, role, awardedAndReady, dueDateInfo]);
+  }, [bid, role, awardedAndReady, dueDateInfo, jobCompleted]);
 
   const pendingRequestsForBid = useMemo(() => {
     if (!bid) return [];
@@ -148,6 +160,12 @@ export default function ProjectMilestoneActions({
     if (!bid?.id) return;
     if (!initialAction) return;
 
+    if (jobCompleted) {
+      notification.error('Not Available', 'This job has been completed.');
+      onInitialActionConsumed?.();
+      return;
+    }
+
     if (initialAction === 'completion') {
       if (needsCompletionResponse) {
         setShowCompletionModal(true);
@@ -173,7 +191,7 @@ export default function ProjectMilestoneActions({
     setRequestType(initialAction);
     setShowRequestModal(true);
     onInitialActionConsumed?.();
-  }, [initialAction, bid?.id, role, canRequestChanges, needsCompletionResponse, onInitialActionConsumed]);
+  }, [initialAction, bid?.id, role, canRequestChanges, needsCompletionResponse, onInitialActionConsumed, jobCompleted]);
 
   const shouldRenderVisibleUI = renderMode !== 'modalsOnly';
 
@@ -297,7 +315,7 @@ export default function ProjectMilestoneActions({
 
   const content = (
     <>
-        {isShow && (
+        {isShow && !jobCompleted && (
         <>
 
             {/* Contractor: request changes */}
@@ -405,38 +423,6 @@ export default function ProjectMilestoneActions({
                 </View>
             )}
 
-            {/* Homeowner: completion response */}
-            {role === 'homeowner' && (bid?.completionPrompted || needsCompletionResponse) && (
-                <View style={{ marginTop: 12 }}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Completion</Text>
-                    {bid?.completionPrompted ? (
-                        <View style={[styles.infoBox, { backgroundColor: isDark ? 'rgba(76,175,80,0.15)' : 'rgba(76,175,80,0.1)' }]}>
-                            <IconSymbol name="checkmark.circle.fill" size={16} color="#4CAF50" />
-                            <Text style={[styles.infoText, { color: colors.text }]}>
-                                Completion status submitted. On‑Time Points: {bid?.onTimeEfficiencyPoints ?? 0} | On‑Budget Points:{' '}
-                                {bid?.onBudgetEfficiencyPoints ?? 0}
-                            </Text>
-                        </View>
-                    ) : needsCompletionResponse ? (
-                        <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: colors.tint }, loading && styles.actionButtonDisabled]}
-                            onPress={() => {
-                                setCompletedOnTime(null);
-                                setCompletedWithinBudget(null);
-                                setShowCompletionModal(true);
-                            }}
-                            disabled={loading}
-                            >
-                            <IconSymbol name="checkmark.seal.fill" size={18} color="#FFFFFF" />
-                            <Text style={styles.actionButtonText}>Answer Completion Questions</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <Text style={[styles.sectionSubtitle, { color: colors.icon }]}>
-                            Completion questions become available one day after the due date (if not already submitted).
-                        </Text>
-                    )}
-                </View>
-            )}
         </>
         )}
 

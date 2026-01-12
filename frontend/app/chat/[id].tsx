@@ -31,7 +31,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import chatService from '@/services/chat';
 import fileDownloadService from '@/services/fileDownload';
 import bidService from '@/services/bid';
-import { formatDateSeparator } from '@/utils/helper';
+import { formatDateSeparator, isDifferentDay } from '@/utils/helper';
 import ProjectMilestoneActions from '@/components/project/ProjectMilestoneActions';
 
 export default function ChatScreen() {
@@ -102,7 +102,6 @@ export default function ChatScreen() {
   const checkExistingBid = async () => {
     if (!chatId || !currentChat || !currentChat.contractor) return;
     try {
-      console.log('chatId', chatId);
       const bids = await bidService.getBidsByChat(chatId);
       let myBid = null;
       if (isContractor) {
@@ -136,6 +135,7 @@ export default function ChatScreen() {
         // Listen for new messages from other users (sender gets message from API response)
         // Socket emits to others only, so all socket messages are from other users
         socketService.on('new_message', (message: any) => {
+          console.log('message', message);
           // Only add if message matches current chat
           if (message.chatId === chatId) {
             dispatch(addMessage({ mode, chatId: chatId, message }));
@@ -404,16 +404,6 @@ export default function ChatScreen() {
       return currentChat.contractor;
     }
     return currentChat.homeowner;
-  };
-
-
-  // Check if two dates are on different days
-  const isDifferentDay = (date1: Date, date2: Date): boolean => {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    d1.setHours(0, 0, 0, 0);
-    d2.setHours(0, 0, 0, 0);
-    return d1.getTime() !== d2.getTime();
   };
 
   // Prepare messages with date separators (chronologically sorted)

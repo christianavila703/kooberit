@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import apiService from '@/services/auth';
+import socketService from '@/services/socket';
 import type {
   ILoginRequest,
   IRegisterRequest,
@@ -54,6 +55,8 @@ export const logoutUser = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
+      // Ensure realtime connection is torn down on logout
+      socketService.disconnect();
       await apiService.logout();
       return null;
     } catch (error: any) {

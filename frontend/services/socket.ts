@@ -6,6 +6,7 @@ import { TOKEN_KEY } from '@/constants/config';
 class SocketService {
   private socket: Socket | null = null;
   private isConnecting = false;
+  private connectPromise: Promise<Socket> | null = null;
 
   async connect(): Promise<Socket> {
     if (this.socket?.connected) {
@@ -13,15 +14,9 @@ class SocketService {
     }
 
     if (this.isConnecting) {
-      // Wait for connection
-      return new Promise((resolve) => {
-        const checkConnection = setInterval(() => {
-          if (this.socket?.connected) {
-            clearInterval(checkConnection);
-            resolve(this.socket!);
-          }
-        }, 100);
-      });
+      if (this.connectPromise) return this.connectPromise;
+      // Fallback: should not happen, but avoid hanging forever
+      throw new Error('Socket connection already in progress');
     }
 
     this.isConnecting = true;
@@ -35,36 +30,45 @@ class SocketService {
         ? baseURL
         : baseURL;
 
-      this.socket = io(socketURL, {
-        auth: {
-          token,
-        },
-        transports: ['websocket', 'polling'],
+      this.connectPromise = new Promise<Socket>((resolve, reject) => {
+        this.socket = io(socketURL, {
+          auth: {
+            token,
+          },
+          transports: ['websocket', 'polling'],
+        });
+
+        this.socket.on('connect', () => {
+          console.log('Socket connected');
+          this.isConnecting = false;
+          resolve(this.socket!);
+        });
+
+        this.socket.on('disconnect', () => {
+          console.log('Socket disconnected');
+        });
+
+        this.socket.on('error', (error) => {
+          console.error('Socket error:', error);
+          this.isConnecting = false;
+          reject(error);
+        });
+      }).finally(() => {
+        this.connectPromise = null;
       });
 
-      this.socket.on('connect', () => {
-        console.log('Socket connected');
-        this.isConnecting = false;
-      });
-
-      this.socket.on('disconnect', () => {
-        console.log('Socket disconnected');
-      });
-
-      this.socket.on('error', (error) => {
-        console.error('Socket error:', error);
-        this.isConnecting = false;
-      });
-
-      return this.socket;
+      return await this.connectPromise;
     } catch (error) {
       console.error('Socket connection error:', error);
       this.isConnecting = false;
+      this.connectPromise = null;
       throw error;
     }
   }
 
   disconnect() {
+    this.isConnecting = false;
+    this.connectPromise = null;
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;

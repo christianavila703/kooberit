@@ -81,3 +81,15 @@ export function formatDateSeparator(date: Date): string {
     });
   }
 }
+
+
+/**
+ * Check if two dates are on different days
+ */
+export function isDifferentDay(date1: Date, date2: Date): boolean {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  d1.setHours(0, 0, 0, 0); // Set hours to 0
+  d2.setHours(0, 0, 0, 0); // Set hours to 0
+  return d1.getTime() !== d2.getTime(); // Compare without time component
+}

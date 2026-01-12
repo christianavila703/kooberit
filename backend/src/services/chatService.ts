@@ -69,6 +69,15 @@ class ChatService {
   }
 
   /**
+   * Find chat by ID with only access-control fields (no populates).
+   * This is used by endpoints that only need to verify membership and/or read jobId.
+   */
+  async findChatAccessById(id: string): Promise<IChatDocument | null> {
+    if (!id) return null;
+    return Chat.findById(id).select('homeownerId contractorId jobId').exec();
+  }
+
+  /**
    * Find all chats for a user
    */
   async findChatsByUser(userId: string, role: UserRole): Promise<IChatDocument[]> {
@@ -253,17 +262,20 @@ class ChatService {
    * Get unread count for user
    */
   async getUnreadCount(userId: string, role: UserRole): Promise<number> {
-    const chats = await Chat.find(
+    const match =
       role === USER_ROLES.HOMEOWNER
         ? { homeownerId: new Types.ObjectId(userId) }
-        : { contractorId: new Types.ObjectId(userId) }
-    ).exec();
+        : { contractorId: new Types.ObjectId(userId) };
 
-    return chats.reduce(
-      (total, chat) =>
-        total + (role === USER_ROLES.HOMEOWNER ? chat.homeownerUnreadCount : chat.contractorUnreadCount),
-      0
-    );
+    const sumField =
+      role === USER_ROLES.HOMEOWNER ? '$homeownerUnreadCount' : '$contractorUnreadCount';
+
+    const result = await Chat.aggregate<{ total: number }>([
+      { $match: match },
+      { $group: { _id: null, total: { $sum: sumField } } },
+    ]).exec();
+
+    return result[0]?.total || 0;
   }
 
   /**

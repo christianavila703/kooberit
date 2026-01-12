@@ -98,7 +98,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
     const before = req.query.before as string | undefined;
 
     // Verify user has access to this chat
-    const chat = await chatService.findChatById(chatId);
+    const chat = await chatService.findChatAccessById(chatId);
     if (!chat) {
       return res.status(404).json({
         success: false,
@@ -120,14 +120,14 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
     // Filter messages based on visibility
     const filteredMessages = messages.filter((message) => {
-      const msg = message.toObject({ virtuals: true });
-      if (!msg.visibleTo || msg.visibleTo === 'both') {
+      const visibleTo = (message as any).visibleTo;
+      if (!visibleTo || visibleTo === 'both') {
         return true;
       }
-      if (msg.visibleTo === USER_ROLES.CONTRACTOR && isContractor) {
+      if (visibleTo === USER_ROLES.CONTRACTOR && isContractor) {
         return true;
       }
-      if (msg.visibleTo === USER_ROLES.HOMEOWNER && isHomeowner) {
+      if (visibleTo === USER_ROLES.HOMEOWNER && isHomeowner) {
         return true;
       }
       return false;
@@ -163,7 +163,7 @@ export const sendMessage = async (req: Request, res: Response) => {
     const { content, type = 'text', fileUrl } = req.body;
 
     // Verify user has access to this chat
-    const chat = await chatService.findChatById(chatId);
+    const chat = await chatService.findChatAccessById(chatId);
     if (!chat) {
       return res.status(404).json({
         success: false,
@@ -250,7 +250,7 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
     const user = (req as any).user;
 
     // Verify user has access to this chat
-    const chat = await chatService.findChatById(chatId);
+    const chat = await chatService.findChatAccessById(chatId);
     if (!chat) {
       return res.status(404).json({
         success: false,

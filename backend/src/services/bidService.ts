@@ -66,20 +66,17 @@ class BidService {
     }
 
     // Calculate award fee (2.5% of bid value)
-    // If passFeeToHomeowner is true, the bid value already includes the fee
+    // If passFeeToHomeowner is true, the fee is deducted from the bid value
     // If false, the fee is separate and contractor pays
     let bidValue = bidData.bidValue;
     let awardFee = bidValue * 0.025;
     
     if (bidData.passFeeToHomeowner) {
-      // If fee is passed to homeowner, the bid value includes the fee
-      // So we need to extract the base value and calculate fee from that
-      // bidValue = baseValue + (baseValue * 0.025)
-      // bidValue = baseValue * 1.025
-      // baseValue = bidValue / 1.025
-      const baseValue = bidValue / 1.025;
-      awardFee = baseValue * 0.025;
-      bidValue = baseValue; // Store the base value without fee
+      // If fee is passed to homeowner, deduct 2.5% from the bid value
+      // The entered bidValue is the bid price, fee is deducted from it
+      // Example: bidValue = $2000, fee = $50, baseValue = $1950
+      awardFee = bidValue * 0.025;
+      bidValue = bidValue - awardFee; // Store the base value (what homeowner pays)
     }
 
     // Create bid
@@ -567,8 +564,16 @@ class BidService {
           bid.projectDueDate = request.newDate;
         } else if (request.requestType === 'budget_change' && request.newBudget) {
           // Recalculate award fee for new budget
-          const newAwardFee = request.newBudget * 0.025;
-          bid.bidValue = request.newBudget;
+          let newBidValue = request.newBudget;
+          let newAwardFee = newBidValue * 0.025;
+          
+          // If fee is passed to homeowner, deduct 2.5% from the new budget
+          if (bid.passFeeToHomeowner) {
+            newAwardFee = newBidValue * 0.025;
+            newBidValue = newBidValue - newAwardFee; // Store the base value (what homeowner pays)
+          }
+          
+          bid.bidValue = newBidValue;
           bid.awardFee = newAwardFee;
         }
         await bid.save();

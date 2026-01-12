@@ -76,38 +76,35 @@ export default function ChatScreen() {
   const chatMessages = useMemo(() => (chatId && typeof chatId === 'string' && messages[chatId]) ? messages[chatId] : [], [messages, chatId]);
   const isDark = colorScheme === 'dark';
 
-  useEffect(() => {
-    connectSocket();
-    
-    return () => {
-      const chatId = id;
-      if (chatId) {
-        socketService.leaveChat(chatId);
-      }
-      // Remove only handlers registered by this screen (avoid breaking other screens)
-      if (socketHandlersRef.current.handleNewMessage) {
-        socketService.off('new_message', socketHandlersRef.current.handleNewMessage);
-      }
-      if (socketHandlersRef.current.handleUserTyping) {
-        socketService.off('user_typing', socketHandlersRef.current.handleUserTyping);
-      }
-      if (socketHandlersRef.current.handleUserStoppedTyping) {
-        socketService.off('user_stopped_typing', socketHandlersRef.current.handleUserStoppedTyping);
-      }
-      if (socketHandlersRef.current.handleMessagesRead) {
-        socketService.off('messages_read', socketHandlersRef.current.handleMessagesRead);
-      }
-    };
-  }, [id]);
-
   useFocusEffect(
     React.useCallback(() => {
+      connectSocket();
       loadChat();
       loadMessages();
 
       hasCheckedBidRef.current = false;
+  
+      return () => {
+        const chatId = id;
+        if (chatId) {
+          socketService.leaveChat(chatId);
+        }
+        // Remove only handlers registered by this screen (avoid breaking other screens)
+        if (socketHandlersRef.current.handleNewMessage) {
+          socketService.off('new_message', socketHandlersRef.current.handleNewMessage);
+        }
+        if (socketHandlersRef.current.handleUserTyping) {
+          socketService.off('user_typing', socketHandlersRef.current.handleUserTyping);
+        }
+        if (socketHandlersRef.current.handleUserStoppedTyping) {
+          socketService.off('user_stopped_typing', socketHandlersRef.current.handleUserStoppedTyping);
+        }
+        if (socketHandlersRef.current.handleMessagesRead) {
+          socketService.off('messages_read', socketHandlersRef.current.handleMessagesRead);
+        }
+      };
     }, [id])
-  )
+  );
   
   useEffect(() => {
     if (currentChat && !hasCheckedBidRef.current) {

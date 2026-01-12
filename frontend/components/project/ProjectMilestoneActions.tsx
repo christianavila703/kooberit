@@ -150,10 +150,9 @@ export default function ProjectMilestoneActions({
   };
 
   useEffect(() => {
-    if (!bid?.id) return;
+    if (!bid?.id || !isShow) return;
     refreshRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bid?.id]);
+  }, [bid?.id, isShow]);
 
   // If parent wants us to open a modal (chat system prompt), do it once.
   useEffect(() => {

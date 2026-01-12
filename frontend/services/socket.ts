@@ -1,7 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { API_CONFIG } from '@/constants/config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY } from '@/constants/config';
+import { getAuthToken } from '@/libs/authToken';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -22,7 +21,7 @@ class SocketService {
     this.isConnecting = true;
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await getAuthToken();
       // Get base URL without /api
       const baseURL = API_CONFIG.BASE_URL.replace('/api', '');
       // For development, use localhost or IP
@@ -39,17 +38,17 @@ class SocketService {
         });
 
         this.socket.on('connect', () => {
-          console.log('Socket connected');
+          if (__DEV__) console.log('Socket connected');
           this.isConnecting = false;
           resolve(this.socket!);
         });
 
         this.socket.on('disconnect', () => {
-          console.log('Socket disconnected');
+          if (__DEV__) console.log('Socket disconnected');
         });
 
         this.socket.on('error', (error) => {
-          console.error('Socket error:', error);
+          if (__DEV__) console.error('Socket error:', error);
           this.isConnecting = false;
           reject(error);
         });
@@ -59,7 +58,7 @@ class SocketService {
 
       return await this.connectPromise;
     } catch (error) {
-      console.error('Socket connection error:', error);
+      if (__DEV__) console.error('Socket connection error:', error);
       this.isConnecting = false;
       this.connectPromise = null;
       throw error;

@@ -193,8 +193,6 @@ export default function ProjectMilestoneActions({
     onInitialActionConsumed?.();
   }, [initialAction, bid?.id, role, canRequestChanges, needsCompletionResponse, onInitialActionConsumed, jobCompleted]);
 
-  const shouldRenderVisibleUI = renderMode !== 'modalsOnly';
-
   if (!bid || bid.bidStatus !== 'awarded') {
     // Still render modalsOnly if we need to consume initialAction and show a helpful error.
     if (renderMode !== 'modalsOnly') return null;

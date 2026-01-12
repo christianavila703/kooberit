@@ -54,6 +54,14 @@ export default function ChatScreen() {
   const isNavigatingToMessagesRef = useRef(false);
   const hasCheckedBidRef = useRef(false);
   const systemRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markReadCooldownRef = useRef<number>(0);
+  const markReadInFlightRef = useRef<boolean>(false);
+  const socketHandlersRef = useRef<{
+    handleNewMessage?: (message: any) => void;
+    handleUserTyping?: (data: { chatId: string; userId: string }) => void;
+    handleUserStoppedTyping?: (data: { chatId: string; userId: string }) => void;
+    handleMessagesRead?: (data: { chatId: string; userId: string }) => void;
+  }>({});
   
   // Bid status state
   const [existingBid, setExistingBid] = useState<any>(null);
@@ -76,10 +84,19 @@ export default function ChatScreen() {
       if (chatId) {
         socketService.leaveChat(chatId);
       }
-      socketService.off('new_message');
-      socketService.off('user_typing');
-      socketService.off('user_stopped_typing');
-      socketService.off('messages_read');
+      // Remove only handlers registered by this screen (avoid breaking other screens)
+      if (socketHandlersRef.current.handleNewMessage) {
+        socketService.off('new_message', socketHandlersRef.current.handleNewMessage);
+      }
+      if (socketHandlersRef.current.handleUserTyping) {
+        socketService.off('user_typing', socketHandlersRef.current.handleUserTyping);
+      }
+      if (socketHandlersRef.current.handleUserStoppedTyping) {
+        socketService.off('user_stopped_typing', socketHandlersRef.current.handleUserStoppedTyping);
+      }
+      if (socketHandlersRef.current.handleMessagesRead) {
+        socketService.off('messages_read', socketHandlersRef.current.handleMessagesRead);
+      }
     };
   }, [id]);
 
@@ -134,7 +151,7 @@ export default function ChatScreen() {
         
         // Listen for new messages from other users (sender gets message from API response)
         // Socket emits to others only, so all socket messages are from other users
-        socketService.on('new_message', (message: any) => {
+        const handleNewMessage = (message: any) => {
           // Only add if message matches current chat
           if (message.chatId === chatId) {
             dispatch(addMessage({ mode, chatId: chatId, message }));
@@ -154,69 +171,51 @@ export default function ChatScreen() {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
           }
-        });
+        };
+        socketHandlersRef.current.handleNewMessage = handleNewMessage;
+        socketService.on('new_message', handleNewMessage);
 
         // Listen for typing indicators
-        socketService.on('user_typing', (data: { chatId: string; userId: string }) => {
+        const handleUserTyping = (data: { chatId: string; userId: string }) => {
           if (data.chatId === chatId && data.userId !== user?.id) {
             setPartnerTyping(true);
           }
-        });
+        };
+        socketHandlersRef.current.handleUserTyping = handleUserTyping;
+        socketService.on('user_typing', handleUserTyping);
 
-        socketService.on('user_stopped_typing', (data: { chatId: string; userId: string }) => {
+        const handleUserStoppedTyping = (data: { chatId: string; userId: string }) => {
           if (data.chatId === chatId && data.userId !== user?.id) {
             setPartnerTyping(false);
           }
-        });
+        };
+        socketHandlersRef.current.handleUserStoppedTyping = handleUserStoppedTyping;
+        socketService.on('user_stopped_typing', handleUserStoppedTyping);
 
         // Listen for read receipts (when other user marks messages as read)
-        socketService.on('messages_read', (data: { chatId: string; userId: string }) => {
+        const handleMessagesRead = (data: { chatId: string; userId: string }) => {
           if (data.chatId === chatId && data.userId !== user?.id) {
             dispatch(markMessagesAsReadInChat({ mode, chatId: chatId, currentUserId: data.userId }));
           }
-        });
+        };
+        socketHandlersRef.current.handleMessagesRead = handleMessagesRead;
+        socketService.on('messages_read', handleMessagesRead);
       }
     } catch (error) {
       console.error('Socket connection error:', error);
     }
   };
 
-  // Mark messages as read when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      const chatId = id;
-      if (!chatId || typeof chatId !== 'string' || !user) return;
-
-      // Get current messages for this chat
-      const chatMessages = messages[chatId] || [];
-      
-      // Only mark as read if there are unread messages from the other person
-      const hasUnreadMessages = chatMessages.some(
-        (msg: any) => msg.senderId !== user?.id && !msg.isRead
-      );
-
-      if (hasUnreadMessages) {
-        // Small delay to ensure messages are loaded
-        const timer = setTimeout(() => {
-          // Mark messages as read via API (Redux will update state automatically)
-          dispatch(markMessagesAsRead({ chatId, mode }));
-        }, 300);
-
-        return () => clearTimeout(timer);
-      }
-    }, [id, messages, user, dispatch])
-  );
-
   useEffect(() => {
     // Ensure id is a string (handle array case from useLocalSearchParams)
     const chatId = id;
     // Scroll to bottom when new messages arrive
-    if (chatId && messages[chatId] && messages[chatId].length > 0) {
+    if (chatId && chatMessages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 200);
     }
-  }, [messages, id, dispatch]);
+  }, [chatMessages.length, id]);
 
   const loadChat = useCallback(async () => {
     const chatId = id;
@@ -406,12 +405,9 @@ export default function ChatScreen() {
   };
 
   // Prepare messages with date separators (chronologically sorted)
-  const prepareMessagesWithDates = () => {
-    const chatId = id;
-    const chatMessages = (chatId && typeof chatId === 'string') ? messages[chatId] || [] : [];
-    
-    if (chatMessages.length === 0) return [];
-    
+  const messagesWithDates = useMemo(() => {
+    if (!chatMessages || chatMessages.length === 0) return [];
+
     // Sort all messages chronologically by createdAt
     const sortedMessages = [...chatMessages].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -454,9 +450,8 @@ export default function ChatScreen() {
     });
     
     return items;
-  };
+  }, [chatMessages]);
 
-  const messagesWithDates = prepareMessagesWithDates();
   const partner = getChatPartner();
 
   // Set header title based on chat partner
@@ -681,8 +676,16 @@ export default function ChatScreen() {
               );
               
               if (hasUnreadMessages) {
-                // Mark messages as read via API (Redux will update state automatically)
-                dispatch(markMessagesAsRead({ chatId, mode }));
+                const now = Date.now();
+                // Prevent spamming the API on frequent scroll events
+                if (markReadInFlightRef.current) return;
+                if (now - markReadCooldownRef.current < 1_000) return;
+                markReadCooldownRef.current = now;
+                markReadInFlightRef.current = true;
+                dispatch(markMessagesAsRead({ chatId, mode }))
+                  .finally(() => {
+                    markReadInFlightRef.current = false;
+                  });
               }
             }
           }}

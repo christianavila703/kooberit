@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -42,9 +42,12 @@ export default function JobDetailsScreen() {
   const homeownerIsLoading = useAppSelector((state) => state.job.homeowner.isLoading);
   
   // Filter job by ID from appropriate array
-  const currentJob = isContractor 
-    ? contractorJobs.find((job) => job.id === id)
-    : homeownerJobs.find((job) => job.id === id);
+  const currentJob = useMemo(() => {
+    if (!id) return undefined;
+    return isContractor
+      ? contractorJobs.find((job) => job.id === id)
+      : homeownerJobs.find((job) => job.id === id);
+  }, [isContractor, contractorJobs, homeownerJobs, id]);
   const isLoading = isContractor ? contractorIsLoading : homeownerIsLoading;
   const [contractorContacts, setContractorContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -63,6 +66,7 @@ export default function JobDetailsScreen() {
   const [activeTab, setActiveTab] = useState<'details' | 'contractors' | 'bid'>('details');
 
   const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
+  const initialLoadKeyRef = useRef<string | null>(null);
 
   // Update header title with job number
   useLayoutEffect(() => {
@@ -77,30 +81,7 @@ export default function JobDetailsScreen() {
     }
   }, [currentJob?.jobNumber, navigation]);
 
-  useEffect(() => {
-    if (id && isAuthenticated) {
-      loadJob();
-      if (!isContractor) {
-        loadContractorContacts();
-        loadBids();
-      } else {
-        checkIfContacted();
-      }
-    }
-  }, [id]);
-
-  useEffect(() => {
-    // Load bid when contractor has contacted
-    if (isContractor && hasContacted && id) {
-      loadMyBid();
-    }
-    // Redirect to details tab if contractor tries to access bid tab without contacting
-    if (isContractor && !hasContacted && activeTab === 'bid') {
-      setActiveTab('details');
-    }
-  }, [hasContacted, id, activeTab]);
-
-  const loadBids = async () => {
+  const loadBids = useCallback(async () => {
     if (!id || isContractor) return;
     setLoadingBids(true);
     try {
@@ -111,7 +92,7 @@ export default function JobDetailsScreen() {
     } finally {
       setLoadingBids(false);
     }
-  };
+  }, [id]);
 
   const handleAwardBid = async (bid: any) => {
     const bidId = bid.id;
@@ -192,19 +173,28 @@ export default function JobDetailsScreen() {
     );
   };
 
-  const loadJob = async () => {
+  const loadJob = useCallback(async () => {
     try {
       const result = await dispatch(fetchJobById(id!)).unwrap();
-      await loadInvitationCount();
+      // Invitation count is non-critical; fetch best-effort without blocking the UI
+      try {
+        if (id) {
+          const count = await invitationService.getInvitationCountByJob(id);
+          setInvitationCount(count);
+        }
+      } catch (error: any) {
+        // Silently fail - invitation count is not critical
+        console.error('Failed to load invitation count:', error);
+      }
       return result;
     } catch (error: any) {
       notification.error('Error', error.message || 'Failed to load job');
       router.back();
       return null;
     }
-  };
+  }, [dispatch, id, router]);
 
-  const loadContractorContacts = async () => {
+  const loadContractorContacts = useCallback(async () => {
     if (!id) return;
     setLoadingContacts(true);
     try {
@@ -215,57 +205,46 @@ export default function JobDetailsScreen() {
     } finally {
       setLoadingContacts(false);
     }
-  };
+  }, [id]);
 
-  const loadInvitationCount = async () => {
-    if (!id) return;
-    try {
-      const count = await invitationService.getInvitationCountByJob(id);
-      setInvitationCount(count);
-    } catch (error: any) {
-      // Silently fail - invitation count is not critical
-      console.error('Failed to load invitation count:', error);
-    }
-  };
-
-  const checkIfContacted = async () => {
+  const checkIfContacted = useCallback(async () => {
     if (!id || !user) return;
     setLoadingContacts(true);
     try {
       const result = await contactService.checkContact(id);
       setHasContacted(result.hasContacted);
       setContactData(result.contact);
-    } catch (error: any) {
+    } catch {
       // Silently fail - if error, assume not contacted
       setHasContacted(false);
       setContactData(null);
     } finally {
       setLoadingContacts(false);
     }
-  };
+  }, [id, user]);
 
-  const loadMyBid = async () => {
+  const loadMyBid = useCallback(async () => {
     if (!id || !user || !isContractor) return;
     try {
       const bidsData = await bidService.getBidsByJob(id);
       const myBidData = bidsData.find((bid) => bid.contractorId === user.id);
       setMyBid(myBidData || null);
-    } catch (error: any) {
+    } catch {
       // Silently fail - bid might not exist
       setMyBid(null);
     } finally {
     }
-  };
+  }, [id, user]);
 
-  const handleBidSubmitted = async () => {
+  const handleBidSubmitted = useCallback(async () => {
     await loadMyBid();
-  };
+  }, [loadMyBid]);
 
-  const handleContactHomeowner = () => {
+  const handleContactHomeowner = useCallback(() => {
     router.push(`/payment/${id}` as any);
-  };
+  }, [router, id]);
 
-  const handlePostJobToMarket = async () => {
+  const handlePostJobToMarket = useCallback(async () => {
     if (!id) return;
     setIsPosting(true);
     try {
@@ -276,9 +255,9 @@ export default function JobDetailsScreen() {
     } finally {
       setIsPosting(false);
     }
-  };
+  }, [dispatch, id, loadJob]);
 
-  const handleInviteContractors = async (emails: string[]) => {
+  const handleInviteContractors = useCallback(async (emails: string[]) => {
     if (!id) return;
     setIsInviting(true);
     try {
@@ -310,18 +289,18 @@ export default function JobDetailsScreen() {
     } finally {
       setIsInviting(false);
     }
-  };
+  }, [dispatch, id, loadJob]);
 
-  const handleCloseJob = async () => {
+  const handleCloseJob = useCallback(async () => {
     if (!id) return;
     try {
       await dispatch(closeJob(id)).unwrap();
     } catch (error: any) {
       throw error;
     }
-  };
+  }, [dispatch, id]);
 
-  const handleDeleteJob = async () => {
+  const handleDeleteJob = useCallback(async () => {
     if (!id) return;
     try {
       await dispatch(deleteJob(id)).unwrap();
@@ -329,11 +308,33 @@ export default function JobDetailsScreen() {
     } catch (error: any) {
       throw error;
     }
-  };
+  }, [dispatch, id, router]);
 
-  const handleChatPress = (chatRoomId: string) => {
+  const handleChatPress = useCallback((chatRoomId: string) => {
     router.push(`/chat/${chatRoomId}` as any);
-  };
+  }, [router]);
+
+  useEffect(() => {
+    if (!id || !isAuthenticated) return;
+    const key = `${id}:${isContractor ? 'contractor' : 'homeowner'}`;
+    if (initialLoadKeyRef.current === key) return;
+    initialLoadKeyRef.current = key;
+
+    loadJob();
+    if (!isContractor) {
+      // parallelize non-dependent fetches
+      Promise.all([loadContractorContacts(), loadBids()]).catch(() => {});
+    } else {
+      checkIfContacted();
+    }
+  }, [id, loadJob, loadContractorContacts, loadBids, checkIfContacted]);
+
+  useEffect(() => {
+    // Load bid when contractor has contacted
+    if (isContractor && hasContacted && id) {
+      loadMyBid();
+    }
+  }, [hasContacted, id, loadMyBid]);
 
   const isDark = colorScheme === 'dark';
 

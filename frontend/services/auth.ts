@@ -2,6 +2,7 @@ import { TOKEN_KEY } from '@/constants/config';
 import endpoints from '@/constants/endpoints';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../libs/api';
+import { setAuthToken } from '@/libs/authToken';
 import type {
   IApiResponse,
   ILoginRequest,
@@ -19,7 +20,9 @@ class AuthService {
    */
   async getToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      setAuthToken(token);
+      return token;
     } catch (error) {
       console.error('Error getting token:', error);
       return null;
@@ -32,6 +35,7 @@ class AuthService {
   async saveToken(token: string): Promise<void> {
     try {
       await AsyncStorage.setItem(TOKEN_KEY, token);
+      setAuthToken(token);
     } catch (error) {
       console.error('Error saving token:', error);
     }
@@ -43,6 +47,7 @@ class AuthService {
   async removeToken(): Promise<void> {
     try {
       await AsyncStorage.removeItem(TOKEN_KEY);
+      setAuthToken(null);
     } catch (error) {
       console.error('Error removing token:', error);
     }

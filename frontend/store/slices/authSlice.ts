@@ -132,7 +132,6 @@ const authSlice = createSlice({
       }
     },
     setCredentials: (state, action: PayloadAction<{ user: IUser; token: string }>) => {
-      console.log('setCredentials', action.payload);
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;

@@ -26,7 +26,7 @@ export default function MessagesScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, mode } = useAppSelector((state: IRootState) => state.auth);
-  const { chats, unreadCount, isLoading } = useAppSelector((state) => state.chat[mode]);
+  const { chats, isLoading } = useAppSelector((state) => state.chat[mode]);
   const contractorUnreadCount = useAppSelector((state) => state.chat.contractor.unreadCount);
   const homeownerUnreadCount = useAppSelector((state) => state.chat.homeowner.unreadCount);
   const colorScheme = useColorScheme();
@@ -39,6 +39,7 @@ export default function MessagesScreen() {
   const handleModeChange = (newMode: 'contractor' | 'homeowner') => {
     dispatch(setMode(newMode));
   };
+  
   const loadChats = useCallback(async () => {
     try {
       await dispatch(fetchUserChats(mode)).unwrap();
@@ -50,7 +51,7 @@ export default function MessagesScreen() {
   const loadUnreadCount = useCallback(async () => {
     try {
       await dispatch(fetchUnreadCount(mode)).unwrap();
-    } catch (error: any) {
+    } catch {
       // Silently fail
     }
   }, [dispatch, mode]);

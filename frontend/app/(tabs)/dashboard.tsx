@@ -14,11 +14,10 @@ import { fetchProfileSettings } from "@/store/slices/profileSlice";
 
 export default function DashboardScreen() {
     const dispatch = useAppDispatch();
-    const { user, mode } = useAppSelector((state: IRootState) => state.auth);
+    const { user, mode, isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
 
-    const { isAuthenticated } = useAppSelector((state: IRootState) => state.auth);
     const isDark = useMemo(() => colorScheme === 'dark', [colorScheme]);
     const isContractor = useMemo(() => user?.role === 'contractor', [user?.role]);
     const showToggle = isContractor;

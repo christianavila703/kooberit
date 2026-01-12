@@ -53,7 +53,6 @@ class NotificationService {
    */
   async checkAndSendNotifications(): Promise<void> {
     try {
-      logger.info('Starting notification check for unchecked jobs');
 
       // Find all open jobs that haven't been checked for notifications
       const uncheckedJobs = await Job.find({
@@ -62,7 +61,6 @@ class NotificationService {
       }).populate('homeowner', 'firstName lastName email');
 
       if (uncheckedJobs.length === 0) {
-        logger.info('No unchecked jobs found');
         return;
       }
 

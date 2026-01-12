@@ -29,7 +29,6 @@ export const initializeAgenda = async (): Promise<void> => {
     // Define the job
     agenda.define('check-job-notifications', async (job: Job) => {
       try {
-        logger.info('Running scheduled job: check-job-notifications');
         await notificationService.checkAndSendNotifications();
       } catch (error: any) {
         logger.error('Error in scheduled job check-job-notifications:', error);

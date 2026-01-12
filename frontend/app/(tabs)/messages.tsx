@@ -197,6 +197,7 @@ export default function MessagesScreen() {
           renderItem={({ item }) => {
             const partner = getChatPartner(item);
             const unread = getUnreadCount(item);
+            const timeToShow = item.lastMessageAt ?? item.createdAt;
             return (
               <TouchableOpacity
                 style={[styles.chatItem, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
@@ -213,9 +214,9 @@ export default function MessagesScreen() {
                     <Text style={[styles.chatName, { color: colors.text }]}>
                       {partner?.firstName} {partner?.lastName}
                     </Text>
-                    {item.lastMessageAt && (
+                    {timeToShow && (
                       <Text style={[styles.chatTime, { color: colors.icon }]}>
-                        {new Date(item.lastMessageAt).toLocaleDateString()}
+                        {new Date(timeToShow).toLocaleDateString()}
                       </Text>
                     )}
                   </View>

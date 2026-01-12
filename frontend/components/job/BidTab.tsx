@@ -312,11 +312,11 @@ export default function BidTab({ jobId, existingBid, onBidSubmitted, jobStatus, 
                   {passFeeToHomeowner ? (
                     <>
                       <Text style={[styles.awardFeePreview, { color: colors.icon }]}>
-                        Bid value (includes 2.5% fee): ${parseFloat(bidValue).toFixed(2)}
+                        Bid value: ${parseFloat(bidValue).toFixed(2)}
                       </Text>
                       <Text style={[styles.awardFeePreview, { color: colors.icon, fontSize: 11 }]}>
-                        Base value: ${(parseFloat(bidValue) / 1.025).toFixed(2)} | Award Fee: $
-                        {((parseFloat(bidValue) / 1.025) * 0.025).toFixed(2)}
+                        Base value: ${(parseFloat(bidValue) * 0.975).toFixed(2)} | Award Fee: $
+                        {(parseFloat(bidValue) * 0.025).toFixed(2)}
                       </Text>
                     </>
                   ) : (

@@ -135,7 +135,6 @@ export default function ChatScreen() {
         // Listen for new messages from other users (sender gets message from API response)
         // Socket emits to others only, so all socket messages are from other users
         socketService.on('new_message', (message: any) => {
-          console.log('message', message);
           // Only add if message matches current chat
           if (message.chatId === chatId) {
             dispatch(addMessage({ mode, chatId: chatId, message }));

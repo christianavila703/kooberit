@@ -53,6 +53,7 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const isNavigatingToMessagesRef = useRef(false);
   const hasCheckedBidRef = useRef(false);
+  const systemRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Bid status state
   const [existingBid, setExistingBid] = useState<any>(null);
@@ -138,6 +139,18 @@ export default function ChatScreen() {
           // Only add if message matches current chat
           if (message.chatId === chatId) {
             dispatch(addMessage({ mode, chatId: chatId, message }));
+
+            // System messages often imply server-side state changes (award fee paid, extensions, completion, etc)
+            if (message?.type === 'system') {
+              if (systemRefreshTimeoutRef.current) {
+                clearTimeout(systemRefreshTimeoutRef.current);
+              }
+              systemRefreshTimeoutRef.current = setTimeout(() => {
+                checkExistingBid();
+                dispatch(fetchChatById({ id: chatId, mode }));
+              }, 250);
+            }
+
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);

@@ -152,6 +152,13 @@ const chatSlice = createSlice({
       if (existingIndex === -1) {
         state[mode].messages[chatId].push(message);
       }
+
+      // Best-effort: update chat list preview so the Messages screen updates instantly
+      const chatIndex = state[mode].chats.findIndex((c) => c.id === chatId);
+      if (chatIndex !== -1) {
+        state[mode].chats[chatIndex].lastMessage = message.content;
+        state[mode].chats[chatIndex].lastMessageAt = message.createdAt;
+      }
     },
     clearMessages: (state, action: PayloadAction<{ mode: IMode; chatId: string }>) => {
       const { mode, chatId } = action.payload;

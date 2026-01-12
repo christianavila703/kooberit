@@ -16,7 +16,7 @@ export const API_CONFIG = {
     // Change this to your backend URL
     BASE_URL: __DEV__ 
       ? Platform.OS === 'android'
-        ? 'http://10.0.2.2:5000/api' // Android Emulator
+        ? 'https://server.kooberit.com/api' // Android Emulator
         : 'http://localhost:5000/api' // iOS Simulator / Web
       : 'https://server.kooberit.com/api', // Production
     TIMEOUT: 10000,
